@@ -1,0 +1,300 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id              String         @id @default(uuid())
+  email           String         @unique
+  passwordHash    String         @default("hashed_demo_pw")
+  name            String
+  avatar          String?
+  jobTitle        String
+  functionalRole  String
+  accessTier      String         @default("STANDARD")
+  managementTier  String         @default("NONE")
+  departmentId    String?
+  managerId       String?
+  status          String         @default("ACTIVE")
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  department      Department?    @relation(fields: [departmentId], references: [id])
+  manager         User?          @relation("ManagementHierarchy", fields: [managerId], references: [id])
+  directReports   User[]         @relation("ManagementHierarchy")
+  certifications  Certification[]
+  leaveRequests   LeaveRequest[]
+  assignedTasks   Task[]         @relation("AssignedTasks")
+  assignedTickets SupportRequest[] @relation("AssignedSupport")
+  createdTickets  SupportRequest[] @relation("CreatedSupport")
+  kpiScores       KpiScore[]
+  kpiLogs         KpiLog[]
+  assignedAssets  Asset[]
+  attendance      AttendanceRecord[]
+}
+
+model Department {
+  id          String   @id @default(uuid())
+  name        String
+  code        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  users       User[]
+}
+
+model AttendanceRecord {
+  id           String    @id @default(uuid())
+  userId       String
+  date         String    // YYYY-MM-DD
+  clockInTime  String    // HH:MM:SS
+  clockOutTime String?   // HH:MM:SS
+  locationTag  String    @default("Lekki HQ")
+  status       String    @default("PRESENT") // PRESENT, LATE, HALF_DAY, OVERTIME
+  kpiAwarded   Int       @default(10)
+  coordinates  String?
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Certification {
+  id           String    @id @default(uuid())
+  userId       String
+  name         String
+  issuingBody  String
+  issueDate    DateTime
+  expiryDate   DateTime
+  certNumber   String?
+  verified     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LeaveRequest {
+  id          String   @id @default(uuid())
+  userId      String
+  leaveType   String
+  startDate   DateTime
+  endDate     DateTime
+  daysCount   Int
+  status      String   @default("PENDING")
+  reason      String?
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Task {
+  id             String    @id @default(uuid())
+  title          String
+  description    String?
+  moduleOrigin   String    @default("PROJECT")
+  status         String    @default("NOT_STARTED")
+  priority       String    @default("MEDIUM")
+  dueDate        DateTime
+  completedAt    DateTime?
+  blockedReason  String?
+  estimatedHours Float     @default(0)
+  loggedHours    Float     @default(0)
+  assigneeId     String
+  projectId      String?
+  projectName    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  assignee       User      @relation("AssignedTasks", fields: [assigneeId], references: [id])
+}
+
+model SupportRequest {
+  id             String    @id @default(uuid())
+  ticketNumber   String    @unique
+  requesterId    String
+  category       String
+  subject        String
+  description    String
+  priority       String    @default("MEDIUM")
+  status         String    @default("SUBMITTED")
+  assignedToId   String?
+  assetId        String?
+  vendor         String?
+  estimatedCost  Float?
+  finalCost      Float?
+  isTemplate     Boolean   @default(false)
+  deliverableUrl String?
+  resolvedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  requester      User      @relation("CreatedSupport", fields: [requesterId], references: [id])
+  assignedTo     User?     @relation("AssignedSupport", fields: [assignedToId], references: [id])
+}
+
+model Asset {
+  id             String    @id @default(uuid())
+  assetTag       String    @unique
+  name           String
+  type           String
+  serialNumber   String
+  assignedToId   String?
+  purchaseDate   DateTime
+  warrantyExpiry DateTime
+  condition      String    @default("GOOD")
+  purchaseCost   Float?
+  createdAt      DateTime  @default(now())
+
+  assignedTo     User?     @relation(fields: [assignedToId], references: [id])
+}
+
+model Subscription {
+  id             String   @id @default(uuid())
+  serviceName    String
+  vendor         String
+  category       String
+  seats          Int      @default(1)
+  billingCycle   String
+  cost           Float
+  currency       String   @default("NGN")
+  renewalDate    DateTime
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+}
+
+model KpiScore {
+  id             String   @id @default(uuid())
+  userId         String
+  monthYear      String
+  totalScore     Int      @default(0)
+  completedCount Int      @default(0)
+  onTimeCount    Int      @default(0)
+  overdueCount   Int      @default(0)
+  rankPosition   Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model KpiLog {
+  id            String   @id @default(uuid())
+  userId        String
+  eventType     String
+  points        Int
+  workItemId    String?
+  workItemType  String?
+  description   String
+  awardedAt     DateTime @default(now())
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  actorId     String
+  actorName   String
+  action      String
+  targetType  String
+  targetId    String?
+  detailsJson String?
+  createdAt   DateTime @default(now())
+}
+
+model Client {
+  id            String   @id @default(uuid())
+  name          String
+  type          String   @default("CLIENT")
+  industry      String?
+  contactPerson String?
+  email         String?
+  phone         String?
+  address       String?
+  status        String   @default("ACTIVE")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Project {
+  id               String   @id @default(uuid())
+  projectCode      String   @unique
+  title            String
+  clientId         String?
+  clientName       String
+  serviceLinesJson String
+  contractValue    Float
+  currency         String   @default("NGN")
+  status           String   @default("ACTIVE")
+  health           String   @default("ON_TRACK")
+  startDate        DateTime
+  targetEndDate    DateTime
+  actualEndDate    DateTime?
+  leadPmName       String
+  vaultStorageTier String   @default("ACTIVE_VAULT")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Opportunity {
+  id                 String   @id @default(uuid())
+  title              String
+  clientName         String
+  serviceLinesJson   String
+  estimatedValue     Float
+  currency           String   @default("NGN")
+  stage              String   @default("IDENTIFIED")
+  source             String?
+  submissionDeadline DateTime
+  decisionDate       DateTime?
+  bdOwnerName        String
+  technicalLeadName  String?
+  winLossReason      String?
+  winningCompetitor  String?
+  convertedProjectId String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model Invoice {
+  id                   String    @id @default(uuid())
+  invoiceNumber        String    @unique
+  projectId            String
+  projectName          String
+  clientId             String
+  clientName           String
+  milestoneDescription String
+  subtotalNgn          Float
+  vatRatePercent       Float     @default(7.5)
+  vatAmountNgn         Float
+  whtRatePercent       Float     @default(5.0)
+  whtDeductionNgn      Float
+  netPayableNgn        Float
+  whtCreditNoteReceived Boolean  @default(false)
+  whtCreditNoteNumber  String?
+  status               String    @default("ISSUED")
+  issuedDate           DateTime  @default(now())
+  dueDate              DateTime
+  paidDate             DateTime?
+  currency             String    @default("NGN")
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+}
+
+model AccessRequest {
+  id                  String   @id @default(uuid())
+  fullName            String
+  email               String
+  jobTitle            String
+  departmentName      String
+  professionalLicense String?
+  assignedProjectCode String?
+  justification       String
+  status              String   @default("PENDING")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
