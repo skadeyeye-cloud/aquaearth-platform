@@ -726,17 +726,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateTaskProgress = (taskId: string, progressPercent: number, newStatus?: TaskItem['status'], loggedHours?: number) => {
     setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
+        // IMMUTABILITY DIRECTIVE: Once a task is marked as DONE, it cannot be undone, reopened, or modified
+        if (t.status === 'DONE') {
+          return t;
+        }
+
         const isNowDone = progressPercent >= 100 || newStatus === 'DONE';
-        const finalStatus = isNowDone ? 'DONE' : (newStatus || (progressPercent > 0 ? 'IN_PROGRESS' : t.status));
-        const updatedTask = {
+        const finalStatus: TaskItem['status'] = isNowDone ? 'DONE' : (newStatus || (progressPercent > 0 ? 'IN_PROGRESS' : t.status));
+        const updatedTask: TaskItem = {
           ...t,
-          progressPercent,
+          progressPercent: isNowDone ? 100 : progressPercent,
           status: finalStatus,
           loggedHours: loggedHours !== undefined ? loggedHours : t.loggedHours,
-          completedAt: isNowDone ? new Date().toISOString().split('T')[0] : t.completedAt
+          completedAt: isNowDone ? (t.completedAt || new Date().toISOString().split('T')[0]) : t.completedAt
         };
 
-        if (isNowDone && t.status !== 'DONE') {
+        if (isNowDone) {
           const nowStr = new Date().toISOString().split('T')[0];
           const pts = calculateEventPoints('PROJECT_TASK', t.dueDate, nowStr);
           
@@ -765,6 +770,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateTaskStatus = (taskId: string, newStatus: TaskItem['status']) => {
+    // IMMUTABILITY DIRECTIVE: Cannot alter or undo status of an already completed task
+    setTasks(prev => {
+      const existing = prev.find(t => t.id === taskId);
+      if (existing && existing.status === 'DONE') {
+        return prev;
+      }
+      return prev;
+    });
     updateTaskProgress(taskId, newStatus === 'DONE' ? 100 : newStatus === 'IN_PROGRESS' ? 50 : 0, newStatus);
   };
 

@@ -20,7 +20,8 @@ import {
   Shield,
   FolderKanban,
   CalendarCheck,
-  ArrowRight
+  ArrowRight,
+  Lock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import RequestIntakeModal from '@/components/workspace/RequestIntakeModal';
@@ -460,13 +461,15 @@ export default function MyWorkspacePage() {
                     <div className="flex items-start gap-3">
                       {/* Checkmark Button */}
                       <button
-                        onClick={() => updateTaskStatus(task.id, isDone ? 'IN_PROGRESS' : 'DONE')}
-                        className={`mt-0.5 w-5 h-5 rounded-full border flex items-center justify-center transition-all active:scale-[0.88] shrink-0 ${
+                        type="button"
+                        disabled={isDone}
+                        onClick={isDone ? undefined : () => updateTaskStatus(task.id, 'DONE')}
+                        className={`mt-0.5 w-5 h-5 rounded-full border flex items-center justify-center transition-all shrink-0 ${
                           isDone 
-                            ? 'bg-emerald-600 border-emerald-600 text-white' 
-                            : 'border-slate-300 dark:border-white/20 hover:border-emerald-600 bg-white dark:bg-transparent'
+                            ? 'bg-emerald-600 border-emerald-600 text-white cursor-default opacity-95 shadow-xs' 
+                            : 'border-slate-300 dark:border-white/20 hover:border-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 bg-white dark:bg-transparent active:scale-[0.88] cursor-pointer'
                         }`}
-                        title={isDone ? 'Reopen Task' : 'Mark Complete (Awards KPI points)'}
+                        title={isDone ? 'Completed & Locked — Cannot be undone (Audit Finalized)' : 'Mark Complete (Awards +50 KPI points)'}
                       >
                         {isDone && <Check className="w-3 h-3 stroke-[3]" />}
                       </button>
@@ -488,13 +491,20 @@ export default function MyWorkspacePage() {
                             </span>
                           )}
 
-                          <span className={`text-[9px] font-bold ml-auto px-1.5 py-0.2 rounded-full whitespace-nowrap shrink-0 ${
-                            task.priority === 'URGENT' ? 'bg-rose-50 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800' :
-                            task.priority === 'HIGH' ? 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800' :
-                            'bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300'
-                          }`}>
-                            {task.priority}
-                          </span>
+                          {isDone ? (
+                            <span className="text-[9px] font-bold ml-auto px-1.5 py-0.2 rounded-full whitespace-nowrap shrink-0 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1">
+                              <Lock className="w-2.5 h-2.5" />
+                              Done & Locked
+                            </span>
+                          ) : (
+                            <span className={`text-[9px] font-bold ml-auto px-1.5 py-0.2 rounded-full whitespace-nowrap shrink-0 ${
+                              task.priority === 'URGENT' ? 'bg-rose-50 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800' :
+                              task.priority === 'HIGH' ? 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800' :
+                              'bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300'
+                            }`}>
+                              {task.priority}
+                            </span>
+                          )}
                         </div>
 
                         <div className={`text-xs font-semibold ${isDone ? 'line-through text-slate-400 dark:text-slate-600' : 'text-slate-900 dark:text-white'}`}>
@@ -523,7 +533,7 @@ export default function MyWorkspacePage() {
                           {isDone && (
                             <span className="text-emerald-600 dark:text-emerald-400 font-bold ml-auto flex items-center gap-1 whitespace-nowrap shrink-0">
                               <CheckCircle2 className="w-3 h-3" />
-                              Earned +50 pts
+                              Earned +50 pts • <Lock className="w-2.5 h-2.5 ml-0.5 inline" /> Immutable
                             </span>
                           )}
                         </div>

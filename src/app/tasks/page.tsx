@@ -23,7 +23,8 @@ import {
   TrendingUp,
   X,
   Sliders,
-  Check
+  Check,
+  Lock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CreateTaskModal from '@/components/workspace/CreateTaskModal';
@@ -338,7 +339,7 @@ export default function MyTasksPage() {
                     {isDone && (
                       <span className="text-[10px] font-bold px-2 py-0.2 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1 whitespace-nowrap shrink-0">
                         <Check className="w-3 h-3" />
-                        Done (+50 KPI Pts)
+                        Done (+50 KPI Pts) • <Lock className="w-2.5 h-2.5" /> Locked
                       </span>
                     )}
                   </div>
@@ -380,8 +381,10 @@ export default function MyTasksPage() {
                 <div className="flex items-center gap-4 shrink-0 justify-between md:justify-end border-t md:border-t-0 pt-2 md:pt-0 border-black/[0.05] dark:border-white/[0.08]">
                   <div className="w-28 space-y-1">
                     <div className="flex items-center justify-between text-[10px] font-bold">
-                      <span className="text-slate-500 dark:text-slate-400">Progress</span>
-                      <span className="text-slate-900 dark:text-white tnum">{percent}%</span>
+                      <span className="text-slate-500 dark:text-slate-400 inline-flex items-center gap-1">
+                        Progress {isDone && <Lock className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />}
+                      </span>
+                      <span className={`tnum ${isDone ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-900 dark:text-white'}`}>{percent}%</span>
                     </div>
                     <div className="w-full h-1.5 bg-slate-100 dark:bg-white/10 rounded-full overflow-hidden">
                       <div 
@@ -518,54 +521,81 @@ export default function MyTasksPage() {
                   </div>
                 )}
 
-                {/* Progress Controls (For Assignee or Manager) */}
+                {/* Progress Controls / Locked State */}
                 {activeDetailTask.approvalStatus === 'APPROVED' && (
-                  <div className="p-4 bg-white dark:bg-[#121216] border border-black/[0.08] dark:border-white/[0.1] rounded-2xl space-y-3">
-                    <div className="flex items-center justify-between text-xs font-bold text-slate-900 dark:text-white">
-                      <span className="flex items-center gap-1.5">
-                        <Sliders className="w-3.5 h-3.5 text-indigo-500" />
-                        Update Progress Milestone
-                      </span>
-                      <span className="tnum font-extrabold text-sm">{activeDetailTask.progressPercent || 0}%</span>
+                  activeDetailTask.status === 'DONE' ? (
+                    <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl space-y-2.5">
+                      <div className="flex items-center justify-between text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                        <span className="flex items-center gap-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                          <span>Task Completed & Permanently Locked</span>
+                        </span>
+                        <span className="text-[10px] bg-emerald-600 text-white font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider inline-flex items-center gap-1 whitespace-nowrap shrink-0 shadow-xs">
+                          <Lock className="w-2.5 h-2.5" />
+                          Finalized
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-emerald-800/80 dark:text-emerald-300/80 leading-relaxed">
+                        This task has been verified as 100% complete and KPI appraisal points have been credited. To guarantee regulatory compliance and appraisal audit integrity, completed deliverables cannot be reopened or undone.
+                      </p>
+                      <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 pt-2 border-t border-emerald-500/20 flex-wrap gap-2">
+                        <span>Completed: <b className="text-slate-800 dark:text-slate-200 tnum">{activeDetailTask.completedAt || activeDetailTask.dueDate}</b></span>
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">100% Progress • +50 KPI Pts Secured</span>
+                      </div>
                     </div>
+                  ) : (
+                    <div className="p-4 bg-white dark:bg-[#121216] border border-black/[0.08] dark:border-white/[0.1] rounded-2xl space-y-3">
+                      <div className="flex items-center justify-between text-xs font-bold text-slate-900 dark:text-white">
+                        <span className="flex items-center gap-1.5">
+                          <Sliders className="w-3.5 h-3.5 text-indigo-500" />
+                          Update Progress Milestone
+                        </span>
+                        <span className="tnum font-extrabold text-sm">{activeDetailTask.progressPercent || 0}%</span>
+                      </div>
 
-                    <input
-                      type="range"
-                      min={0}
-                      max={100}
-                      step={5}
-                      value={activeDetailTask.progressPercent || 0}
-                      onChange={(e) => updateTaskProgress(activeDetailTask.id, Number(e.target.value))}
-                      className="w-full accent-slate-900 dark:accent-white cursor-pointer"
-                    />
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        step={5}
+                        value={activeDetailTask.progressPercent || 0}
+                        onChange={(e) => updateTaskProgress(activeDetailTask.id, Number(e.target.value))}
+                        className="w-full accent-slate-900 dark:accent-white cursor-pointer"
+                      />
 
-                    <div className="flex items-center gap-2 pt-1 flex-wrap">
-                      <button
-                        onClick={() => updateTaskProgress(activeDetailTask.id, 25, 'IN_PROGRESS')}
-                        className="px-2.5 py-1 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 text-slate-800 dark:text-slate-200 rounded-lg text-[10px] font-bold"
-                      >
-                        25%
-                      </button>
-                      <button
-                        onClick={() => updateTaskProgress(activeDetailTask.id, 50, 'IN_PROGRESS')}
-                        className="px-2.5 py-1 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 text-slate-800 dark:text-slate-200 rounded-lg text-[10px] font-bold"
-                      >
-                        50%
-                      </button>
-                      <button
-                        onClick={() => updateTaskProgress(activeDetailTask.id, 75, 'IN_PROGRESS')}
-                        className="px-2.5 py-1 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 text-slate-800 dark:text-slate-200 rounded-lg text-[10px] font-bold"
-                      >
-                        75%
-                      </button>
-                      <button
-                        onClick={() => updateTaskProgress(activeDetailTask.id, 100, 'DONE')}
-                        className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold ml-auto shadow-xs active:scale-[0.96]"
-                      >
-                        Mark 100% Done (+50 KPI)
-                      </button>
+                      <div className="flex items-center gap-2 pt-1 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => updateTaskProgress(activeDetailTask.id, 25, 'IN_PROGRESS')}
+                          className="px-2.5 py-1 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 text-slate-800 dark:text-slate-200 rounded-lg text-[10px] font-bold active:scale-[0.96] whitespace-nowrap shrink-0"
+                        >
+                          25%
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateTaskProgress(activeDetailTask.id, 50, 'IN_PROGRESS')}
+                          className="px-2.5 py-1 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 text-slate-800 dark:text-slate-200 rounded-lg text-[10px] font-bold active:scale-[0.96] whitespace-nowrap shrink-0"
+                        >
+                          50%
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateTaskProgress(activeDetailTask.id, 75, 'IN_PROGRESS')}
+                          className="px-2.5 py-1 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 text-slate-800 dark:text-slate-200 rounded-lg text-[10px] font-bold active:scale-[0.96] whitespace-nowrap shrink-0"
+                        >
+                          75%
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateTaskProgress(activeDetailTask.id, 100, 'DONE')}
+                          className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold ml-auto shadow-xs active:scale-[0.96] whitespace-nowrap shrink-0 inline-flex items-center gap-1"
+                        >
+                          <Check className="w-3 h-3" />
+                          <span>Mark 100% Done (+50 KPI)</span>
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )
                 )}
 
                 {/* Threaded Time-Stamped Comments Feed */}
