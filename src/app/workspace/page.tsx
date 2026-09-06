@@ -21,11 +21,17 @@ import {
   FolderKanban,
   CalendarCheck,
   ArrowRight,
-  Lock
+  Lock,
+  UploadCloud,
+  FileText,
+  Download,
+  HardDrive,
+  Search
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import RequestIntakeModal from '@/components/workspace/RequestIntakeModal';
 import CreateTaskModal from '@/components/workspace/CreateTaskModal';
+import UploadDocumentModal from '@/components/workspace/UploadDocumentModal';
 
 export default function MyWorkspacePage() {
   const router = useRouter();
@@ -37,6 +43,7 @@ export default function MyWorkspacePage() {
     projects, 
     attendanceRecords, 
     allUsers, 
+    documents,
     updateTaskStatus, 
     submitLeaveRequest 
   } = useAuth();
@@ -44,7 +51,10 @@ export default function MyWorkspacePage() {
   const [isIntakeOpen, setIsIntakeOpen] = useState(false);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
+  const [isUploadDocOpen, setIsUploadDocOpen] = useState(false);
   const [taskFilter, setTaskFilter] = useState<'ALL' | 'IN_PROGRESS' | 'URGENT' | 'DONE'>('ALL');
+  const [docSearchTerm, setDocSearchTerm] = useState('');
+  const [docCategoryFilter, setDocCategoryFilter] = useState('ALL');
 
   // Leave modal state
   const [leaveType, setLeaveType] = useState<'ANNUAL' | 'SICK' | 'CASUAL'>('ANNUAL');
@@ -95,6 +105,24 @@ export default function MyWorkspacePage() {
     return true;
   });
 
+  // PRD Req 5: "My Documents" view listing documents the logged-in user has permission to see
+  const myDocuments = documents.filter(doc => {
+    if (isAdminOrLeadership) return true;
+    const isAuthor = doc.authorName.toLowerCase() === currentUser.name.toLowerCase();
+    const isProjectMember = doc.projectId ? myTasks.some(t => t.projectId === doc.projectId) : false;
+    const isFirmWide = !doc.projectId;
+    return isAuthor || isProjectMember || isFirmWide;
+  });
+
+  const filteredMyDocs = myDocuments.filter(doc => {
+    const matchesSearch = 
+      doc.title.toLowerCase().includes(docSearchTerm.toLowerCase()) ||
+      doc.documentNumber.toLowerCase().includes(docSearchTerm.toLowerCase()) ||
+      (doc.projectName ? doc.projectName.toLowerCase().includes(docSearchTerm.toLowerCase()) : false);
+    const matchesCategory = docCategoryFilter === 'ALL' || doc.category === docCategoryFilter;
+    return matchesSearch && matchesCategory;
+  });
+
   const handleLeaveSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     submitLeaveRequest({
@@ -134,15 +162,23 @@ export default function MyWorkspacePage() {
           <button
             type="button"
             onClick={() => setIsCreateTaskOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-950 rounded-xl text-xs font-bold shadow-xs transition-all active:scale-[0.96] cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-950 rounded-xl text-xs font-bold shadow-xs transition-all active:scale-[0.96] cursor-pointer whitespace-nowrap shrink-0"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Create Task</span>
           </button>
           <button
             type="button"
+            onClick={() => setIsUploadDocOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all active:scale-[0.96] cursor-pointer whitespace-nowrap shrink-0"
+          >
+            <UploadCloud className="w-3.5 h-3.5" />
+            <span>Upload Document</span>
+          </button>
+          <button
+            type="button"
             onClick={() => setIsLeaveModalOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-white dark:bg-[#16161a] border border-black/[0.08] dark:border-white/[0.12] hover:bg-slate-50 dark:hover:bg-[#202026] text-slate-800 dark:text-white rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-[0.96] cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-white dark:bg-[#16161a] border border-black/[0.08] dark:border-white/[0.12] hover:bg-slate-50 dark:hover:bg-[#202026] text-slate-800 dark:text-white rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-[0.96] cursor-pointer whitespace-nowrap shrink-0"
           >
             <PlaneTakeoff className="w-3.5 h-3.5 text-slate-500 dark:text-slate-300" />
             <span>Take Time Off</span>
@@ -150,7 +186,7 @@ export default function MyWorkspacePage() {
           <button
             type="button"
             onClick={() => setIsIntakeOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-white dark:bg-[#16161a] border border-black/[0.08] dark:border-white/[0.12] hover:bg-slate-50 dark:hover:bg-[#202026] text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-[0.96] cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-white dark:bg-[#16161a] border border-black/[0.08] dark:border-white/[0.12] hover:bg-slate-50 dark:hover:bg-[#202026] text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-[0.96] cursor-pointer whitespace-nowrap shrink-0"
           >
             <Layers className="w-3.5 h-3.5 text-slate-400" />
             <span>New Request</span>
@@ -589,8 +625,184 @@ export default function MyWorkspacePage() {
         </div>
       </div>
 
+      {/* Module 6 Personal Hub: My Documents & Project Deliverables (PRD Req 5 & 63) */}
+      <div className="bg-white dark:bg-[#0c0c0e] border border-black/[0.08] dark:border-white/[0.12] rounded-3xl p-6 space-y-4 shadow-xs apple-card-hover">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-black/[0.05] dark:border-white/[0.08]">
+          <div>
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 whitespace-nowrap shrink-0">
+                Module 6 • Personal Vault Hub
+              </span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 whitespace-nowrap shrink-0 inline-flex items-center gap-1">
+                <HardDrive className="w-2.5 h-2.5" />
+                Active Vault Staging
+              </span>
+            </div>
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+              <span>My Documents & Deliverables</span>
+              <span className="text-[11px] bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-slate-200 px-2 py-0.2 rounded-full font-bold tnum whitespace-nowrap shrink-0">
+                {filteredMyDocs.length}
+              </span>
+            </h2>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Project deliverables, technical reports, and templates scoped to your assignments. Upload files directly (.docx, .pdf, .pptx, images).
+            </p>
+          </div>
+
+          {/* Search, Filter & Quick Upload Trigger */}
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={docSearchTerm}
+                onChange={(e) => setDocSearchTerm(e.target.value)}
+                placeholder="Search documents, codes..."
+                className="pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-white/5 border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 w-44 sm:w-52 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+              />
+            </div>
+
+            {/* Upload Button */}
+            <button
+              type="button"
+              onClick={() => setIsUploadDocOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs active:scale-[0.96] cursor-pointer whitespace-nowrap shrink-0"
+            >
+              <UploadCloud className="w-3.5 h-3.5" />
+              <span>Upload Document</span>
+            </button>
+
+            {/* Link to Full Repository */}
+            <Link
+              href="/documents"
+              className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-semibold active:scale-[0.96] transition-colors whitespace-nowrap shrink-0"
+            >
+              <span>Repository</span>
+              <ArrowUpRight className="w-3 h-3 text-slate-400" />
+            </Link>
+          </div>
+        </div>
+
+        {/* Category Filter Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+          {[
+            { id: 'ALL', label: 'All Files' },
+            { id: 'TECHNICAL_REPORT', label: 'Technical Reports' },
+            { id: 'PROPOSAL', label: 'Proposals / RFPs' },
+            { id: 'LAB_CERTIFICATE', label: 'Lab Certificates' },
+            { id: 'REGULATORY_PERMIT', label: 'Permits' },
+            { id: 'GIS_MAP', label: 'GIS & Maps' }
+          ].map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setDocCategoryFilter(cat.id)}
+              className={`px-3 py-1 rounded-xl font-medium transition-all active:scale-[0.96] whitespace-nowrap shrink-0 text-[11px] ${
+                docCategoryFilter === cat.id
+                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold shadow-2xs'
+                  : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Documents Grid */}
+        {filteredMyDocs.length === 0 ? (
+          <div className="py-10 text-center text-slate-400 dark:text-slate-500 space-y-2">
+            <FileText className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-700 stroke-1" />
+            <div className="text-xs font-medium">No documents found matching this filter</div>
+            <button
+              type="button"
+              onClick={() => setIsUploadDocOpen(true)}
+              className="text-indigo-600 dark:text-indigo-400 text-xs font-bold hover:underline inline-flex items-center gap-1 cursor-pointer"
+            >
+              <UploadCloud className="w-3.5 h-3.5" />
+              Upload a document now
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {filteredMyDocs.map((doc) => {
+              const isDraft = doc.qaStatus === 'DRAFT_WATERMARKED';
+              const isReleased = doc.qaStatus === 'RELEASED_TO_CLIENT';
+              const isApproved = doc.qaStatus === 'QA_APPROVED';
+              const isReview = doc.qaStatus === 'IN_REVIEW';
+
+              return (
+                <div
+                  key={doc.id}
+                  className="p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-black/[0.06] dark:border-white/[0.06] hover:border-black/[0.12] dark:hover:border-white/[0.15] transition-all space-y-3 flex flex-col justify-between apple-card-hover"
+                >
+                  <div className="space-y-2">
+                    {/* Top Tag Row */}
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <span className="font-mono text-[10px] font-bold text-slate-500 dark:text-slate-400 whitespace-nowrap shrink-0">
+                        {doc.documentNumber}
+                      </span>
+                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 border ${
+                        isReleased ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' :
+                        isApproved ? 'bg-sky-50 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800' :
+                        isReview ? 'bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800' :
+                        'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                      }`}>
+                        {isReleased ? 'Released to Client' : isApproved ? 'QA Approved' : isReview ? 'In QA Review' : 'Draft (Watermarked)'}
+                      </span>
+                    </div>
+
+                    {/* Title */}
+                    <h3 className="text-xs font-bold text-slate-900 dark:text-white leading-snug line-clamp-2">
+                      {doc.title}
+                    </h3>
+
+                    {/* Project & Category Badge */}
+                    <div className="flex items-center gap-1.5 flex-wrap text-[10px] text-slate-500 dark:text-slate-400">
+                      {doc.projectName ? (
+                        <span className="bg-black/[0.04] dark:bg-white/5 px-2 py-0.5 rounded-md truncate max-w-[190px]">
+                          {doc.projectName}
+                        </span>
+                      ) : (
+                        <span className="bg-black/[0.04] dark:bg-white/5 px-2 py-0.5 rounded-md">
+                          Firm-Wide Template
+                        </span>
+                      )}
+                      <span className="font-semibold text-slate-400 dark:text-slate-500 tnum">
+                        {doc.version}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Footer & Actions */}
+                  <div className="pt-2 border-t border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                    <span className="tnum font-medium">
+                      {doc.fileSizeMb} MB • {doc.authorName.split(' ')[0]}
+                    </span>
+                    <a
+                      href={doc.downloadUrl}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        alert(`Downloading ${doc.title} (${doc.version})`);
+                      }}
+                      className="p-1 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-200/60 dark:hover:bg-white/10 rounded-lg transition-colors inline-flex items-center gap-1 text-[10px] font-semibold cursor-pointer"
+                      title="Download Deliverable"
+                    >
+                      <Download className="w-3 h-3" />
+                      <span>Download</span>
+                    </a>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Universal Request Modal */}
       <RequestIntakeModal isOpen={isIntakeOpen} onClose={() => setIsIntakeOpen(false)} />
+
+      {/* Upload Document Modal (PRD Req 5 & 63) */}
+      <UploadDocumentModal isOpen={isUploadDocOpen} onClose={() => setIsUploadDocOpen(false)} />
 
       {/* Create Task for Approval Modal */}
       <CreateTaskModal isOpen={isCreateTaskOpen} onClose={() => setIsCreateTaskOpen(false)} />
