@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { motion } from 'framer-motion';
+import { haptics } from '@/lib/haptics';
 import { 
   LayoutGrid, 
   Briefcase, 
@@ -156,11 +157,8 @@ export default function Sidebar({ onMobileItemClick }: { onMobileItemClick?: () 
                     key={idx}
                     href={item.href}
                     prefetch={true}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      if (pathname !== item.href) {
-                        router.push(item.href);
-                      }
+                    onClick={() => {
+                      haptics.selection();
                       if (onMobileItemClick) {
                         onMobileItemClick();
                       }

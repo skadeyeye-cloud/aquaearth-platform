@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { usePathname } from 'next/navigation';
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
 import LoadingOverlay from '@/components/ui/LoadingOverlay';
 import PageTransition from '@/components/layout/PageTransition';
+import RouteProgressBar from '@/components/layout/RouteProgressBar';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -15,6 +16,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   if (isAuthPage) {
     return (
       <div className="min-h-screen w-full bg-[#ffffff] dark:bg-[#000000] text-slate-900 dark:text-white flex flex-col justify-center items-center transition-colors">
+        <Suspense fallback={null}>
+          <RouteProgressBar />
+        </Suspense>
         <LoadingOverlay />
         <main className="w-full h-full flex flex-col justify-center items-center">
           <PageTransition>
@@ -27,6 +31,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#ffffff] dark:bg-[#000000] text-slate-900 dark:text-slate-100 transition-colors">
+      <Suspense fallback={null}>
+        <RouteProgressBar />
+      </Suspense>
       <LoadingOverlay />
       
       {/* Desktop Persistent Sidebar */}

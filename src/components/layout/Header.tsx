@@ -1,23 +1,41 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { usePresence } from '@/lib/presence-context';
 import { haptics } from '@/lib/haptics';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, 
   Bell, 
   ChevronDown, 
   LogOut, 
   Sun, 
-  Moon,
-  Menu,
-  ScanFace
+  Moon, 
+  Menu, 
+  ScanFace,
+  LayoutGrid,
+  CheckCircle2,
+  CalendarCheck,
+  Compass,
+  BarChart3,
+  Award,
+  Briefcase,
+  Users,
+  FolderKanban,
+  Smartphone,
+  FileText,
+  ShieldCheck,
+  HardDrive,
+  Layers,
+  Receipt,
+  Shield
 } from 'lucide-react';
 import NotificationCenter from './NotificationCenter';
 import BiometricAuthModal from '@/components/auth/BiometricAuthModal';
+import SpotlightModal from './SpotlightModal';
 
 interface HeaderProps {
   onOpenMobileSidebar?: () => void;
@@ -25,14 +43,51 @@ interface HeaderProps {
 
 export default function Header({ onOpenMobileSidebar }: HeaderProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const { currentUser, allUsers, switchUser, logout, theme, toggleTheme, notifications } = useAuth();
   const { activeUsers } = usePresence();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isPresenceOpen, setIsPresenceOpen] = useState(false);
   const [isBiometricModalOpen, setIsBiometricModalOpen] = useState(false);
+  const [isSpotlightOpen, setIsSpotlightOpen] = useState(false);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsSpotlightOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const getModuleContext = (path: string) => {
+    if (path.startsWith('/workspace')) return { section: 'Workspace', title: 'My Workspace', icon: LayoutGrid };
+    if (path.startsWith('/tasks')) return { section: 'Workspace', title: 'My Tasks', icon: CheckCircle2 };
+    if (path.startsWith('/hr/attendance')) return { section: 'Workspace', title: 'Daily Attendance', icon: CalendarCheck };
+    if (path.startsWith('/directory')) return { section: 'Workspace', title: 'Staff Directory', icon: Compass };
+    if (path.startsWith('/analytics')) return { section: 'Executive Intelligence', title: 'Command & Analytics', icon: BarChart3 };
+    if (path.startsWith('/kpi')) return { section: 'Executive Intelligence', title: 'KPI Leaderboard', icon: Award };
+    if (path.startsWith('/bd')) return { section: 'Commercial Engine', title: 'BD & Tendering', icon: Briefcase };
+    if (path.startsWith('/crm')) return { section: 'Commercial Engine', title: 'Client CRM', icon: Users };
+    if (path.startsWith('/projects')) return { section: 'Project Delivery', title: 'Projects & Milestones', icon: FolderKanban };
+    if (path.startsWith('/field')) return { section: 'Field Operations', title: 'Field Data Capture', icon: Smartphone };
+    if (path.startsWith('/documents')) return { section: 'Quality & Governance', title: 'Documents Repository', icon: FileText };
+    if (path.startsWith('/qa')) return { section: 'Quality & Governance', title: 'QA/QC Technical Review', icon: CheckCircle2 };
+    if (path.startsWith('/compliance')) return { section: 'Quality & Governance', title: 'Regulatory Matrix', icon: ShieldCheck };
+    if (path.startsWith('/vault')) return { section: 'Quality & Governance', title: 'AquaEarth Vault', icon: HardDrive };
+    if (path.startsWith('/operations/it-design')) return { section: 'Operational Support', title: 'IT & Design Studio', icon: Layers };
+    if (path.startsWith('/finance')) return { section: 'Operational Support', title: 'Milestone Finance', icon: Receipt };
+    if (path.startsWith('/admin')) return { section: 'Administration', title: 'Admin Command', icon: Shield };
+    return { section: 'Operations', title: 'Platform Hub', icon: LayoutGrid };
+  };
+
+  const currentModule = getModuleContext(pathname);
+  const ModuleIcon = currentModule.icon;
 
   const handleSignOut = () => {
     logout();
@@ -42,8 +97,8 @@ export default function Header({ onOpenMobileSidebar }: HeaderProps) {
   return (
     <>
       <header className="h-16 bg-white dark:bg-[#000000] sticky top-0 z-20 flex items-center justify-between px-3 sm:px-6 select-none border-b border-black/[0.08] dark:border-white/[0.12] transition-colors gap-2 sm:gap-3">
-        {/* Left Mobile Menu Trigger & Search */}
-        <div className="flex items-center gap-2 flex-1 max-w-[220px] sm:max-w-xs md:max-w-sm lg:max-w-md min-w-0">
+        {/* Left Mobile Menu Trigger, Module Spatial Breadcrumb & Spotlight Search */}
+        <div className="flex items-center gap-2.5 flex-1 max-w-xl min-w-0">
           {onOpenMobileSidebar && (
             <button
               type="button"
@@ -54,13 +109,47 @@ export default function Header({ onOpenMobileSidebar }: HeaderProps) {
               <Menu className="w-5 h-5" />
             </button>
           )}
-          <div className="relative w-full">
-            <Search className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Spotlight search..."
-              className="w-full pl-8 pr-3 py-1.5 bg-slate-100 dark:bg-white/10 border border-black/[0.04] dark:border-white/[0.08] rounded-xl text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white dark:focus:bg-[#0d0d10] transition-all shadow-2xs"
-            />
+
+          {/* Active Module Spatial Indicator */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={pathname}
+              initial={{ opacity: 0, x: -4 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 4 }}
+              transition={{ duration: 0.16, ease: [0.23, 1, 0.32, 1] }}
+              className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-white/10 border border-black/[0.04] dark:border-white/[0.08] text-xs font-semibold shrink-0 select-none shadow-2xs"
+            >
+              <ModuleIcon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+              <span className="text-slate-400 dark:text-slate-500 text-[10.5px] font-medium whitespace-nowrap">
+                {currentModule.section}
+              </span>
+              <span className="text-slate-300 dark:text-slate-600 text-[9px]">/</span>
+              <span className="text-slate-800 dark:text-white font-bold text-[11px] whitespace-nowrap">
+                {currentModule.title}
+              </span>
+            </motion.div>
+          </AnimatePresence>
+
+          {/* Spotlight Search Launcher Trigger */}
+          <div className="relative flex-1 max-w-xs sm:max-w-sm">
+            <button
+              type="button"
+              onClick={() => {
+                haptics.selection();
+                setIsSpotlightOpen(true);
+              }}
+              className="relative flex items-center justify-between w-full pl-8 pr-2.5 py-1.5 bg-slate-100 dark:bg-white/10 hover:bg-slate-200/70 dark:hover:bg-white/15 border border-black/[0.04] dark:border-white/[0.08] rounded-xl text-xs text-slate-500 dark:text-slate-400 transition-all cursor-pointer group shadow-2xs"
+              title="Spotlight Search & Quick Module Switcher (Cmd+K)"
+            >
+              <Search className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 group-hover:text-emerald-500 absolute left-3 top-1/2 -translate-y-1/2 transition-colors" />
+              <span className="truncate text-[11.5px] text-slate-500 dark:text-slate-400 font-normal">
+                Spotlight search or jump...
+              </span>
+              <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-white dark:bg-white/10 text-[9px] font-semibold text-slate-500 dark:text-slate-400 border border-black/[0.06] dark:border-white/[0.08] shadow-2xs shrink-0">
+                ⌘K
+              </kbd>
+            </button>
           </div>
         </div>
 
@@ -324,6 +413,12 @@ export default function Header({ onOpenMobileSidebar }: HeaderProps) {
         onSuccess={(user) => {
           switchUser(user.id);
         }}
+      />
+
+      {/* Apple Spotlight Quick Module Switcher (Cmd+K) */}
+      <SpotlightModal
+        isOpen={isSpotlightOpen}
+        onClose={() => setIsSpotlightOpen(false)}
       />
     </>
   );
