@@ -112,6 +112,20 @@ interface AuthContextType {
   updateLeaveStatus: (leaveId: string, status: LeaveItem['status']) => void;
   updateUserStatus: (userId: string, status: 'ACTIVE' | 'DEACTIVATED') => void;
   updateUserRole: (userId: string, functionalRole: any, accessTier: any, managementTier: any) => void;
+  bulkImportUsers: (records: Array<{
+    name: string;
+    email: string;
+    jobTitle: string;
+    departmentName: string;
+    functionalRole?: any;
+    accessTier?: any;
+    managementTier?: any;
+    managerEmail?: string;
+    phone?: string;
+    location?: string;
+    skills?: string[];
+    certificationsList?: string[];
+  }>) => { successCount: number; errors: string[] };
   createOpportunity: (opp: Omit<OpportunityItem, 'id' | 'createdAt'>) => void;
   updateOpportunityStage: (oppId: string, newStage: OpportunityStage, reason?: string, competitor?: string) => { success: boolean; requiresApproval?: boolean };
   approveHighValueBid: (oppId: string) => void;
@@ -855,6 +869,108 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAuditLogs(prev => [audit, ...prev]);
   };
 
+  const bulkImportUsers = (records: Array<{
+    name: string;
+    email: string;
+    jobTitle: string;
+    departmentName: string;
+    functionalRole?: any;
+    accessTier?: any;
+    managementTier?: any;
+    managerEmail?: string;
+    phone?: string;
+    location?: string;
+    skills?: string[];
+    certificationsList?: string[];
+  }>) => {
+    let successCount = 0;
+    const errors: string[] = [];
+    const newUsersList: UserProfile[] = [];
+
+    const getDeptId = (dept: string) => {
+      const d = dept.toLowerCase();
+      if (d.includes('exec')) return 'dept-exec';
+      if (d.includes('geotech') || d.includes('geophys')) return 'dept-geotech';
+      if (d.includes('env') || d.includes('esia')) return 'dept-env';
+      if (d.includes('gis') || d.includes('survey')) return 'dept-gis';
+      if (d.includes('qa') || d.includes('quality')) return 'dept-qa';
+      if (d.includes('it') || d.includes('digital')) return 'dept-it';
+      if (d.includes('hr') || d.includes('human')) return 'dept-hr';
+      if (d.includes('fin') || d.includes('account')) return 'dept-finance';
+      return 'dept-ops';
+    };
+
+    records.forEach((rec, idx) => {
+      if (!rec.name?.trim() || !rec.email?.trim() || !rec.jobTitle?.trim()) {
+        errors.push(`Row ${idx + 1}: Name, email, and job title are required.`);
+        return;
+      }
+
+      const emailLower = rec.email.toLowerCase().trim();
+      const duplicateExisting = allUsers.some(u => u.email.toLowerCase() === emailLower);
+      const duplicateBatch = newUsersList.some(u => u.email.toLowerCase() === emailLower);
+      if (duplicateExisting || duplicateBatch) {
+        errors.push(`Row ${idx + 1}: Email "${rec.email}" is already registered.`);
+        return;
+      }
+
+      let managerId: string | undefined;
+      let managerName: string | undefined;
+      if (rec.managerEmail?.trim()) {
+        const mgr = allUsers.find(u => u.email.toLowerCase() === rec.managerEmail?.toLowerCase().trim());
+        if (mgr) {
+          managerId = mgr.id;
+          managerName = mgr.name;
+        }
+      }
+
+      const newId = `usr-${Date.now()}-${idx + 1}`;
+      const defaultAvatar = `https://images.unsplash.com/photo-${1500000000000 + (idx * 1234567) % 80000000000}?w=150&auto=format&fit=crop&q=80`;
+
+      const newUser: UserProfile = {
+        id: newId,
+        email: emailLower,
+        name: rec.name.trim(),
+        avatar: defaultAvatar,
+        jobTitle: rec.jobTitle.trim(),
+        departmentId: getDeptId(rec.departmentName || 'Operations'),
+        departmentName: rec.departmentName?.trim() || 'General Operations',
+        functionalRole: rec.functionalRole || 'TECHNICAL_CONSULTANT',
+        accessTier: rec.accessTier || 'STANDARD',
+        managementTier: rec.managementTier || 'NONE',
+        managerId,
+        managerName,
+        status: 'ACTIVE',
+        createdAt: new Date().toISOString().split('T')[0],
+        phone: rec.phone?.trim() || '+234 803 000 0000',
+        location: rec.location?.trim() || 'Lekki Phase 1 HQ, Lagos',
+        skills: rec.skills || ['Technical Reporting', 'Consulting Advisory'],
+        certificationsList: rec.certificationsList || []
+      };
+
+      newUsersList.push(newUser);
+      successCount++;
+    });
+
+    if (newUsersList.length > 0) {
+      setAllUsers(prev => [...prev, ...newUsersList]);
+
+      const audit: AuditRecord = {
+        id: `aud-${Date.now()}`,
+        actorId: currentUser.id,
+        actorName: currentUser.name,
+        action: 'STAFF_BATCH_IMPORTED',
+        targetType: 'Staff Roster',
+        targetId: `batch-${Date.now()}`,
+        details: `Batch imported ${newUsersList.length} staff member accounts via CSV spreadsheet.`,
+        timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+      };
+      setAuditLogs(prev => [audit, ...prev]);
+    }
+
+    return { successCount, errors };
+  };
+
   const createOpportunity = (oppData: Omit<OpportunityItem, 'id' | 'createdAt'>) => {
     const isHighValue = (oppData.currency === 'NGN' && oppData.estimatedValue >= 50000000) ||
                         (oppData.currency !== 'NGN' && oppData.estimatedValue >= 100000);
@@ -1507,6 +1623,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       updateLeaveStatus,
       updateUserStatus,
       updateUserRole,
+      bulkImportUsers,
       createOpportunity,
       updateOpportunityStage,
       approveHighValueBid,

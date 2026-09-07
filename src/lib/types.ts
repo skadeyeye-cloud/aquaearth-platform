@@ -31,6 +31,15 @@ export interface UserProfile {
   managerName?: string;
   status: 'ACTIVE' | 'DEACTIVATED';
   createdAt: string;
+  phone?: string;
+  location?: string;
+  skills?: string[];
+  certificationsList?: string[];
+  emergencyContact?: {
+    name: string;
+    phone: string;
+    relation: string;
+  };
 }
 
 export interface TaskComment {
