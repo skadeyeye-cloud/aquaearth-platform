@@ -1,4 +1,17 @@
-import { UserProfile, TaskItem, SupportTicket, CertificationItem, LeaveItem, KpiLeaderboardEntry, AuditRecord } from './types';
+import { 
+  UserProfile, 
+  TaskItem, 
+  SupportTicket, 
+  CertificationItem, 
+  LeaveItem, 
+  KpiLeaderboardEntry, 
+  AuditRecord,
+  DocumentFolder,
+  BudgetRequest,
+  StaffQuery,
+  PayrollRecord,
+  CandidateApplication
+} from './types';
 
 export const INITIAL_USERS: UserProfile[] = [
   {
@@ -1607,3 +1620,387 @@ export const INITIAL_ATTENDANCE: import('./types').AttendanceRecordItem[] = [
     notes: 'Helicopter transfer delayed by weather.'
   }
 ];
+
+export const INITIAL_DOCUMENT_FOLDERS: DocumentFolder[] = [
+  {
+    id: 'fld-1',
+    name: 'Corporate Governance & HSE',
+    department: 'Executive Leadership',
+    description: 'Corporate charter, board resolutions, and HSE manual standards',
+    createdById: 'usr-1',
+    createdByName: 'Kaine Edike',
+    createdAt: '2026-01-10',
+    isRestricted: false
+  },
+  {
+    id: 'fld-2',
+    name: 'FMEnv Environmental Templates',
+    department: 'Environmental & Social',
+    description: 'Federal Ministry of Environment approved ESIA templates & checklists',
+    createdById: 'usr-2',
+    createdByName: 'Chidi Okafor',
+    createdAt: '2026-02-14',
+    isRestricted: false
+  },
+  {
+    id: 'fld-3',
+    name: 'Employee Handbook & SOPs',
+    department: 'Human Resources',
+    description: 'Standard operating procedures, code of conduct, and personnel benefits',
+    createdById: 'usr-2',
+    createdByName: 'Chidi Okafor',
+    createdAt: '2026-03-01',
+    isRestricted: false
+  },
+  {
+    id: 'fld-4',
+    name: 'Geotechnical Laboratory Manuals',
+    department: 'Geotechnical & Geophysics',
+    description: 'ASTM, BS1377 soil mechanics testing protocols and calibration certificates',
+    createdById: 'usr-1',
+    createdByName: 'Kaine Edike',
+    createdAt: '2026-04-18',
+    isRestricted: false
+  },
+  {
+    id: 'fld-5',
+    name: 'IT Security & Encryption Keys',
+    department: 'IT & Digital Operations',
+    description: 'Restricted root certificate documentation, VPN configs, and disaster recovery plan',
+    createdById: 'usr-2',
+    createdByName: 'Chidi Okafor',
+    createdAt: '2026-05-20',
+    isRestricted: true
+  }
+];
+
+export const INITIAL_BUDGET_REQUESTS: BudgetRequest[] = [
+  {
+    id: 'bgt-1',
+    requestNumber: 'BGT-2026-001',
+    title: 'Escravos Offshore Geotechnical Jack-Up Rig Mobilization',
+    department: 'Geotechnical & Geophysics',
+    requestedById: 'usr-4',
+    requestedByName: 'Engr. Femi Adebayo',
+    amountNgn: 18500000,
+    category: 'FIELD_EXPEDITION',
+    justification: 'Mobilization of Jack-Up Rig 04 for Chevron Escravos Channel Bathymetry & Deep Soil Boreholes. Required for contractual start date.',
+    status: 'PENDING_APPROVAL',
+    createdAt: '2026-09-02 09:30'
+  },
+  {
+    id: 'bgt-2',
+    requestNumber: 'BGT-2026-002',
+    title: 'GIS Bathymetry High-End Drone Dual LiDAR Sensor Battery Packs',
+    department: 'Geoinformatics & Survey',
+    requestedById: 'usr-7',
+    requestedByName: 'Halima Yusuf',
+    amountNgn: 4200000,
+    category: 'EQUIPMENT_PROCUREMENT',
+    justification: 'Replacement LiPo flight packs and dual GPS antennae for Bonny Island coastline mapping survey.',
+    status: 'APPROVED',
+    reviewedById: 'usr-1',
+    reviewedByName: 'Kaine Edike',
+    reviewComments: 'Approved. Procure directly from authorized DJI Enterprise distributor.',
+    reviewedAt: '2026-09-03 14:15',
+    createdAt: '2026-09-02 11:00'
+  },
+  {
+    id: 'bgt-3',
+    requestNumber: 'BGT-2026-003',
+    title: 'Autodesk Civil 3D & ArcGIS Pro Enterprise 12-Seat License Renewal',
+    department: 'IT & Digital Operations',
+    requestedById: 'usr-2',
+    requestedByName: 'Chidi Okafor',
+    amountNgn: 5800000,
+    category: 'SOFTWARE_LICENSES',
+    justification: 'Annual corporate subscription renewal for 12 engineering design & GIS workstations.',
+    status: 'APPROVED',
+    reviewedById: 'usr-1',
+    reviewedByName: 'Kaine Edike',
+    reviewComments: 'Approved under Module 12 IT operational baseline.',
+    reviewedAt: '2026-09-04 10:20',
+    createdAt: '2026-09-03 16:45'
+  }
+];
+
+export const INITIAL_STAFF_QUERIES: StaffQuery[] = [
+  {
+    id: 'qry-1',
+    queryNumber: 'QRY-2026-088',
+    staffId: 'usr-6',
+    staffName: 'Tunde Bakare',
+    staffDepartment: 'Geotechnical & Geophysics',
+    issuedById: 'usr-3',
+    issuedByName: 'Amina Bello',
+    title: 'Delay in Escravos Water Sampling Laboratory Transmission',
+    allegationDetails: 'Failure to transmit sealed chain-of-custody borehole water samples within the mandatory 48-hour cold chain window following the August 24 offshore campaign.',
+    incidentDate: '2026-08-25',
+    issuedDate: '2026-08-27',
+    responseDeadline: '2026-08-29 17:00',
+    status: 'RESOLVED',
+    staffResponse: 'Helicopter transfer from Escravos Barge was grounded due to tropical storm warnings by NCAA. Samples were maintained in refrigerated laboratory containers at 4°C with temperature log intact.',
+    respondedAt: '2026-08-28 11:30',
+    resolution: 'CANCELLED',
+    resolutionNotes: 'Exonerated after review of meteorological log and cold chain telemetry. Procedural compliance maintained under adverse weather.',
+    resolvedAt: '2026-08-29 09:15',
+    resolvedById: 'usr-3',
+    resolvedByName: 'Amina Bello'
+  },
+  {
+    id: 'qry-2',
+    queryNumber: 'QRY-2026-089',
+    staffId: 'usr-6',
+    staffName: 'Tunde Bakare',
+    staffDepartment: 'Geotechnical & Geophysics',
+    issuedById: 'usr-3',
+    issuedByName: 'Amina Bello',
+    title: 'Unnotified Late Departure from Bonny Offshore Mobilization',
+    allegationDetails: 'Departed base without counter-signed departure manifest from Lead Geologist on duty.',
+    incidentDate: '2026-09-01',
+    issuedDate: '2026-09-03',
+    responseDeadline: '2026-09-10 17:00',
+    status: 'ISSUED'
+  }
+];
+
+export const INITIAL_PAYROLL_RECORDS: PayrollRecord[] = [
+  {
+    id: 'pay-1',
+    staffId: 'usr-1',
+    staffName: 'Kaine Edike',
+    department: 'Executive Leadership',
+    jobTitle: 'Founder & Managing Consultant',
+    baseSalaryNgn: 4500000,
+    hazardAllowanceNgn: 0,
+    fieldPerDiemNgn: 250000,
+    performanceBonusNgn: 750000,
+    pensionDeductionNgn: 360000,
+    taxPayeNgn: 850000,
+    netPayNgn: 4290000,
+    monthYear: '2026-09',
+    paymentStatus: 'APPROVED'
+  },
+  {
+    id: 'pay-2',
+    staffId: 'usr-4',
+    staffName: 'Engr. Femi Adebayo',
+    department: 'Geotechnical & Geophysics',
+    jobTitle: 'Head of Geotechnical Engineering',
+    baseSalaryNgn: 2800000,
+    hazardAllowanceNgn: 350000,
+    fieldPerDiemNgn: 400000,
+    performanceBonusNgn: 400000,
+    pensionDeductionNgn: 224000,
+    taxPayeNgn: 480000,
+    netPayNgn: 3246000,
+    monthYear: '2026-09',
+    paymentStatus: 'APPROVED'
+  },
+  {
+    id: 'pay-3',
+    staffId: 'usr-5',
+    staffName: 'Dr. Ngozi Eze',
+    department: 'Environmental & Social',
+    jobTitle: 'Lead Environmental Consultant',
+    baseSalaryNgn: 2600000,
+    hazardAllowanceNgn: 200000,
+    fieldPerDiemNgn: 300000,
+    performanceBonusNgn: 485000,
+    pensionDeductionNgn: 208000,
+    taxPayeNgn: 440000,
+    netPayNgn: 2937000,
+    monthYear: '2026-09',
+    paymentStatus: 'APPROVED'
+  },
+  {
+    id: 'pay-4',
+    staffId: 'usr-6',
+    staffName: 'Tunde Bakare',
+    department: 'Geotechnical & Geophysics',
+    jobTitle: 'Senior Field Geologist',
+    baseSalaryNgn: 1600000,
+    hazardAllowanceNgn: 450000,
+    fieldPerDiemNgn: 500000,
+    performanceBonusNgn: 220000,
+    pensionDeductionNgn: 128000,
+    taxPayeNgn: 240000,
+    netPayNgn: 2402000,
+    monthYear: '2026-09',
+    paymentStatus: 'DRAFT'
+  },
+  {
+    id: 'pay-5',
+    staffId: 'usr-7',
+    staffName: 'Halima Yusuf',
+    department: 'Geoinformatics & Survey',
+    jobTitle: 'GIS & Bathymetric Analyst',
+    baseSalaryNgn: 1400000,
+    hazardAllowanceNgn: 150000,
+    fieldPerDiemNgn: 200000,
+    performanceBonusNgn: 200000,
+    pensionDeductionNgn: 112000,
+    taxPayeNgn: 190000,
+    netPayNgn: 1648000,
+    monthYear: '2026-09',
+    paymentStatus: 'DRAFT'
+  }
+];
+
+export const INITIAL_CANDIDATE_APPLICATIONS: CandidateApplication[] = [
+  {
+    id: 'cand-1',
+    candidateNumber: 'CND-2026-041',
+    fullName: 'Engr. Osasogie Ighodaro',
+    email: 'o.ighodaro@offshoregeotech.ng',
+    phone: '+234 803 555 7788',
+    appliedRole: 'Senior Offshore Hydrographic Surveyor',
+    department: 'Geoinformatics & Survey',
+    currentStage: 'INTERVIEW_2',
+    yearsExperience: 8,
+    expectedSalaryNgn: 2200000,
+    notes: [
+      {
+        stage: 'INTERVIEW_1',
+        interviewerId: 'usr-3',
+        interviewerName: 'Amina Bello',
+        date: '2026-08-22',
+        rating: 4,
+        technicalCompetency: 'High mastery of Kongsberg multibeam echo-sounders and QPS QINSy data acquisition.',
+        culturalFit: 'Strong HSE mindset; extensive deepwater Shell/Total contractor experience.',
+        recommendation: 'ADVANCE',
+        comments: 'Recommended for technical review with Head of Survey.'
+      }
+    ],
+    documents: [
+      {
+        id: 'cdoc-1',
+        title: 'CV & Hydrographic Survey Portfolio.pdf',
+        stage: 'PROSPECTIVE',
+        fileType: 'PDF',
+        fileSizeMb: 4.8,
+        uploadedAt: '2026-08-18',
+        downloadUrl: '/vault/candidates/cand-1-cv.pdf'
+      },
+      {
+        id: 'cdoc-2',
+        title: 'SURCON Registration & Degree Certificate.pdf',
+        stage: 'INTERVIEW_1',
+        fileType: 'PDF',
+        fileSizeMb: 2.1,
+        uploadedAt: '2026-08-22',
+        downloadUrl: '/vault/candidates/cand-1-cert.pdf'
+      }
+    ],
+    vaultFolderId: 'vlt-cand-1',
+    createdAt: '2026-08-18'
+  },
+  {
+    id: 'cand-2',
+    candidateNumber: 'CND-2026-042',
+    fullName: 'Aisha Danjuma',
+    email: 'aisha.danjuma@ecoresearch.org',
+    phone: '+234 812 444 9911',
+    appliedRole: 'Senior Environmental Microbiologist',
+    department: 'Environmental & Social',
+    currentStage: 'INTERVIEW_3',
+    yearsExperience: 6,
+    expectedSalaryNgn: 1800000,
+    notes: [
+      {
+        stage: 'INTERVIEW_1',
+        interviewerId: 'usr-3',
+        interviewerName: 'Amina Bello',
+        date: '2026-08-25',
+        rating: 5,
+        technicalCompetency: 'Exceptional knowledge of benthic macroinvertebrates and hydrocarbon fingerprinting.',
+        culturalFit: 'Collaborative, research-focused, proactive communicator.',
+        recommendation: 'ADVANCE',
+        comments: 'Outstanding screening scorecard.'
+      },
+      {
+        stage: 'INTERVIEW_2',
+        interviewerId: 'usr-5',
+        interviewerName: 'Dr. Ngozi Eze',
+        date: '2026-09-01',
+        rating: 5,
+        technicalCompetency: 'FMEnv certified accredited analyst. Flawless grasp of DPR EGASPIN regulatory standards.',
+        culturalFit: 'Ready for offshore mobilization and environmental impact assessment leadership.',
+        recommendation: 'ADVANCE',
+        comments: 'Strongest ESIA analyst interviewed this quarter. Advanced to Managing Consultant final gate.'
+      }
+    ],
+    documents: [
+      {
+        id: 'cdoc-3',
+        title: 'Aisha_Danjuma_Curriculum_Vitae.pdf',
+        stage: 'PROSPECTIVE',
+        fileType: 'PDF',
+        fileSizeMb: 3.2,
+        uploadedAt: '2026-08-20',
+        downloadUrl: '/vault/candidates/cand-2-cv.pdf'
+      },
+      {
+        id: 'cdoc-4',
+        title: 'Published Papers & FMEnv Accreditation.pdf',
+        stage: 'INTERVIEW_2',
+        fileType: 'PDF',
+        fileSizeMb: 8.5,
+        uploadedAt: '2026-09-01',
+        downloadUrl: '/vault/candidates/cand-2-papers.pdf'
+      }
+    ],
+    vaultFolderId: 'vlt-cand-2',
+    createdAt: '2026-08-20'
+  },
+  {
+    id: 'cand-3',
+    candidateNumber: 'CND-2026-043',
+    fullName: 'Babajide Cole',
+    email: 'b.cole@geotechpros.com',
+    phone: '+234 805 777 3322',
+    appliedRole: 'Geotechnical Soil Mechanics Technician',
+    department: 'Geotechnical & Geophysics',
+    currentStage: 'PROBATIONARY',
+    yearsExperience: 4,
+    expectedSalaryNgn: 1100000,
+    notes: [
+      {
+        stage: 'INTERVIEW_3',
+        interviewerId: 'usr-1',
+        interviewerName: 'Kaine Edike',
+        date: '2026-09-03',
+        rating: 4,
+        technicalCompetency: 'Proficient in CPTu (Piezocone Penetrometer) and triaxial shear testing.',
+        culturalFit: 'Field-ready, disciplined approach to lab QA/QC.',
+        recommendation: 'OFFER_PROBATION',
+        comments: '3-Month probationary employment offer extended. Station at Escravos Field Lab.'
+      }
+    ],
+    documents: [
+      {
+        id: 'cdoc-5',
+        title: 'Babajide_Cole_Credentials.pdf',
+        stage: 'PROSPECTIVE',
+        fileType: 'PDF',
+        fileSizeMb: 3.9,
+        uploadedAt: '2026-08-15',
+        downloadUrl: '/vault/candidates/cand-3-cv.pdf'
+      },
+      {
+        id: 'cdoc-6',
+        title: 'Signed_Probationary_Offer_Letter.pdf',
+        stage: 'PROBATIONARY',
+        fileType: 'PDF',
+        fileSizeMb: 1.5,
+        uploadedAt: '2026-09-04',
+        downloadUrl: '/vault/candidates/cand-3-offer.pdf'
+      }
+    ],
+    outcome: 'PROBATIONARY',
+    outcomeDate: '2026-09-04',
+    vaultFolderId: 'vlt-cand-3',
+    createdAt: '2026-08-15'
+  }
+];
+

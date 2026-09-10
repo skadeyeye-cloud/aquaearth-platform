@@ -29,7 +29,7 @@ export interface UserProfile {
   departmentName?: string;
   managerId?: string;
   managerName?: string;
-  status: 'ACTIVE' | 'DEACTIVATED';
+  status: 'ACTIVE' | 'DEACTIVATED' | 'SUSPENDED';
   createdAt: string;
   phone?: string;
   location?: string;
@@ -117,6 +117,7 @@ export interface LeaveItem {
   id: string;
   userId: string;
   userName: string;
+  userDepartment?: string;
   leaveType: 'ANNUAL' | 'SICK' | 'CASUAL' | 'MATERNITY' | 'PATERNITY';
   startDate: string;
   endDate: string;
@@ -124,7 +125,45 @@ export interface LeaveItem {
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   reason?: string;
   createdAt: string;
+  approvedById?: string;
+  approvedByName?: string;
+  approverRole?: string;
+  approvalDate?: string;
 }
+
+export type KpiWorkItemType = 
+  | 'PROJECT_TASK' 
+  | 'FIELD_FORM' 
+  | 'QA_REVIEW' 
+  | 'DESIGN_ASSET' 
+  | 'IT_TICKET' 
+  | 'WON_TENDER';
+
+export interface KpiWorkItemRule {
+  workItemType: KpiWorkItemType;
+  label: string;
+  description: string;
+  basePoints: number;
+  onTimeBonus: number;
+  overduePenaltyPerDay: number;
+}
+
+export interface KpiTierThresholds {
+  needsImprovementMax: number;
+  satisfactoryMin: number;
+  commendableMin: number;
+  exemplaryMin: number;
+}
+
+export interface KpiScoringConfig {
+  rules: Record<KpiWorkItemType, KpiWorkItemRule>;
+  attendanceOnTimeBonus: number;
+  tierThresholds: KpiTierThresholds;
+  lastUpdated?: string;
+  updatedBy?: string;
+}
+
+export type PerformanceTier = 'NEEDS_IMPROVEMENT' | 'SATISFACTORY' | 'COMMENDABLE' | 'EXEMPLARY';
 
 export interface KpiLeaderboardEntry {
   userId: string;
@@ -138,6 +177,7 @@ export interface KpiLeaderboardEntry {
   overdueCount: number;
   rankPosition: number;
   monthYear: string;
+  tier?: PerformanceTier;
 }
 
 export interface AuditRecord {
@@ -402,12 +442,21 @@ export interface HardwareAsset {
   id: string;
   assetTag: string;
   name: string;
+  serialNumber?: string;
   category: 'LAPTOP' | 'SURVEY_DGPS' | 'DRONE' | 'WATER_PROBE' | 'SERVER_NODE';
+  assignedToId?: string;
   assignedToName: string;
   assignedToDept: string;
   purchaseDate: string;
-  status: 'OPERATIONAL' | 'IN_REPAIR' | 'DECOMMISSIONED';
+  status: 'OPERATIONAL' | 'IN_REPAIR' | 'DECOMMISSIONED' | 'IN_STORAGE';
   location: string;
+  condition?: 'EXCELLENT' | 'GOOD' | 'FAIR' | 'MAINTENANCE_REQUIRED';
+  history?: Array<{ 
+    date: string; 
+    action: 'CREATED' | 'ASSIGNED' | 'RETRIEVED' | 'REASSIGNED' | 'MAINTENANCE'; 
+    staffName: string; 
+    notes?: string 
+  }>;
 }
 
 export interface SubscriptionItem {
@@ -514,4 +563,142 @@ export interface PushNotificationEvent {
   actorAvatar?: string;
   canQuickApprove?: boolean;
 }
+
+// Module 6 & 8: Document Folders (IT & Admin Governed)
+export interface DocumentFolder {
+  id: string;
+  name: string;
+  department: string;
+  description: string;
+  createdById: string;
+  createdByName: string;
+  createdAt: string;
+  isRestricted?: boolean;
+  itemCount?: number;
+}
+
+// Module 10: Budget Requests Workflow
+export type BudgetCategory = 
+  | 'FIELD_EXPEDITION' 
+  | 'EQUIPMENT_PROCUREMENT' 
+  | 'SOFTWARE_LICENSES' 
+  | 'SUBCONTRACTOR' 
+  | 'OPERATIONAL_EXPENSE';
+
+export type BudgetRequestStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'DECLINED';
+
+export interface BudgetRequest {
+  id: string;
+  requestNumber: string;
+  title: string;
+  department: string;
+  requestedById: string;
+  requestedByName: string;
+  amountNgn: number;
+  category: BudgetCategory;
+  justification: string;
+  status: BudgetRequestStatus;
+  reviewedById?: string;
+  reviewedByName?: string;
+  reviewComments?: string;
+  reviewedAt?: string;
+  createdAt: string;
+}
+
+// Module 9: Disciplinary Queries
+export type QueryResolution = 'PROCEEDING' | 'FORMAL_WARNING' | 'CANCELLED';
+export type QueryStatus = 'ISSUED' | 'RESPONSE_SUBMITTED' | 'RESOLVED';
+
+export interface StaffQuery {
+  id: string;
+  queryNumber: string;
+  staffId: string;
+  staffName: string;
+  staffDepartment: string;
+  issuedById: string;
+  issuedByName: string;
+  title: string;
+  allegationDetails: string;
+  incidentDate: string;
+  issuedDate: string;
+  responseDeadline: string;
+  status: QueryStatus;
+  staffResponse?: string;
+  respondedAt?: string;
+  resolution?: QueryResolution;
+  resolutionNotes?: string;
+  resolvedAt?: string;
+  resolvedById?: string;
+  resolvedByName?: string;
+}
+
+// Module 9 & 10: Payroll, Bonuses & Benefits
+export interface PayrollRecord {
+  id: string;
+  staffId: string;
+  staffName: string;
+  department: string;
+  jobTitle: string;
+  baseSalaryNgn: number;
+  hazardAllowanceNgn: number;
+  fieldPerDiemNgn: number;
+  performanceBonusNgn: number;
+  pensionDeductionNgn: number;
+  taxPayeNgn: number;
+  netPayNgn: number;
+  monthYear: string;
+  paymentStatus: 'DRAFT' | 'APPROVED' | 'DISBURSED';
+}
+
+// Module 9B: Onboarding & Recruitment Pipeline
+export type InterviewStage = 
+  | 'PROSPECTIVE' 
+  | 'INTERVIEW_1' 
+  | 'INTERVIEW_2' 
+  | 'INTERVIEW_3' 
+  | 'PROBATIONARY' 
+  | 'FULL_EMPLOYMENT' 
+  | 'NON_EMPLOYMENT';
+
+export interface InterviewNote {
+  stage: InterviewStage;
+  interviewerId: string;
+  interviewerName: string;
+  date: string;
+  rating: number; // 1-5
+  technicalCompetency: string;
+  culturalFit: string;
+  recommendation: 'ADVANCE' | 'HOLD' | 'REJECT' | 'OFFER_PROBATION' | 'OFFER_FULL';
+  comments: string;
+}
+
+export interface CandidateDocument {
+  id: string;
+  title: string;
+  stage: InterviewStage;
+  fileType: string;
+  fileSizeMb: number;
+  uploadedAt: string;
+  downloadUrl: string;
+}
+
+export interface CandidateApplication {
+  id: string;
+  candidateNumber: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  appliedRole: string;
+  department: string;
+  currentStage: InterviewStage;
+  yearsExperience: number;
+  expectedSalaryNgn?: number;
+  notes: InterviewNote[];
+  documents: CandidateDocument[];
+  vaultFolderId?: string;
+  outcome?: 'PROBATIONARY' | 'FULL_EMPLOYMENT' | 'NON_EMPLOYMENT';
+  outcomeDate?: string;
+  createdAt: string;
+}
+
 

@@ -27,7 +27,16 @@ import {
   ExecutiveDigestConfig,
   AccessRequestItem,
   NotificationItem,
-  AttendanceRecordItem
+  AttendanceRecordItem,
+  KpiScoringConfig,
+  DocumentFolder,
+  BudgetRequest,
+  StaffQuery,
+  PayrollRecord,
+  CandidateApplication,
+  InterviewStage,
+  InterviewNote,
+  CandidateDocument
 } from './types';
 import { 
   INITIAL_USERS, 
@@ -51,9 +60,19 @@ import {
   INITIAL_EXECUTIVE_DIGEST_CONFIG,
   INITIAL_ACCESS_REQUESTS,
   INITIAL_NOTIFICATIONS,
-  INITIAL_ATTENDANCE
+  INITIAL_ATTENDANCE,
+  INITIAL_DOCUMENT_FOLDERS,
+  INITIAL_BUDGET_REQUESTS,
+  INITIAL_STAFF_QUERIES,
+  INITIAL_PAYROLL_RECORDS,
+  INITIAL_CANDIDATE_APPLICATIONS
 } from './mock-data';
-import { calculateEventPoints } from './kpi-engine';
+import { 
+  calculateEventPoints, 
+  DEFAULT_KPI_CONFIG, 
+  simulateLeaderboardRecalculation,
+  getPerformanceTier
+} from './kpi-engine';
 
 interface AuthContextType {
   theme: 'light' | 'dark';
@@ -63,6 +82,9 @@ interface AuthContextType {
   isAuthenticated: boolean;
   currentUser: UserProfile;
   allUsers: UserProfile[];
+  kpiConfig: KpiScoringConfig;
+  updateKpiConfig: (newConfig: KpiScoringConfig, shouldRecalculateLeaderboard?: boolean) => void;
+  resetKpiConfigToDefault: () => void;
   tasks: TaskItem[];
   tickets: SupportTicket[];
   leaveRequests: LeaveItem[];
@@ -109,8 +131,8 @@ interface AuthContextType {
   updateTaskProgress: (taskId: string, progressPercent: number, status?: TaskItem['status'], loggedHours?: number) => void;
   createSupportTicket: (ticket: Omit<SupportTicket, 'id' | 'ticketNumber' | 'requesterId' | 'requesterName' | 'requesterDept' | 'createdAt'>) => void;
   submitLeaveRequest: (leave: Omit<LeaveItem, 'id' | 'userId' | 'userName' | 'status' | 'createdAt'>) => void;
-  updateLeaveStatus: (leaveId: string, status: LeaveItem['status']) => void;
-  updateUserStatus: (userId: string, status: 'ACTIVE' | 'DEACTIVATED') => void;
+  updateLeaveStatus: (leaveId: string, status: LeaveItem['status'], comment?: string) => void;
+  updateUserStatus: (userId: string, status: 'ACTIVE' | 'DEACTIVATED' | 'SUSPENDED') => void;
   updateUserRole: (userId: string, functionalRole: any, accessTier: any, managementTier: any) => void;
   bulkImportUsers: (records: Array<{
     name: string;
@@ -126,6 +148,29 @@ interface AuthContextType {
     skills?: string[];
     certificationsList?: string[];
   }>) => { successCount: number; errors: string[] };
+  createClientOrganization: (client: Omit<ClientAccount, 'id' | 'activeProjectsCount' | 'totalRevenueBilled' | 'communicationsLog'>) => ClientAccount;
+  logBdActivityWithApproval: (data: { opportunityId: string; title: string; type: 'CALL' | 'MEETING'; clientName: string; summary: string; scheduledDate: string; durationMins?: number }) => void;
+  documentFolders: DocumentFolder[];
+  createDocumentFolder: (folder: { name: string; department: string; description: string; isRestricted?: boolean }) => { success: boolean; message: string };
+  budgetRequests: BudgetRequest[];
+  submitBudgetRequest: (request: Omit<BudgetRequest, 'id' | 'requestNumber' | 'status' | 'createdAt'>) => void;
+  reviewBudgetRequest: (requestId: string, status: 'APPROVED' | 'DECLINED', comment?: string) => void;
+  createEmployee: (employee: Omit<UserProfile, 'id' | 'createdAt'>) => UserProfile;
+  suspendEmployee: (userId: string, reason: string) => void;
+  reactivateEmployee: (userId: string) => void;
+  staffQueries: StaffQuery[];
+  raiseStaffQuery: (query: Omit<StaffQuery, 'id' | 'queryNumber' | 'status' | 'issuedDate'>) => void;
+  respondToStaffQuery: (queryId: string, responseText: string) => void;
+  resolveStaffQuery: (queryId: string, resolution: 'PROCEEDING' | 'FORMAL_WARNING' | 'CANCELLED', notes: string) => void;
+  payrollRecords: PayrollRecord[];
+  updatePayrollRecord: (record: PayrollRecord) => void;
+  candidateApplications: CandidateApplication[];
+  advanceCandidateStage: (candidateId: string, newStage: InterviewStage, note?: Omit<InterviewNote, 'stage'>, document?: Omit<CandidateDocument, 'id' | 'stage' | 'uploadedAt'>) => void;
+  convertCandidateToEmployee: (candidateId: string, role?: string) => UserProfile;
+  createHardwareAsset: (asset: Omit<HardwareAsset, 'id'>) => void;
+  assignHardwareAsset: (assetId: string, staffId: string, notes?: string) => void;
+  retrieveHardwareAsset: (assetId: string, reason: string) => void;
+  resetUserPassword: (userId: string) => { tempToken: string; message: string };
   createOpportunity: (opp: Omit<OpportunityItem, 'id' | 'createdAt'>) => void;
   updateOpportunityStage: (oppId: string, newStage: OpportunityStage, reason?: string, competitor?: string) => { success: boolean; requiresApproval?: boolean };
   approveHighValueBid: (oppId: string) => void;
@@ -178,6 +223,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [accessRequests, setAccessRequests] = useState<AccessRequestItem[]>(INITIAL_ACCESS_REQUESTS);
   const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecordItem[]>(INITIAL_ATTENDANCE);
+  const [kpiConfig, setKpiConfig] = useState<KpiScoringConfig>(DEFAULT_KPI_CONFIG);
+  const [documentFolders, setDocumentFolders] = useState<DocumentFolder[]>(INITIAL_DOCUMENT_FOLDERS);
+  const [budgetRequests, setBudgetRequests] = useState<BudgetRequest[]>(INITIAL_BUDGET_REQUESTS);
+  const [staffQueries, setStaffQueries] = useState<StaffQuery[]>(INITIAL_STAFF_QUERIES);
+  const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>(INITIAL_PAYROLL_RECORDS);
+  const [candidateApplications, setCandidateApplications] = useState<CandidateApplication[]>(INITIAL_CANDIDATE_APPLICATIONS);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   const isHydrated = useRef(false);
@@ -236,6 +287,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const storedLeaderboard = getStoredData<KpiLeaderboardEntry[]>('leaderboard', INITIAL_KPI_LEADERBOARD);
       setLeaderboard(storedLeaderboard || []);
+
+      const storedKpiConfig = getStoredData<KpiScoringConfig>('kpi_scoring_config', DEFAULT_KPI_CONFIG);
+      setKpiConfig(storedKpiConfig || DEFAULT_KPI_CONFIG);
+
+      const storedFolders = getStoredData<DocumentFolder[]>('document_folders', INITIAL_DOCUMENT_FOLDERS);
+      setDocumentFolders(storedFolders || INITIAL_DOCUMENT_FOLDERS);
+
+      const storedBudgets = getStoredData<BudgetRequest[]>('budget_requests', INITIAL_BUDGET_REQUESTS);
+      setBudgetRequests(storedBudgets || INITIAL_BUDGET_REQUESTS);
+
+      const storedQueries = getStoredData<StaffQuery[]>('staff_queries', INITIAL_STAFF_QUERIES);
+      setStaffQueries(storedQueries || INITIAL_STAFF_QUERIES);
+
+      const storedPayroll = getStoredData<PayrollRecord[]>('payroll_records', INITIAL_PAYROLL_RECORDS);
+      setPayrollRecords(storedPayroll || INITIAL_PAYROLL_RECORDS);
+
+      const storedCandidates = getStoredData<CandidateApplication[]>('candidate_applications', INITIAL_CANDIDATE_APPLICATIONS);
+      setCandidateApplications(storedCandidates || INITIAL_CANDIDATE_APPLICATIONS);
 
       const savedTheme = localStorage.getItem('ae_theme') as 'light' | 'dark';
       if (savedTheme) {
@@ -331,6 +400,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (isHydrated.current) setStoredData('leaderboard', leaderboard);
   }, [leaderboard]);
 
+  useEffect(() => {
+    if (isHydrated.current) setStoredData('kpi_scoring_config', kpiConfig);
+  }, [kpiConfig]);
+
+  useEffect(() => {
+    if (isHydrated.current) setStoredData('document_folders', documentFolders);
+  }, [documentFolders]);
+
+  useEffect(() => {
+    if (isHydrated.current) setStoredData('budget_requests', budgetRequests);
+  }, [budgetRequests]);
+
+  useEffect(() => {
+    if (isHydrated.current) setStoredData('staff_queries', staffQueries);
+  }, [staffQueries]);
+
+  useEffect(() => {
+    if (isHydrated.current) setStoredData('payroll_records', payrollRecords);
+  }, [payrollRecords]);
+
+  useEffect(() => {
+    if (isHydrated.current) setStoredData('candidate_applications', candidateApplications);
+  }, [candidateApplications]);
+
   const toggleTheme = () => {
     setTheme(prev => {
       const next = prev === 'light' ? 'dark' : 'light';
@@ -355,7 +448,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [hours, minutes] = timeStr.split(':').map(Number);
     const isLate = hours > 8 || (hours === 8 && minutes > 15);
     const status = isLate ? 'LATE' : 'PRESENT';
-    const kpiAwarded = isLate ? 0 : 10;
+    const kpiAwarded = isLate ? 0 : (kpiConfig?.attendanceOnTimeBonus ?? 10);
 
     const newRecord: AttendanceRecordItem = {
       id: `att-${Date.now()}`,
@@ -757,7 +850,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (isNowDone) {
           const nowStr = new Date().toISOString().split('T')[0];
-          const pts = calculateEventPoints('PROJECT_TASK', t.dueDate, nowStr);
+          const pts = calculateEventPoints('PROJECT_TASK', t.dueDate, nowStr, kpiConfig?.rules?.PROJECT_TASK);
           
           setLeaderboard(lPrev => {
             const updated = lPrev.map(entry => {
@@ -835,17 +928,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLeaveRequests(prev => [newLeave, ...prev]);
   };
 
-  const updateLeaveStatus = (leaveId: string, status: LeaveItem['status']) => {
-    setLeaveRequests(prev => prev.map(l => l.id === leaveId ? { ...l, status } : l));
+  const updateLeaveStatus = (leaveId: string, status: LeaveItem['status'], comment?: string) => {
+    setLeaveRequests(prev => prev.map(l => {
+      if (l.id !== leaveId) return l;
+      return {
+        ...l,
+        status,
+        approvedById: currentUser.id,
+        approvedByName: currentUser.name,
+        approverRole: currentUser.jobTitle,
+        approvalDate: new Date().toISOString().split('T')[0],
+        approverComments: comment
+      };
+    }));
+
+    const req = leaveRequests.find(l => l.id === leaveId);
+    const staffName = req ? req.userName : leaveId;
+
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      category: 'APPROVAL',
+      title: `Leave Request ${status === 'APPROVED' ? 'Approved' : 'Declined'}`,
+      message: `${currentUser.name} ${status.toLowerCase()} leave request for ${staffName}.`,
+      isRead: false,
+      priority: 'NORMAL',
+      timestamp: 'Just now',
+      actionType: 'VIEW_TASK',
+      actionTargetId: leaveId,
+      actionLabel: 'View Leave Details',
+      actionUrl: '/hr/leave'
+    };
+    setNotifications(prev => [notif, ...prev]);
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: status === 'APPROVED' ? 'LEAVE_REQUEST_APPROVED' : 'LEAVE_REQUEST_REJECTED',
+      targetType: 'Leave Management',
+      targetId: leaveId,
+      details: `${currentUser.name} (${currentUser.jobTitle}) ${status.toLowerCase()} leave request for ${staffName}`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
   };
 
-  const updateUserStatus = (userId: string, status: 'ACTIVE' | 'DEACTIVATED') => {
+  const updateUserStatus = (userId: string, status: 'ACTIVE' | 'DEACTIVATED' | 'SUSPENDED') => {
     setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, status } : u));
     const audit: AuditRecord = {
       id: `aud-${Date.now()}`,
       actorId: currentUser.id,
       actorName: currentUser.name,
-      action: status === 'ACTIVE' ? 'USER_ACTIVATED' : 'USER_DEACTIVATED',
+      action: status === 'ACTIVE' ? 'USER_ACTIVATED' : (status === 'SUSPENDED' ? 'USER_SUSPENDED' : 'USER_DEACTIVATED'),
       targetType: 'User Account',
       targetId: userId,
       details: `Account status updated to ${status}`,
@@ -1171,7 +1305,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setFieldRecords(prev => [newRecord, ...prev]);
 
-    const pts = calculateEventPoints('FIELD_FORM', now.toISOString().split('T')[0], now.toISOString().split('T')[0]);
+    const pts = calculateEventPoints('FIELD_FORM', now.toISOString().split('T')[0], now.toISOString().split('T')[0], kpiConfig?.rules?.FIELD_FORM);
     setLeaderboard(lPrev => {
       const updated = lPrev.map(entry => {
         if (entry.userId === recordData.technicianId) {
@@ -1305,7 +1439,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ];
 
         if (isComplete) {
-          const pts = calculateEventPoints('QA_REVIEW', new Date().toISOString().split('T')[0], new Date().toISOString().split('T')[0]);
+          const pts = calculateEventPoints('QA_REVIEW', new Date().toISOString().split('T')[0], new Date().toISOString().split('T')[0], kpiConfig?.rules?.QA_REVIEW);
           setLeaderboard(lPrev => {
             const updated = lPrev.map(entry => {
               if (entry.userId === qa.authorId || entry.userId === currentUser.id) {
@@ -1576,6 +1710,738 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }));
   };
 
+  const updateKpiConfig = (newConfig: KpiScoringConfig, shouldRecalculateLeaderboard: boolean = false) => {
+    const updatedConfigWithMeta: KpiScoringConfig = {
+      ...newConfig,
+      lastUpdated: new Date().toISOString().replace('T', ' ').substring(0, 19),
+      updatedBy: currentUser.name
+    };
+    setKpiConfig(updatedConfigWithMeta);
+
+    if (shouldRecalculateLeaderboard) {
+      setLeaderboard(prev => {
+        const comparisons = simulateLeaderboardRecalculation(prev, kpiConfig, updatedConfigWithMeta);
+        return comparisons.map(c => {
+          const original = prev.find(p => p.userId === c.userId);
+          return {
+            ...(original || {}),
+            userId: c.userId,
+            name: c.name,
+            avatar: c.avatar,
+            jobTitle: c.jobTitle,
+            departmentName: c.departmentName,
+            totalScore: c.simulatedScore,
+            rankPosition: c.simulatedRank,
+            completedCount: original?.completedCount || 0,
+            onTimeCount: original?.onTimeCount || 0,
+            overdueCount: original?.overdueCount || 0,
+            monthYear: original?.monthYear || '2026-09',
+            tier: c.simulatedTier.tier
+          };
+        });
+      });
+    }
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'KPI_SCORING_CONFIG_UPDATED',
+      targetType: 'KPI Configuration',
+      targetId: 'kpi-config',
+      details: `Superadmin ${currentUser.name} updated KPI weights: Task base (${newConfig.rules.PROJECT_TASK.basePoints} pts), Attendance on-time (+${newConfig.attendanceOnTimeBonus} pts), Exemplary threshold (${newConfig.tierThresholds.exemplaryMin} pts). ${shouldRecalculateLeaderboard ? 'Live leaderboard recalculated.' : 'Baseline config updated.'}`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const resetKpiConfigToDefault = () => {
+    updateKpiConfig(DEFAULT_KPI_CONFIG, true);
+  };
+
+  const createClientOrganization = (clientData: Omit<ClientAccount, 'id' | 'activeProjectsCount' | 'totalRevenueBilled' | 'communicationsLog'>): ClientAccount => {
+    const newClient: ClientAccount = {
+      ...clientData,
+      id: `client-${Date.now()}`,
+      activeProjectsCount: 0,
+      totalRevenueBilled: 0,
+      communicationsLog: []
+    };
+    setClients(prev => [newClient, ...prev]);
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'CLIENT_ORGANIZATION_CREATED',
+      targetType: 'Client Account',
+      targetId: newClient.id,
+      details: `${currentUser.name} registered new client organization: ${newClient.name} (${newClient.industry})`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+    return newClient;
+  };
+
+  const logBdActivityWithApproval = (data: {
+    opportunityId: string;
+    title: string;
+    type: 'CALL' | 'MEETING';
+    clientName: string;
+    summary: string;
+    scheduledDate: string;
+    durationMins?: number;
+  }) => {
+    const opp = opportunities.find(o => o.id === data.opportunityId);
+    const oppTitle = opp ? opp.title : data.clientName;
+    const lineManager = allUsers.find(u => u.id === currentUser.managerId) || allUsers.find(u => u.managementTier === 'LINE_MANAGER' || u.managementTier === 'DEPT_HEAD') || allUsers[0];
+
+    const newTask: TaskItem = {
+      id: `tsk-bd-${Date.now()}`,
+      title: `BD Log Approval: ${data.type === 'CALL' ? 'Phone/Video Call' : 'Stakeholder Meeting'} - ${data.clientName}`,
+      description: `BD Representative ${currentUser.name} conducted ${data.type.toLowerCase()} regarding "${oppTitle}". Summary: ${data.summary}. Scheduled/Conducted: ${data.scheduledDate} (${data.durationMins || 30} mins). Awaiting Line Manager approval to finalize to audit ledger.`,
+      moduleOrigin: 'BD',
+      status: 'NOT_STARTED',
+      priority: 'MEDIUM',
+      dueDate: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
+      assigneeId: lineManager.id,
+      assigneeName: lineManager.name,
+      assignedById: currentUser.id,
+      assignedByName: currentUser.name,
+      projectId: data.opportunityId,
+      projectName: oppTitle,
+      estimatedHours: 1,
+      loggedHours: 0,
+      approvalStatus: 'PENDING_APPROVAL',
+      progressPercent: 0,
+      managerId: lineManager.id,
+      managerName: lineManager.name,
+      comments: [
+        {
+          id: `tc-${Date.now()}`,
+          authorId: currentUser.id,
+          authorName: currentUser.name,
+          authorRole: currentUser.jobTitle,
+          avatar: currentUser.avatar,
+          text: `Logged ${data.type} with ${data.clientName}. Ready for managerial verification.`,
+          timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16)
+        }
+      ]
+    };
+
+    setTasks(prev => [newTask, ...prev]);
+
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      category: 'APPROVAL',
+      title: `BD Activity Awaiting Sign-Off`,
+      message: `${currentUser.name} submitted a BD ${data.type} with ${data.clientName} for line manager verification.`,
+      isRead: false,
+      priority: 'NORMAL',
+      timestamp: 'Just now',
+      actionType: 'VIEW_TASK',
+      actionTargetId: newTask.id,
+      actionLabel: 'Verify Activity',
+      actionUrl: '/operations/tasks'
+    };
+    setNotifications(prev => [notif, ...prev]);
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'BD_ACTIVITY_LOGGED_FOR_APPROVAL',
+      targetType: 'BD Communication',
+      targetId: newTask.id,
+      details: `${currentUser.name} logged ${data.type} with ${data.clientName} (Task ID: ${newTask.id} routed to ${lineManager.name})`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const createDocumentFolder = (folder: { name: string; department: string; description: string; isRestricted?: boolean }): { success: boolean; message: string } => {
+    const isAuthorized = currentUser.functionalRole === 'IT_LEAD' || 
+                         currentUser.functionalRole === 'IT_DESIGN_OFFICER' || 
+                         currentUser.accessTier === 'SUPERADMIN' || 
+                         currentUser.accessTier === 'ADMIN';
+
+    if (!isAuthorized) {
+      return {
+        success: false,
+        message: 'Permission Denied: Loose folders outside project workspaces can only be provisioned by IT Support or System Administrators.'
+      };
+    }
+
+    const newFolder: DocumentFolder = {
+      id: `fld-${Date.now()}`,
+      name: folder.name,
+      department: folder.department,
+      description: folder.description,
+      isRestricted: folder.isRestricted ?? false,
+      createdById: currentUser.id,
+      createdByName: currentUser.name,
+      createdAt: new Date().toISOString().split('T')[0],
+      itemCount: 0
+    };
+
+    setDocumentFolders(prev => [newFolder, ...prev]);
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'DOCUMENT_FOLDER_CREATED',
+      targetType: 'Document Repository',
+      targetId: newFolder.id,
+      details: `${currentUser.name} created non-project folder "${newFolder.name}" in ${newFolder.department}`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+
+    return {
+      success: true,
+      message: `Folder "${folder.name}" successfully created.`
+    };
+  };
+
+  const submitBudgetRequest = (request: Omit<BudgetRequest, 'id' | 'requestNumber' | 'status' | 'createdAt'>) => {
+    const count = budgetRequests.length + 1;
+    const reqNum = `BUD-${new Date().getFullYear()}-${String(count).padStart(3, '0')}`;
+    const newReq: BudgetRequest = {
+      ...request,
+      id: `bud-${Date.now()}`,
+      requestNumber: reqNum,
+      status: 'PENDING_APPROVAL',
+      createdAt: new Date().toISOString().split('T')[0]
+    };
+
+    setBudgetRequests(prev => [newReq, ...prev]);
+
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      category: 'APPROVAL',
+      title: `New Budget Request: ${reqNum}`,
+      message: `${currentUser.name} requested ₦${request.amountNgn.toLocaleString()} for ${request.title}.`,
+      isRead: false,
+      priority: 'HIGH',
+      timestamp: 'Just now',
+      actionType: 'VIEW_TASK',
+      actionTargetId: newReq.id,
+      actionLabel: 'Review Budget',
+      actionUrl: '/finance'
+    };
+    setNotifications(prev => [notif, ...prev]);
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'BUDGET_REQUEST_SUBMITTED',
+      targetType: 'Budget Request',
+      targetId: newReq.id,
+      details: `${currentUser.name} submitted budget request ${reqNum} for ₦${request.amountNgn.toLocaleString()} (${request.category})`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const reviewBudgetRequest = (requestId: string, status: 'APPROVED' | 'DECLINED', comment?: string) => {
+    setBudgetRequests(prev => prev.map(req => {
+      if (req.id !== requestId) return req;
+      return {
+        ...req,
+        status: status === 'APPROVED' ? 'APPROVED' : 'DECLINED',
+        reviewedById: currentUser.id,
+        reviewedByName: currentUser.name,
+        reviewComments: comment || (status === 'APPROVED' ? 'Approved by finance/executive committee.' : 'Declined by reviewer.'),
+        reviewedAt: new Date().toISOString().split('T')[0]
+      };
+    }));
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: status === 'APPROVED' ? 'BUDGET_REQUEST_APPROVED' : 'BUDGET_REQUEST_DECLINED',
+      targetType: 'Budget Request',
+      targetId: requestId,
+      details: `Budget request ${requestId} was ${status.toLowerCase()} by ${currentUser.name} (${currentUser.jobTitle})`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const createEmployee = (employeeData: Omit<UserProfile, 'id' | 'createdAt'>): UserProfile => {
+    const deptPrefix = (employeeData.departmentName || 'OPS').substring(0, 3).toLowerCase();
+    const count = allUsers.length + 1;
+    const newId = `usr-${deptPrefix}-${String(count).padStart(3, '0')}`;
+
+    const newEmp: UserProfile = {
+      ...employeeData,
+      id: newId,
+      createdAt: new Date().toISOString().split('T')[0]
+    };
+
+    setAllUsers(prev => [newEmp, ...prev]);
+
+    // Provision initial draft payroll record
+    const initialPayroll: PayrollRecord = {
+      id: `pr-${Date.now()}`,
+      staffId: newEmp.id,
+      staffName: newEmp.name,
+      department: newEmp.departmentName || 'Operations',
+      jobTitle: newEmp.jobTitle,
+      baseSalaryNgn: 450000,
+      hazardAllowanceNgn: 50000,
+      fieldPerDiemNgn: 0,
+      performanceBonusNgn: 0,
+      pensionDeductionNgn: 40000,
+      taxPayeNgn: 48000,
+      netPayNgn: 412000,
+      monthYear: '2026-09',
+      paymentStatus: 'DRAFT'
+    };
+    setPayrollRecords(prev => [initialPayroll, ...prev]);
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'EMPLOYEE_RECORD_CREATED',
+      targetType: 'Staff Management',
+      targetId: newEmp.id,
+      details: `${currentUser.name} created employee record for ${newEmp.name} (${newEmp.jobTitle})`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+
+    return newEmp;
+  };
+
+  const suspendEmployee = (userId: string, reason: string) => {
+    setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, status: 'DEACTIVATED' } : u));
+
+    const targetUser = allUsers.find(u => u.id === userId);
+    const targetName = targetUser ? targetUser.name : userId;
+
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      category: 'SYSTEM',
+      title: `Staff Access Suspended`,
+      message: `${targetName} has been suspended from system operations. Reason: ${reason}`,
+      isRead: false,
+      priority: 'HIGH',
+      timestamp: 'Just now',
+      actionType: 'VIEW_TASK',
+      actionTargetId: userId,
+      actionLabel: 'View Directory',
+      actionUrl: '/hr/staff'
+    };
+    setNotifications(prev => [notif, ...prev]);
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'STAFF_SUSPENDED',
+      targetType: 'Staff Access Control',
+      targetId: userId,
+      details: `${currentUser.name} suspended staff member ${targetName} (${userId}). Reason: ${reason}`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const reactivateEmployee = (userId: string) => {
+    setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, status: 'ACTIVE' } : u));
+
+    const targetUser = allUsers.find(u => u.id === userId);
+    const targetName = targetUser ? targetUser.name : userId;
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'STAFF_REACTIVATED',
+      targetType: 'Staff Access Control',
+      targetId: userId,
+      details: `${currentUser.name} reactivated staff member ${targetName} (${userId})`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const raiseStaffQuery = (query: Omit<StaffQuery, 'id' | 'queryNumber' | 'status' | 'issuedDate'>) => {
+    const count = staffQueries.length + 1;
+    const qNum = `QRY-${new Date().getFullYear()}-${String(count).padStart(3, '0')}`;
+    const newQuery: StaffQuery = {
+      ...query,
+      id: `qry-${Date.now()}`,
+      queryNumber: qNum,
+      status: 'ISSUED',
+      issuedDate: new Date().toISOString().split('T')[0]
+    };
+
+    setStaffQueries(prev => [newQuery, ...prev]);
+
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      category: 'APPROVAL',
+      title: `Disciplinary Query Issued: ${qNum}`,
+      message: `A query regarding "${query.title}" has been issued to ${query.staffName}. Response deadline: ${query.responseDeadline}.`,
+      isRead: false,
+      priority: 'HIGH',
+      timestamp: 'Just now',
+      actionType: 'VIEW_TASK',
+      actionTargetId: newQuery.id,
+      actionLabel: 'View Disciplinary Query',
+      actionUrl: '/hr/staff'
+    };
+    setNotifications(prev => [notif, ...prev]);
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'STAFF_QUERY_ISSUED',
+      targetType: 'Disciplinary Record',
+      targetId: newQuery.id,
+      details: `${currentUser.name} issued query ${qNum} to ${query.staffName} (${query.staffDepartment}): ${query.title}`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const respondToStaffQuery = (queryId: string, responseText: string) => {
+    setStaffQueries(prev => prev.map(q => {
+      if (q.id !== queryId) return q;
+      return {
+        ...q,
+        staffResponse: responseText,
+        respondedAt: new Date().toISOString().split('T')[0],
+        status: 'RESPONSE_SUBMITTED'
+      };
+    }));
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'STAFF_QUERY_RESPONSE_SUBMITTED',
+      targetType: 'Disciplinary Record',
+      targetId: queryId,
+      details: `${currentUser.name} submitted response to disciplinary query ${queryId}`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const resolveStaffQuery = (queryId: string, resolution: 'PROCEEDING' | 'FORMAL_WARNING' | 'CANCELLED', notes: string) => {
+    setStaffQueries(prev => prev.map(q => {
+      if (q.id !== queryId) return q;
+      return {
+        ...q,
+        resolution,
+        resolutionNotes: notes,
+        resolvedAt: new Date().toISOString().split('T')[0],
+        resolvedById: currentUser.id,
+        resolvedByName: currentUser.name,
+        status: 'RESOLVED'
+      };
+    }));
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'STAFF_QUERY_RESOLVED',
+      targetType: 'Disciplinary Record',
+      targetId: queryId,
+      details: `${currentUser.name} resolved query ${queryId} with disposition: ${resolution}. Notes: ${notes}`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const updatePayrollRecord = (record: PayrollRecord) => {
+    setPayrollRecords(prev => prev.map(r => r.id === record.id ? record : r));
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'PAYROLL_RECORD_UPDATED',
+      targetType: 'Payroll & Remuneration',
+      targetId: record.id,
+      details: `${currentUser.name} updated payroll for ${record.staffName} (Net: ₦${record.netPayNgn.toLocaleString()}, Status: ${record.paymentStatus})`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const advanceCandidateStage = (
+    candidateId: string, 
+    newStage: InterviewStage, 
+    note?: Omit<InterviewNote, 'stage'>, 
+    document?: Omit<CandidateDocument, 'id' | 'stage' | 'uploadedAt'>
+  ) => {
+    setCandidateApplications(prev => prev.map(cand => {
+      if (cand.id !== candidateId) return cand;
+
+      const newNotes = note ? [
+        ...cand.notes,
+        {
+          ...note,
+          stage: newStage
+        }
+      ] : cand.notes;
+
+      const newDocs = document ? [
+        ...cand.documents,
+        {
+          ...document,
+          id: `cdoc-${Date.now()}`,
+          stage: newStage,
+          uploadedAt: new Date().toISOString().split('T')[0]
+        }
+      ] : cand.documents;
+
+      let outcome = cand.outcome;
+      if (newStage === 'PROBATIONARY') outcome = 'PROBATIONARY';
+      else if (newStage === 'FULL_EMPLOYMENT') outcome = 'FULL_EMPLOYMENT';
+      else if (newStage === 'NON_EMPLOYMENT') outcome = 'NON_EMPLOYMENT';
+
+      return {
+        ...cand,
+        currentStage: newStage,
+        notes: newNotes,
+        documents: newDocs,
+        outcome,
+        outcomeDate: outcome ? new Date().toISOString().split('T')[0] : cand.outcomeDate
+      };
+    }));
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'CANDIDATE_STAGE_ADVANCED',
+      targetType: 'Recruitment & Onboarding',
+      targetId: candidateId,
+      details: `${currentUser.name} moved candidate ${candidateId} to stage ${newStage}`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const convertCandidateToEmployee = (candidateId: string, role?: string): UserProfile => {
+    const cand = candidateApplications.find(c => c.id === candidateId);
+    if (!cand) throw new Error(`Candidate ${candidateId} not found`);
+
+    const deptPrefix = cand.department.substring(0, 3).toLowerCase();
+    const count = allUsers.length + 1;
+    const newId = `usr-${deptPrefix}-${String(count).padStart(3, '0')}`;
+
+    const newEmp: UserProfile = {
+      id: newId,
+      name: cand.fullName,
+      email: cand.email,
+      phone: cand.phone,
+      jobTitle: cand.appliedRole,
+      functionalRole: (role as any) || 'FIELD_STAFF',
+      accessTier: 'STANDARD',
+      managementTier: 'NONE',
+      departmentName: cand.department,
+      status: 'ACTIVE',
+      createdAt: new Date().toISOString().split('T')[0],
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      skills: ['Recruited Candidate', cand.appliedRole],
+      certificationsList: []
+    };
+
+    setAllUsers(prev => [newEmp, ...prev]);
+
+    // Update candidate application status
+    setCandidateApplications(prev => prev.map(c => {
+      if (c.id !== candidateId) return c;
+      return {
+        ...c,
+        currentStage: 'FULL_EMPLOYMENT',
+        outcome: 'FULL_EMPLOYMENT',
+        outcomeDate: new Date().toISOString().split('T')[0]
+      };
+    }));
+
+    // Provision baseline payroll record
+    const baseSal = cand.expectedSalaryNgn || 550000;
+    const newPayroll: PayrollRecord = {
+      id: `pr-${Date.now()}`,
+      staffId: newEmp.id,
+      staffName: newEmp.name,
+      department: cand.department,
+      jobTitle: cand.appliedRole,
+      baseSalaryNgn: baseSal,
+      hazardAllowanceNgn: 40000,
+      fieldPerDiemNgn: 0,
+      performanceBonusNgn: 0,
+      pensionDeductionNgn: 45000,
+      taxPayeNgn: 52000,
+      netPayNgn: baseSal + 40000 - 45000 - 52000,
+      monthYear: '2026-09',
+      paymentStatus: 'DRAFT'
+    };
+    setPayrollRecords(prev => [newPayroll, ...prev]);
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'CANDIDATE_CONVERTED_TO_STAFF',
+      targetType: 'Staff Management',
+      targetId: newEmp.id,
+      details: `${currentUser.name} successfully converted candidate ${cand.fullName} to full active employee (ID: ${newId}, Role: ${newEmp.jobTitle})`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+
+    return newEmp;
+  };
+
+  const createHardwareAsset = (asset: Omit<HardwareAsset, 'id'>) => {
+    const newAsset: HardwareAsset = {
+      ...asset,
+      id: `hw-${Date.now()}`,
+      history: [
+        {
+          date: new Date().toISOString().split('T')[0],
+          action: 'CREATED',
+          staffName: currentUser.name,
+          notes: 'Asset registered and provisioned into IT system inventory.'
+        }
+      ]
+    };
+
+    setHardwareAssets(prev => [newAsset, ...prev]);
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'HARDWARE_ASSET_REGISTERED',
+      targetType: 'Hardware Inventory',
+      targetId: newAsset.id,
+      details: `${currentUser.name} registered asset ${newAsset.assetTag} (${newAsset.name}, SN: ${newAsset.serialNumber || 'N/A'})`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const assignHardwareAsset = (assetId: string, staffId: string, notes?: string) => {
+    const targetStaff = allUsers.find(u => u.id === staffId);
+    const staffName = targetStaff ? targetStaff.name : staffId;
+
+    setHardwareAssets(prev => prev.map(asset => {
+      if (asset.id !== assetId) return asset;
+      const historyItem = {
+        date: new Date().toISOString().split('T')[0],
+        action: 'ASSIGNED' as const,
+        staffName: staffName,
+        notes: notes || `Handed over and assigned to ${staffName}`
+      };
+      return {
+        ...asset,
+        status: 'OPERATIONAL',
+        assignedToName: staffName,
+        assignedToDept: targetStaff?.departmentName || 'General',
+        assignedToId: staffId,
+        history: [historyItem, ...(asset.history || [])]
+      };
+    }));
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'HARDWARE_ASSET_ASSIGNED',
+      targetType: 'Hardware Inventory',
+      targetId: assetId,
+      details: `${currentUser.name} assigned asset ${assetId} to ${staffName}`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const retrieveHardwareAsset = (assetId: string, reason: string) => {
+    setHardwareAssets(prev => prev.map(asset => {
+      if (asset.id !== assetId) return asset;
+      const prevAssignee = asset.assignedToName || 'Staff';
+      const historyItem = {
+        date: new Date().toISOString().split('T')[0],
+        action: 'RETRIEVED' as const,
+        staffName: currentUser.name,
+        notes: `Retrieved from ${prevAssignee}. Reason: ${reason}`
+      };
+      return {
+        ...asset,
+        status: 'IN_STORAGE',
+        assignedToName: 'Unassigned',
+        assignedToDept: 'IT Inventory',
+        assignedToId: undefined,
+        history: [historyItem, ...(asset.history || [])]
+      };
+    }));
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'HARDWARE_ASSET_RETRIEVED',
+      targetType: 'Hardware Inventory',
+      targetId: assetId,
+      details: `${currentUser.name} retrieved asset ${assetId} back into stock. Reason: ${reason}`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const resetUserPassword = (userId: string): { tempToken: string; message: string } => {
+    const target = allUsers.find(u => u.id === userId);
+    const targetName = target ? target.name : userId;
+    const tokenPart = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const tempToken = `TMP-AQ-${tokenPart}-${Date.now().toString().slice(-4)}`;
+
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      category: 'SYSTEM',
+      title: 'Password Reset Token Issued',
+      message: `A temporary password token was generated for ${targetName}. Valid for 24 hours.`,
+      isRead: false,
+      priority: 'HIGH',
+      timestamp: 'Just now',
+      actionType: 'VIEW_TASK',
+      actionTargetId: userId,
+      actionLabel: 'Audit Log',
+      actionUrl: '/operations/it-design'
+    };
+    setNotifications(prev => [notif, ...prev]);
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'PASSWORD_RESET_TOKEN_GENERATED',
+      targetType: 'User Authentication',
+      targetId: userId,
+      details: `${currentUser.name} generated temporary access token for ${targetName} (${userId})`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+
+    return {
+      tempToken,
+      message: `Temporary password reset token successfully created for ${targetName}. Please share securely.`
+    };
+  };
+
   return (
     <AuthContext.Provider value={{
       theme,
@@ -1585,6 +2451,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAuthenticated,
       currentUser,
       allUsers,
+      kpiConfig,
+      updateKpiConfig,
+      resetKpiConfigToDefault,
       tasks,
       tickets,
       leaveRequests,
@@ -1644,7 +2513,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       approveAccessRequest,
       markNotificationRead,
       markAllNotificationsRead,
-      executeNotificationAction
+      executeNotificationAction,
+      createClientOrganization,
+      logBdActivityWithApproval,
+      documentFolders,
+      createDocumentFolder,
+      budgetRequests,
+      submitBudgetRequest,
+      reviewBudgetRequest,
+      createEmployee,
+      suspendEmployee,
+      reactivateEmployee,
+      staffQueries,
+      raiseStaffQuery,
+      respondToStaffQuery,
+      resolveStaffQuery,
+      payrollRecords,
+      updatePayrollRecord,
+      candidateApplications,
+      advanceCandidateStage,
+      convertCandidateToEmployee,
+      createHardwareAsset,
+      assignHardwareAsset,
+      retrieveHardwareAsset,
+      resetUserPassword
     }}>
       {children}
     </AuthContext.Provider>

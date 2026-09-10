@@ -17,16 +17,22 @@ import {
   FolderKanban,
   FileCheck,
   Sparkles,
-  Plus
+  Plus,
+  Folder,
+  FolderPlus
 } from 'lucide-react';
 import { DocumentCategory, DocumentItem } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
+import { NewFolderModal } from '@/components/documents/NewFolderModal';
+import { haptics } from '@/lib/haptics';
 
 export default function DocumentsPage() {
-  const { documents, projects, allUsers, uploadDocument, submitForQa } = useAuth();
+  const { documents, projects, allUsers, uploadDocument, submitForQa, documentFolders, currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
+  const [selectedFolderId, setSelectedFolderId] = useState<string>('ALL');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
   const [isQaSubmitOpen, setIsQaSubmitOpen] = useState(false);
   const [selectedDocForQa, setSelectedDocForQa] = useState<DocumentItem | null>(null);
 
@@ -99,12 +105,66 @@ export default function DocumentsPage() {
 
         <div className="flex items-center gap-2">
           <button
+            onClick={() => { setIsNewFolderOpen(true); haptics.selection(); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-semibold shadow-2xs transition-all active:scale-[0.96] whitespace-nowrap shrink-0"
+          >
+            <FolderPlus className="w-3.5 h-3.5 text-amber-500" />
+            <span>New Folder (IT / Admin)</span>
+          </button>
+
+          <button
             onClick={() => setIsUploadOpen(true)}
             className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-2xs transition-all active:scale-[0.96]"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Upload Document</span>
           </button>
+        </div>
+      </div>
+
+      {/* Institutional & Departmental Non-Project Folders */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            Institutional Repositories & Non-Project Folders
+          </span>
+          <span className="text-[10px] text-slate-400">
+            Provisioned and restricted strictly to IT Support & System Administrators
+          </span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+          {documentFolders.map((folder) => (
+            <div
+              key={folder.id}
+              onClick={() => {
+                setSelectedFolderId(selectedFolderId === folder.id ? 'ALL' : folder.id);
+                haptics.selection();
+              }}
+              className={`p-3 rounded-2xl border text-left cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.98] ${
+                selectedFolderId === folder.id
+                  ? 'border-amber-500 bg-amber-50/50 dark:bg-amber-950/20 shadow-xs'
+                  : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                  <Folder className="w-4 h-4" />
+                </div>
+                {folder.isRestricted && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900">
+                    <Lock className="w-2.5 h-2.5" />
+                    <span>Restricted</span>
+                  </span>
+                )}
+              </div>
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                {folder.name}
+              </h4>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                {folder.department} • {folder.itemCount || 0} items
+              </p>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -117,7 +177,7 @@ export default function DocumentsPage() {
             placeholder="Search documents by code, title, or author..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-black/[0.08] rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+            className="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-black/[0.08] dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20"
           />
         </div>
 
@@ -126,7 +186,7 @@ export default function DocumentsPage() {
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            className="px-3 py-1.5 bg-slate-50 border border-black/[0.08] rounded-xl text-xs font-semibold text-slate-700 focus:outline-none"
+            className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-black/[0.08] dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-hidden"
           >
             <option value="ALL">All Categories</option>
             <option value="TECHNICAL_REPORT">Technical Reports (EIA/Geotech)</option>
@@ -366,6 +426,12 @@ export default function DocumentsPage() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* New Folder Modal (IT & Admin Governed) */}
+      <NewFolderModal
+        isOpen={isNewFolderOpen}
+        onClose={() => setIsNewFolderOpen(false)}
+      />
     </div>
   );
 }

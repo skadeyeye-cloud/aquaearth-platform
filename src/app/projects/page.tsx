@@ -25,9 +25,31 @@ import { ProjectRecord, ProjectHealth, ProjectStatus } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function ProjectsPage() {
-  const { projects, clients, allUsers, createProject, closeOutAndArchiveProject } = useAuth();
+  const { currentUser, projects, clients, allUsers, createProject, closeOutAndArchiveProject } = useAuth();
   const [healthFilter, setHealthFilter] = useState<'ALL' | 'ON_TRACK' | 'AT_RISK' | 'DELAYED'>('ALL');
   const [selectedProject, setSelectedProject] = useState<ProjectRecord | null>(null);
+
+  const isSuperadmin = currentUser.accessTier === 'SUPERADMIN' || currentUser.functionalRole === 'SUPERADMIN' || currentUser.functionalRole === 'MANAGING_CONSULTANT';
+  const isHR = (currentUser.functionalRole === 'HR_ADMIN' || currentUser.departmentName === 'Human Resources') && !isSuperadmin;
+
+  if (isHR) {
+    return (
+      <div className="p-8 max-w-xl mx-auto my-12 text-center space-y-4 apple-glass-card rounded-3xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/60 dark:bg-rose-950/20">
+        <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto">
+          <Lock className="w-6 h-6" />
+        </div>
+        <h2 className="text-base font-bold text-slate-900 dark:text-white">Module Access Restricted (HR Scoping Barrier)</h2>
+        <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+          In accordance with AquaEarth enterprise data isolation policy, Human Resources personnel are restricted from viewing running client projects, engineering milestones, and commercial project telemetry.
+        </p>
+        <div className="pt-2">
+          <a href="/hr/staff" className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold">
+            Return to HR Human Capital
+          </a>
+        </div>
+      </div>
+    );
+  }
   
   // AI Scope Parser State
   const [isAiParserOpen, setIsAiParserOpen] = useState(false);

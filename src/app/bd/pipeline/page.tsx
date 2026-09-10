@@ -19,18 +19,25 @@ import {
   AlertTriangle,
   Building2,
   Lock,
-  UserCheck
+  UserCheck,
+  PhoneCall,
+  Users,
+  Search,
+  Filter,
+  Check
 } from 'lucide-react';
 import { OpportunityItem, OpportunityStage } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
+import { haptics } from '@/lib/haptics';
+import { NewClientModal } from '@/components/bd/NewClientModal';
+import { LogBdActivityModal } from '@/components/bd/LogBdActivityModal';
 
-const STAGES: { id: OpportunityStage; label: string; color: string }[] = [
-  { id: 'IDENTIFIED', label: '1. Identified', color: 'border-slate-300' },
-  { id: 'QUALIFYING', label: '2. Qualifying', color: 'border-blue-400' },
-  { id: 'PROPOSAL_DRAFTING', label: '3. Proposal Drafting', color: 'border-purple-400' },
-  { id: 'SUBMITTED', label: '4. Submitted', color: 'border-amber-400' },
-  { id: 'WON', label: '5. Won', color: 'border-emerald-500' },
-  { id: 'LOST', label: '6. Lost', color: 'border-rose-400' },
+const PIPELINE_STEPS: { id: OpportunityStage; label: string; stepNumber: number }[] = [
+  { id: 'IDENTIFIED', label: 'Identified', stepNumber: 1 },
+  { id: 'QUALIFYING', label: 'Qualifying', stepNumber: 2 },
+  { id: 'PROPOSAL_DRAFTING', label: 'Drafting', stepNumber: 3 },
+  { id: 'SUBMITTED', label: 'Submitted', stepNumber: 4 },
+  { id: 'WON', label: 'Won', stepNumber: 5 },
 ];
 
 export default function BdPipelinePage() {
@@ -46,9 +53,15 @@ export default function BdPipelinePage() {
   } = useAuth();
 
   const [isNewOppOpen, setIsNewOppOpen] = useState(false);
+  const [isNewClientOpen, setIsNewClientOpen] = useState(false);
+  const [isLogActivityOpen, setIsLogActivityOpen] = useState(false);
   const [isClientPortalOpen, setIsClientPortalOpen] = useState(false);
-  const [selectedOpp, setSelectedOpp] = useState<OpportunityItem | null>(null);
-  
+  const [activeActivityOpp, setActiveActivityOpp] = useState<OpportunityItem | null>(null);
+
+  // Search and Filter State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStageFilter, setSelectedStageFilter] = useState<'ALL' | OpportunityStage>('ALL');
+
   // Win / Loss modal state
   const [lossModalOpp, setLossModalOpp] = useState<OpportunityItem | null>(null);
   const [lossReason, setLossReason] = useState('');
@@ -75,15 +88,19 @@ export default function BdPipelinePage() {
   const wonOpps = opportunities.filter(o => o.stage === 'WON');
   const wonRate = Math.round((wonOpps.length / Math.max(1, opportunities.filter(o => o.stage === 'WON' || o.stage === 'LOST').length)) * 100);
 
-  const handleStageMove = (opp: OpportunityItem, newStage: OpportunityStage) => {
-    if (newStage === 'LOST') {
+  // Inline status bar click handler
+  const handleStageSelect = (opp: OpportunityItem, targetStage: OpportunityStage) => {
+    haptics.selection();
+    if (targetStage === 'LOST') {
       setLossModalOpp(opp);
       return;
     }
 
-    const result = updateOpportunityStage(opp.id, newStage);
+    const result = updateOpportunityStage(opp.id, targetStage);
     if (!result.success && result.requiresApproval) {
       alert(`⚠️ High-Value Bid Approval Gate: This bid exceeds ₦50M / $100k and requires Managing Consultant sign-off before submission.`);
+    } else {
+      haptics.success();
     }
   };
 
@@ -94,6 +111,7 @@ export default function BdPipelinePage() {
     setLossModalOpp(null);
     setLossReason('');
     setWinningCompetitor('');
+    haptics.impact();
   };
 
   const handleCreateOpp = (e: React.FormEvent) => {
@@ -119,7 +137,17 @@ export default function BdPipelinePage() {
 
     setIsNewOppOpen(false);
     setTitle('');
+    haptics.success();
   };
+
+  const filteredOpps = opportunities.filter(opp => {
+    const matchesStage = selectedStageFilter === 'ALL' || opp.stage === selectedStageFilter;
+    const matchesSearch = searchQuery === '' || 
+      opp.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      opp.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      opp.serviceLines.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchesStage && matchesSearch;
+  });
 
   return (
     <div className="space-y-6">
@@ -129,286 +157,361 @@ export default function BdPipelinePage() {
           <div className="text-[11px] font-semibold text-slate-500 tracking-tight">
             Module 2 • Commercial Pipeline & Tendering
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight mt-0.5">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mt-0.5">
             Business Development & Bids
           </h1>
-          <p className="text-xs text-slate-500">
-            Track opportunities from RFP signal to proposal submission, high-value sign-off gates, and 1-click project initialization.
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Interactive commercial pipeline list view with inline milestone updates, new client onboarding, and managerial activity verification.
           </p>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={() => setIsClientPortalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-black/[0.08] hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold shadow-2xs transition-all active:scale-[0.96] whitespace-nowrap shrink-0"
+            onClick={() => { setIsNewClientOpen(true); haptics.selection(); }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold shadow-2xs transition-all active:scale-[0.96] whitespace-nowrap shrink-0"
           >
-            <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
-            <span>Client RFP Portal Link</span>
+            <Building2 className="w-3.5 h-3.5 text-blue-500" />
+            <span>Create Client / Org</span>
           </button>
 
           <button
-            onClick={() => setIsNewOppOpen(true)}
+            onClick={() => { setActiveActivityOpp(null); setIsLogActivityOpen(true); haptics.selection(); }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 rounded-xl text-xs font-semibold shadow-2xs transition-all active:scale-[0.96] whitespace-nowrap shrink-0"
+          >
+            <PhoneCall className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+            <span>Log Call / Meeting</span>
+          </button>
+
+          <button
+            onClick={() => { setIsClientPortalOpen(true); haptics.selection(); }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold shadow-2xs transition-all active:scale-[0.96] whitespace-nowrap shrink-0"
+          >
+            <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+            <span>Client RFP Portal</span>
+          </button>
+
+          <button
+            onClick={() => { setIsNewOppOpen(true); haptics.selection(); }}
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-2xs transition-all active:scale-[0.96] whitespace-nowrap shrink-0"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Log New Opportunity</span>
+            <span>New Opportunity</span>
           </button>
         </div>
       </div>
 
       {/* Analytics Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <div className="apple-glass-card rounded-2xl p-4 space-y-1">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
           <div className="text-[10px] uppercase font-bold text-slate-400">Total Live Pipeline</div>
-          <div className="text-xl font-extrabold text-slate-900 tnum">
+          <div className="text-xl font-extrabold text-slate-900 dark:text-white tnum">
             ₦{(totalActiveValueNGN / 1000000).toFixed(1)}M <span className="text-xs font-normal text-slate-400">NGN Eq.</span>
           </div>
-          <div className="text-[10px] text-slate-500 font-medium">{activeOpps.length} active bidding campaigns</div>
+          <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">{activeOpps.length} active bidding campaigns</div>
         </div>
 
-        <div className="apple-glass-card rounded-2xl p-4 space-y-1">
+        <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
           <div className="text-[10px] uppercase font-bold text-slate-400">Historical Win Rate</div>
-          <div className="text-xl font-extrabold text-emerald-600 tnum">{wonRate}%</div>
-          <div className="text-[10px] text-slate-500 font-medium">{wonOpps.length} won engagements</div>
+          <div className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 tnum">{wonRate}%</div>
+          <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">{wonOpps.length} won engagements</div>
         </div>
 
-        <div className="apple-glass-card rounded-2xl p-4 space-y-1">
+        <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
           <div className="text-[10px] uppercase font-bold text-slate-400">High-Value Gates (&ge;₦50M)</div>
-          <div className="text-xl font-extrabold text-purple-600 tnum">
+          <div className="text-xl font-extrabold text-purple-600 dark:text-purple-400 tnum">
             {opportunities.filter(o => o.requiresLeadershipApproval && !o.isApprovedByLeadership).length} Pending
           </div>
-          <div className="text-[10px] text-slate-500 font-medium">Leadership sign-off required</div>
+          <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Leadership sign-off required</div>
         </div>
 
-        <div className="apple-glass-card rounded-2xl p-4 space-y-1">
+        <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
           <div className="text-[10px] uppercase font-bold text-slate-400">Next Tender Deadline</div>
-          <div className="text-sm font-bold text-amber-700 truncate mt-1">Sept 08 (Escravos)</div>
-          <div className="text-[10px] text-amber-600 font-semibold flex items-center gap-1">
+          <div className="text-sm font-bold text-amber-700 dark:text-amber-400 truncate mt-1">Sept 18 (Escravos)</div>
+          <div className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1">
             <Clock className="w-3 h-3" />
-            <span>T-7 Days Countdown Alert</span>
+            <span>Active Tendering Countdown</span>
           </div>
         </div>
       </div>
 
-      {/* Kanban Board Container */}
-      <div className="overflow-x-auto pb-4">
-        <div className="grid grid-cols-6 gap-3 min-w-[1200px]">
-          {STAGES.map((col) => {
-            const colOpps = opportunities.filter(o => o.stage === col.id);
-            const colTotal = colOpps.reduce((acc, curr) => acc + curr.estimatedValue, 0);
+      {/* Filter and Search Bar */}
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="relative flex-1">
+          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search deals, clients, or service lines..."
+            className="w-full text-xs pl-8 pr-3 py-2 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20"
+          />
+        </div>
+
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+          {(['ALL', 'IDENTIFIED', 'QUALIFYING', 'PROPOSAL_DRAFTING', 'SUBMITTED', 'WON', 'LOST'] as const).map((stage) => {
+            const isSelected = selectedStageFilter === stage;
+            const count = stage === 'ALL' 
+              ? opportunities.length 
+              : opportunities.filter(o => o.stage === stage).length;
 
             return (
-              <div key={col.id} className="bg-slate-100/70 rounded-3xl p-3 flex flex-col min-h-[550px] border border-black/[0.04]">
-                {/* Column Header */}
-                <div className="pb-2.5 mb-2 border-b border-black/[0.06] flex items-center justify-between">
-                  <div>
-                    <h3 className="text-xs font-bold text-slate-900">{col.label}</h3>
-                    <div className="text-[10px] text-slate-400 font-mono tnum">
-                      {colOpps.length} deals • {col.id === 'WON' ? 'Closed' : `~₦${(colTotal / 1000000).toFixed(0)}M`}
-                    </div>
-                  </div>
-                  <span className="w-5 h-5 rounded-full bg-white text-slate-700 text-[10px] font-bold flex items-center justify-center shadow-2xs whitespace-nowrap shrink-0">
-                    {colOpps.length}
-                  </span>
-                </div>
-
-                {/* Card Stack */}
-                <div className="space-y-2.5 flex-1 overflow-y-auto">
-                  {colOpps.map((opp) => (
-                    <motion.div
-                      layout
-                      key={opp.id}
-                      className="bg-white rounded-2xl p-3.5 border border-black/[0.06] shadow-xs hover:shadow-md transition-all space-y-2 text-xs"
-                    >
-                      <div className="flex items-center justify-between text-[10px]">
-                        <span className="font-semibold text-slate-500 truncate max-w-[110px]">{opp.clientName}</span>
-                        <span className="font-bold text-slate-900 bg-slate-100 px-1.5 py-0.2 rounded font-mono tnum whitespace-nowrap shrink-0">
-                          {opp.currency} {opp.estimatedValue.toLocaleString()}
-                        </span>
-                      </div>
-
-                      <h4 className="font-bold text-xs text-slate-900 line-clamp-2 leading-tight">
-                        {opp.title}
-                      </h4>
-
-                      {/* Service Lines Tag */}
-                      <div className="flex flex-wrap gap-1">
-                        {opp.serviceLines.map((sl, idx) => (
-                          <span key={idx} className="text-[9px] bg-slate-50 border border-black/[0.05] text-slate-600 px-1.5 py-0.2 rounded whitespace-nowrap shrink-0">
-                            {sl}
-                          </span>
-                        ))}
-                      </div>
-
-                      {/* High-Value Approval Pill */}
-                      {opp.requiresLeadershipApproval && (
-                        <div className={`p-1.5 rounded-xl text-[10px] flex items-center justify-between ${
-                          opp.isApprovedByLeadership 
-                            ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
-                            : 'bg-purple-50 text-purple-800 border border-purple-200'
-                        }`}>
-                          <span className="font-semibold inline-flex items-center gap-1 whitespace-nowrap shrink-0">
-                            <Lock className="w-3 h-3 text-purple-600" />
-                            {opp.isApprovedByLeadership ? 'Leadership Signed' : 'Needs Sign-Off'}
-                          </span>
-                          {!opp.isApprovedByLeadership && isManagingConsultant && (
-                            <button
-                              onClick={() => approveHighValueBid(opp.id)}
-                              className="px-2 py-0.5 bg-purple-700 hover:bg-purple-800 text-white font-bold rounded-lg text-[9px] shadow-2xs active:scale-[0.96] whitespace-nowrap shrink-0"
-                            >
-                              Approve
-                            </button>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Won Project Auto-Convert Action */}
-                      {opp.stage === 'WON' && (
-                        <div className="pt-1.5 border-t border-black/[0.04] flex items-center justify-between">
-                          {opp.convertedProjectId ? (
-                            <span className="text-[10px] font-bold text-emerald-700 inline-flex items-center gap-1 whitespace-nowrap shrink-0">
-                              <CheckCircle2 className="w-3 h-3" />
-                              {opp.convertedProjectId}
-                            </span>
-                          ) : (
-                            <button
-                              onClick={() => convertWonToProject(opp.id)}
-                              className="w-full py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] rounded-lg shadow-2xs inline-flex items-center justify-center gap-1 whitespace-nowrap shrink-0"
-                            >
-                              <FolderPlus className="w-3 h-3" />
-                              <span>Initialize Project (M4)</span>
-                            </button>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Lost Reason Display */}
-                      {opp.stage === 'LOST' && opp.winLossReason && (
-                        <div className="p-2 bg-rose-50 rounded-xl border border-rose-100 text-[10px] text-rose-800 space-y-0.5">
-                          <div className="font-bold">Loss Analysis:</div>
-                          <p className="line-clamp-2 text-rose-700">{opp.winLossReason}</p>
-                          {opp.winningCompetitor && (
-                            <div className="text-[9px] text-rose-600">Won by: <b>{opp.winningCompetitor}</b></div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Stage Progression Selector */}
-                      {opp.stage !== 'WON' && opp.stage !== 'LOST' && (
-                        <div className="pt-1.5 border-t border-black/[0.04] flex items-center justify-between">
-                          <span className="text-[10px] text-slate-400 font-mono tnum">
-                            Due: {opp.submissionDeadline.split(' ')[0].substring(5)}
-                          </span>
-
-                          <div className="flex items-center gap-1">
-                            <select
-                              value={opp.stage}
-                              onChange={(e) => handleStageMove(opp, e.target.value as OpportunityStage)}
-                              className="text-[10px] font-semibold bg-slate-100 rounded-lg px-1.5 py-0.5 border border-black/[0.06] text-slate-700 focus:outline-none"
-                            >
-                              <option value="IDENTIFIED">Identified</option>
-                              <option value="QUALIFYING">Qualify</option>
-                              <option value="PROPOSAL_DRAFTING">Drafting</option>
-                              <option value="SUBMITTED">Submitted</option>
-                              <option value="WON">Mark Won</option>
-                              <option value="LOST">Mark Lost</option>
-                            </select>
-                          </div>
-                        </div>
-                      )}
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
+              <button
+                key={stage}
+                onClick={() => { setSelectedStageFilter(stage); haptics.selection(); }}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 shrink-0 ${
+                  isSelected
+                    ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                <span>{stage === 'PROPOSAL_DRAFTING' ? 'Drafting' : stage}</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                  isSelected ? 'bg-white/20 dark:bg-black/20' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
+                }`}>
+                  {count}
+                </span>
+              </button>
             );
           })}
         </div>
       </div>
 
-      {/* Mandatory Loss Reason & Competitor Intelligence Modal (PRD FR 19) */}
-      <AnimatePresence>
-        {lossModalOpp && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setLossModalOpp(null)} className="fixed inset-0 bg-black/40 backdrop-blur-md" />
-            <motion.div initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} className="relative bg-white rounded-3xl shadow-2xl max-w-md w-full border border-black/[0.08] p-6 space-y-4 z-10 text-xs">
-              <div className="flex items-center justify-between border-b border-black/[0.05] pb-2">
-                <div>
-                  <span className="text-[10px] font-bold text-rose-600 uppercase">PRD FR 19 Requirement</span>
-                  <h3 className="text-sm font-bold text-slate-900">Record Loss Analysis</h3>
-                </div>
-                <button onClick={() => setLossModalOpp(null)} className="text-slate-400 hover:text-slate-700">&times;</button>
-              </div>
-
-              <p className="text-[11px] text-slate-500">
-                To build actionable competitor intelligence, please capture the reason and winning competitor before closing this bid.
-              </p>
-
-              <form onSubmit={handleLossSubmit} className="space-y-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Loss Reason & Debrief Notes</label>
-                  <textarea
-                    required
-                    rows={3}
-                    value={lossReason}
-                    onChange={(e) => setLossReason(e.target.value)}
-                    placeholder="e.g. Price too high, client preferred vendor with local vessel in Bonny, scope mismatch..."
-                    className="w-full p-2 bg-slate-50 border border-black/[0.08] rounded-xl text-xs resize-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Winning Competitor (if known)</label>
-                  <input
-                    type="text"
-                    value={winningCompetitor}
-                    onChange={(e) => setWinningCompetitor(e.target.value)}
-                    placeholder="e.g. Fugro NV, SGS, Deltatek, Unknown"
-                    className="w-full p-2 bg-slate-50 border border-black/[0.08] rounded-xl text-xs"
-                  />
-                </div>
-
-                <div className="flex justify-end gap-2 pt-2 border-t border-black/[0.05]">
-                  <button type="button" onClick={() => setLossModalOpp(null)} className="px-3 py-1.5 text-slate-500 font-semibold">Cancel</button>
-                  <button type="submit" className="px-4 py-1.5 bg-rose-600 text-white rounded-xl font-bold shadow-xs active:scale-[0.96]">Record Loss</button>
-                </div>
-              </form>
-            </motion.div>
+      {/* Pipeline List View with Inline Interactive Status Bars */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
+          <div className="flex items-center gap-2">
+            <Briefcase className="w-4 h-4 text-slate-500" />
+            <h2 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+              Commercial Deal Pipeline List ({filteredOpps.length})
+            </h2>
           </div>
-        )}
-      </AnimatePresence>
+          <span className="text-[11px] text-slate-500 dark:text-slate-400">
+            Click on any milestone in a deal's status bar to advance or update its stage inline
+          </span>
+        </div>
+
+        <div className="divide-y divide-slate-200 dark:divide-slate-800">
+          {filteredOpps.length === 0 ? (
+            <div className="p-12 text-center text-slate-400">
+              <Briefcase className="w-8 h-8 mx-auto mb-2 opacity-40" />
+              <p className="text-xs font-semibold">No deals match your search criteria</p>
+            </div>
+          ) : (
+            filteredOpps.map((opp) => {
+              const isWon = opp.stage === 'WON';
+              const isLost = opp.stage === 'LOST';
+              const isHighValue = opp.estimatedValue >= 50000000 || (opp.currency === 'USD' && opp.estimatedValue >= 100000);
+              const formattedVal = opp.currency === 'NGN' 
+                ? `₦${(opp.estimatedValue / 1000000).toFixed(1)}M`
+                : `$${(opp.estimatedValue / 1000).toFixed(0)}k`;
+
+              // Find step index for progressive active fill
+              const currentStepIdx = PIPELINE_STEPS.findIndex(s => s.id === opp.stage);
+
+              return (
+                <div key={opp.id} className="p-5 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors space-y-4">
+                  {/* Deal Header Row */}
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                          {opp.id.toUpperCase()}
+                        </span>
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                          {opp.title}
+                        </h3>
+                        {isHighValue && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                            <ShieldAlert className="w-3 h-3" />
+                            <span>High-Value Gate</span>
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+                        <span className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                          <Building2 className="w-3 h-3 text-slate-400" />
+                          {opp.clientName}
+                        </span>
+                        <span>•</span>
+                        <span>Lead: <span className="font-medium text-slate-700 dark:text-slate-300">{opp.bdOwnerName}</span></span>
+                        <span>•</span>
+                        <span>Due: <span className="font-medium text-slate-700 dark:text-slate-300">{opp.submissionDeadline}</span></span>
+                        {opp.serviceLines?.length > 0 && (
+                          <>
+                            <span>•</span>
+                            <span className="text-[11px] text-blue-600 dark:text-blue-400 font-medium">
+                              {opp.serviceLines.join(', ')}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Value & Actions */}
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="text-right">
+                        <div className="text-base font-extrabold text-slate-900 dark:text-white font-mono tnum">
+                          {formattedVal}
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          {opp.currency} Estimate
+                        </div>
+                      </div>
+
+                      {/* Log Call / Meeting Button */}
+                      <button
+                        onClick={() => {
+                          setActiveActivityOpp(opp);
+                          setIsLogActivityOpen(true);
+                          haptics.selection();
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-purple-50 dark:hover:bg-purple-900/40 text-slate-700 dark:text-slate-300 hover:text-purple-700 dark:hover:text-purple-300 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 transition-colors"
+                        title="Log a client meeting or call pending line manager verification"
+                      >
+                        <PhoneCall className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Log Call/Meeting</span>
+                      </button>
+
+                      {/* Convert to Won Project Button */}
+                      {isWon && !opp.convertedProjectId && (
+                        <button
+                          onClick={() => {
+                            const newProjId = convertWonToProject(opp.id);
+                            haptics.success();
+                            alert(`🎉 Success! Project ${newProjId} initialized in workspace from won tender!`);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-xs transition-all active:scale-[0.96]"
+                        >
+                          <FolderPlus className="w-3.5 h-3.5" />
+                          <span>Initialize Project</span>
+                        </button>
+                      )}
+
+                      {isWon && !!opp.convertedProjectId && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[11px] font-bold">
+                          <Check className="w-3 h-3" />
+                          <span>Project Initialized ({opp.convertedProjectId})</span>
+                        </span>
+                      )}
+
+                      {/* Mark Lost Toggle */}
+                      {!isWon && !isLost && (
+                        <button
+                          onClick={() => handleStageSelect(opp, 'LOST')}
+                          className="px-2.5 py-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg text-xs font-medium transition-colors"
+                          title="Mark deal as lost"
+                        >
+                          Mark Lost
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Interactive Inline Status Bar */}
+                  <div className="pt-2">
+                    {isLost ? (
+                      <div className="flex items-center justify-between p-3 rounded-xl border border-rose-200 dark:border-rose-800/60 bg-rose-50/60 dark:bg-rose-950/20 text-xs">
+                        <div className="flex items-center gap-2 text-rose-700 dark:text-rose-400 font-semibold">
+                          <XCircle className="w-4 h-4" />
+                          <span>Marked as Lost: {opp.winLossReason || 'Client opted for competing proposal'}</span>
+                          {opp.winningCompetitor && (
+                            <span className="text-slate-500 font-normal">
+                              (Winning Competitor: <strong className="text-slate-700 dark:text-slate-300">{opp.winningCompetitor}</strong>)
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => handleStageSelect(opp, 'QUALIFYING')}
+                          className="text-[11px] text-blue-600 hover:underline font-bold"
+                        >
+                          Re-open Opportunity
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <div className="grid grid-cols-5 gap-2">
+                          {PIPELINE_STEPS.map((step, idx) => {
+                            const isCurrent = opp.stage === step.id;
+                            const isPast = currentStepIdx > idx;
+                            const isFuture = currentStepIdx < idx;
+
+                            let segmentBg = 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700';
+                            if (isCurrent) {
+                              segmentBg = isWon 
+                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs' 
+                                : 'bg-blue-600 text-white border-blue-600 shadow-xs';
+                            } else if (isPast) {
+                              segmentBg = 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60 font-semibold';
+                            }
+
+                            return (
+                              <button
+                                key={step.id}
+                                onClick={() => handleStageSelect(opp, step.id)}
+                                className={`group relative flex flex-col p-2.5 rounded-xl border text-left transition-all hover:scale-[1.01] active:scale-[0.98] ${segmentBg}`}
+                              >
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-[10px] font-mono uppercase tracking-wider opacity-80">
+                                    Step 0{step.stepNumber}
+                                  </span>
+                                  {isPast ? (
+                                    <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                                  ) : isCurrent ? (
+                                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                                  ) : (
+                                    <ChevronRight className="w-3 h-3 opacity-30 group-hover:opacity-80 transition-opacity" />
+                                  )}
+                                </div>
+                                <span className="text-xs font-bold truncate">
+                                  {step.label}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
 
       {/* New Opportunity Modal */}
       <AnimatePresence>
         {isNewOppOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsNewOppOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-md" />
-            <motion.div initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} className="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full border border-black/[0.08] p-6 space-y-4 z-10 text-xs">
-              <div className="flex items-center justify-between border-b border-black/[0.05] pb-2">
-                <h3 className="text-sm font-bold text-slate-900">Log New Opportunity / Tender</h3>
-                <button onClick={() => setIsNewOppOpen(false)} className="text-slate-400 hover:text-slate-700">&times;</button>
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-lg w-full border border-slate-200 dark:border-slate-800 p-6 space-y-4 z-10 text-xs">
+              <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Log New Bidding Opportunity</h3>
+                <button onClick={() => setIsNewOppOpen(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">&times;</button>
               </div>
 
-              <form onSubmit={handleCreateOpp} className="space-y-3">
+              <form onSubmit={handleCreateOpp} className="space-y-4">
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Opportunity Title</label>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Opportunity Title</label>
                   <input
                     type="text"
                     required
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="e.g. Chevron Escravos Terminal EIA & Geotechnical Study"
-                    className="w-full p-2 bg-slate-50 border border-black/[0.08] rounded-xl text-xs"
+                    className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Client Organization</label>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Client Organization</label>
                     <select
                       value={clientId}
                       onChange={(e) => setClientId(e.target.value)}
-                      className="w-full p-2 bg-slate-50 border border-black/[0.08] rounded-xl text-xs font-medium"
+                      className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white"
                     >
                       {clients.map(c => (
                         <option key={c.id} value={c.id}>{c.name}</option>
@@ -417,11 +520,11 @@ export default function BdPipelinePage() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Lead Source</label>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Lead Source</label>
                     <select
                       value={source}
                       onChange={(e) => setSource(e.target.value)}
-                      className="w-full p-2 bg-slate-50 border border-black/[0.08] rounded-xl text-xs"
+                      className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
                     >
                       <option value="Public Tender RFP">Public Tender RFP</option>
                       <option value="Existing Client Repeat">Existing Client Repeat</option>
@@ -433,22 +536,22 @@ export default function BdPipelinePage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Estimated Value</label>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Estimated Value</label>
                     <input
                       type="number"
                       required
                       value={estimatedValue}
                       onChange={(e) => setEstimatedValue(Number(e.target.value))}
-                      className="w-full p-2 bg-slate-50 border border-black/[0.08] rounded-xl text-xs font-mono tnum"
+                      className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-mono tnum text-slate-900 dark:text-white"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Currency</label>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Currency</label>
                     <select
                       value={currency}
                       onChange={(e: any) => setCurrency(e.target.value)}
-                      className="w-full p-2 bg-slate-50 border border-black/[0.08] rounded-xl text-xs font-bold"
+                      className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white"
                     >
                       <option value="NGN">₦ NGN (Nigerian Naira)</option>
                       <option value="USD">$ USD (US Dollar)</option>
@@ -460,23 +563,23 @@ export default function BdPipelinePage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Submission Deadline</label>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Submission Deadline</label>
                     <input
                       type="text"
                       required
                       value={submissionDeadline}
                       onChange={(e) => setSubmissionDeadline(e.target.value)}
                       placeholder="YYYY-MM-DD HH:MM"
-                      className="w-full p-2 bg-slate-50 border border-black/[0.08] rounded-xl text-xs"
+                      className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Supporting Technical Lead</label>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Supporting Technical Lead</label>
                     <select
                       value={technicalLeadId}
                       onChange={(e) => setTechnicalLeadId(e.target.value)}
-                      className="w-full p-2 bg-slate-50 border border-black/[0.08] rounded-xl text-xs"
+                      className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
                     >
                       {allUsers.filter(u => u.functionalRole === 'PROJECT_MANAGER' || u.functionalRole === 'FIELD_STAFF').map(u => (
                         <option key={u.id} value={u.id}>{u.name} ({u.jobTitle.split(' ')[0]})</option>
@@ -485,9 +588,9 @@ export default function BdPipelinePage() {
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2 border-t border-black/[0.05]">
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
                   <button type="button" onClick={() => setIsNewOppOpen(false)} className="px-3 py-1.5 text-slate-500 font-semibold">Cancel</button>
-                  <button type="submit" className="px-4 py-1.5 bg-slate-900 text-white rounded-xl font-bold shadow-xs active:scale-[0.96]">Create Opportunity</button>
+                  <button type="submit" className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold shadow-xs active:scale-[0.96]">Create Opportunity</button>
                 </div>
               </form>
             </motion.div>
@@ -495,26 +598,84 @@ export default function BdPipelinePage() {
         )}
       </AnimatePresence>
 
+      {/* Loss Reason Modal */}
+      <AnimatePresence>
+        {lossModalOpp && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setLossModalOpp(null)} className="fixed inset-0 bg-black/40 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-sm w-full border border-slate-200 dark:border-slate-800 p-6 space-y-4 z-10 text-xs">
+              <div className="flex items-center gap-2 text-rose-600 font-bold border-b border-slate-200 dark:border-slate-800 pb-2">
+                <XCircle className="w-4 h-4" />
+                <span>Mark Opportunity as Lost</span>
+              </div>
+              <form onSubmit={handleLossSubmit} className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Debrief / Loss Reason</label>
+                  <textarea
+                    required
+                    value={lossReason}
+                    onChange={(e) => setLossReason(e.target.value)}
+                    placeholder="e.g. Price undercut by 15%, Local community preference..."
+                    className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Winning Competitor (if known)</label>
+                  <input
+                    type="text"
+                    value={winningCompetitor}
+                    onChange={(e) => setWinningCompetitor(e.target.value)}
+                    placeholder="e.g. Fugro, ALS, SGS..."
+                    className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
+                  />
+                </div>
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+                  <button type="button" onClick={() => setLossModalOpp(null)} className="px-3 py-1.5 text-slate-500 font-semibold">Cancel</button>
+                  <button type="submit" className="px-4 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold shadow-xs active:scale-[0.96]">Confirm Loss</button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* New Client Modal */}
+      <NewClientModal
+        isOpen={isNewClientOpen}
+        onClose={() => setIsNewClientOpen(false)}
+        onSuccess={(id) => {
+          setClientId(id);
+        }}
+      />
+
+      {/* Log Activity Modal */}
+      <LogBdActivityModal
+        isOpen={isLogActivityOpen}
+        onClose={() => setIsLogActivityOpen(false)}
+        defaultOpportunityId={activeActivityOpp?.id}
+        defaultClientName={activeActivityOpp?.clientName}
+      />
+
       {/* Client Portal Simulation Modal */}
       <AnimatePresence>
         {isClientPortalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsClientPortalOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-md" />
-            <motion.div initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} className="relative bg-white rounded-3xl shadow-2xl max-w-md w-full border border-black/[0.08] p-6 space-y-4 z-10 text-xs">
-              <div className="flex items-center justify-between border-b border-black/[0.05] pb-2">
-                <h3 className="text-sm font-bold text-slate-900">AquaEarth Branded Client RFP Intake Portal</h3>
-                <button onClick={() => setIsClientPortalOpen(false)} className="text-slate-400 hover:text-slate-700">&times;</button>
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-md w-full border border-slate-200 dark:border-slate-800 p-6 space-y-4 z-10 text-xs">
+              <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">AquaEarth Branded Client RFP Intake Portal</h3>
+                <button onClick={() => setIsClientPortalOpen(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">&times;</button>
               </div>
 
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Share this secure link with prospective clients or partners (Chevron, TotalEnergies, NLNG) to upload RFP/TOR tenders directly into the platform:
               </p>
 
-              <div className="p-3 bg-slate-50 rounded-xl border border-black/[0.08] text-[11px] font-mono text-slate-800 break-all select-all">
+              <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-[11px] font-mono text-slate-800 dark:text-slate-200 break-all select-all">
                 https://portal.aquaearth.ng/tenders/upload/ae-direct-rfp
               </div>
 
-              <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-[10px] text-emerald-800 space-y-1">
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl border border-emerald-200 dark:border-emerald-800 text-[10px] text-emerald-800 dark:text-emerald-300 space-y-1">
                 <div className="font-bold">Automated Ingestion:</div>
                 <p>Client uploads auto-create an `Identified` opportunity and notify the BD Lead instantly.</p>
               </div>
@@ -522,7 +683,7 @@ export default function BdPipelinePage() {
               <div className="flex justify-end">
                 <button
                   onClick={() => setIsClientPortalOpen(false)}
-                  className="px-4 py-1.5 bg-slate-900 text-white rounded-xl font-semibold active:scale-[0.96]"
+                  className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold active:scale-[0.96]"
                 >
                   Done
                 </button>

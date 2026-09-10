@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
@@ -12,14 +12,16 @@ import {
   Users, 
   GitFork, 
   Clock, 
-  Lock,
-  ArrowRight,
-  TrendingUp,
-  MapPin,
-  CheckCircle2,
-  AlertCircle
+  Lock, 
+  ArrowRight, 
+  TrendingUp, 
+  MapPin, 
+  CheckCircle2, 
+  AlertCircle,
+  Sliders
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import KpiWeightsManagerModal from '@/components/admin/KpiWeightsManagerModal';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -28,8 +30,11 @@ export default function AdminDashboardPage() {
     leaderboard, 
     projects, 
     attendanceRecords, 
-    allUsers 
+    allUsers,
+    kpiConfig
   } = useAuth();
+
+  const [isKpiModalOpen, setIsKpiModalOpen] = useState(false);
 
   // KPI Calculations
   const totalCompanyKpi = leaderboard.reduce((acc, e) => acc + e.totalScore, 0);
@@ -71,6 +76,13 @@ export default function AdminDashboardPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsKpiModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30 rounded-xl text-xs font-bold shadow-xs active:scale-[0.97] transition-all"
+          >
+            <Sliders className="w-3.5 h-3.5" />
+            <span>KPI Weights & Tiers</span>
+          </button>
           <Link
             href="/admin/users"
             prefetch={true}
@@ -246,7 +258,30 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Administrative Sub-Modules Hub */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div 
+          onClick={() => setIsKpiModalOpen(true)}
+          className="p-5 bg-white dark:bg-[#0c0c0e] border border-amber-500/30 dark:border-amber-500/20 rounded-3xl shadow-xs apple-card-hover cursor-pointer group active:scale-[0.99] relative overflow-hidden"
+        >
+          <div className="absolute -top-6 -right-6 w-20 h-20 bg-amber-500/10 rounded-full blur-xl pointer-events-none" />
+          <div className="flex items-center justify-between pb-2">
+            <Sliders className="w-5 h-5 text-amber-500" />
+            <span className="text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-full border border-amber-500/20">
+              PRD 114
+            </span>
+          </div>
+          <h4 className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+            KPI Scoring & Tiers
+          </h4>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+            Work-item completion points, punctuality incentives, and monthly appraisal bands.
+          </p>
+          <div className="pt-2 mt-2 border-t border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between text-[10px] text-slate-400 font-semibold">
+            <span>6 Rules + Punctuality</span>
+            <span className="text-amber-600 dark:text-amber-400 font-bold">Configure &rarr;</span>
+          </div>
+        </div>
+
         <Link 
           href="/admin/users"
           prefetch={true}
@@ -292,6 +327,12 @@ export default function AdminDashboardPage() {
           </p>
         </Link>
       </div>
+
+      {/* Superadmin KPI Weights & Tier Thresholds Manager Modal */}
+      <KpiWeightsManagerModal
+        isOpen={isKpiModalOpen}
+        onClose={() => setIsKpiModalOpen(false)}
+      />
     </div>
   );
 }

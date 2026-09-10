@@ -20,16 +20,20 @@ import {
   Calendar,
   Layers,
   Clock,
-  Eye
+  Eye,
+  Sliders
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import KpiBreakdownModal from '@/components/kpi/KpiBreakdownModal';
+import KpiWeightsManagerModal from '@/components/admin/KpiWeightsManagerModal';
+import { getPerformanceTier } from '@/lib/kpi-engine';
 
 export default function KpiLeaderboardPage() {
-  const { leaderboard, currentUser, allUsers, tasks } = useAuth();
+  const { leaderboard, currentUser, allUsers, tasks, kpiConfig } = useAuth();
   const [selectedMonth, setSelectedMonth] = useState('2026-09');
   const [deptFilter, setDeptFilter] = useState('ALL');
   const [drilldownEntry, setDrilldownEntry] = useState<KpiLeaderboardEntry | null>(null);
+  const [isWeightsModalOpen, setIsWeightsModalOpen] = useState(false);
 
   // Role Scoping Flags
   const isSuperadmin = currentUser.accessTier === 'SUPERADMIN' || 
@@ -104,6 +108,16 @@ export default function KpiLeaderboardPage() {
 
         {/* Controls */}
         <div className="flex items-center gap-2">
+          {isSuperadmin && (
+            <button
+              onClick={() => setIsWeightsModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30 rounded-xl text-xs font-bold shadow-xs transition-all active:scale-[0.96]"
+            >
+              <Sliders className="w-3.5 h-3.5" />
+              <span>Configure Scoring & Tiers</span>
+            </button>
+          )}
+
           <select
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
@@ -154,8 +168,8 @@ export default function KpiLeaderboardPage() {
                   September Appraisal Total (Click to Inspect)
                 </h3>
               </div>
-              <span className="text-xs font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2.5 py-0.5 rounded-full tnum">
-                Tier 1 Performer
+              <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border tnum ${getPerformanceTier(myEntry.totalScore, kpiConfig?.tierThresholds).badgeColor}`}>
+                {getPerformanceTier(myEntry.totalScore, kpiConfig?.tierThresholds).label}
               </span>
             </div>
 
@@ -220,8 +234,13 @@ export default function KpiLeaderboardPage() {
               onClick={() => setDrilldownEntry(topThree[1])}
               className="bg-white dark:bg-[#0c0c0e] border border-black/[0.08] dark:border-white/[0.12] rounded-3xl p-6 flex flex-col items-center text-center space-y-3 relative md:order-1 order-2 shadow-xs cursor-pointer hover:border-slate-900 dark:hover:border-white transition-all"
             >
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/10 px-2.5 py-0.5 rounded-full">
-                🥈 2nd Place
+              <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/10 px-2.5 py-0.5 rounded-full">
+                  🥈 2nd Place
+                </div>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getPerformanceTier(topThree[1].totalScore, kpiConfig?.tierThresholds).badgeColor}`}>
+                  {getPerformanceTier(topThree[1].totalScore, kpiConfig?.tierThresholds).label}
+                </span>
               </div>
               <img
                 src={topThree[1].avatar || 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150'}
@@ -244,9 +263,14 @@ export default function KpiLeaderboardPage() {
               onClick={() => setDrilldownEntry(topThree[0])}
               className="bg-gradient-to-b from-amber-500/10 via-amber-500/5 to-white dark:to-[#0c0c0e] rounded-3xl p-6 border border-amber-300 dark:border-amber-500/30 shadow-md flex flex-col items-center text-center space-y-3 relative md:order-2 order-1 md:-mt-2 cursor-pointer hover:border-amber-500 transition-all"
             >
-              <div className="bg-amber-400 text-amber-950 font-black text-[10px] uppercase tracking-wider px-3 py-0.5 rounded-full shadow-2xs flex items-center gap-1">
-                <Crown className="w-3 h-3 fill-current" />
-                Team Top Performer
+              <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                <div className="bg-amber-400 text-amber-950 font-black text-[10px] uppercase tracking-wider px-3 py-0.5 rounded-full shadow-2xs flex items-center gap-1">
+                  <Crown className="w-3 h-3 fill-current" />
+                  Top Performer
+                </div>
+                <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border ${getPerformanceTier(topThree[0].totalScore, kpiConfig?.tierThresholds).badgeColor}`}>
+                  {getPerformanceTier(topThree[0].totalScore, kpiConfig?.tierThresholds).label}
+                </span>
               </div>
               <img
                 src={topThree[0].avatar || 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150'}
@@ -272,8 +296,13 @@ export default function KpiLeaderboardPage() {
               onClick={() => setDrilldownEntry(topThree[2])}
               className="bg-white dark:bg-[#0c0c0e] border border-black/[0.08] dark:border-white/[0.12] rounded-3xl p-6 flex flex-col items-center text-center space-y-3 relative md:order-3 order-3 shadow-xs cursor-pointer hover:border-slate-900 dark:hover:border-white transition-all"
             >
-              <div className="text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950 px-2.5 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
-                🥉 3rd Place
+              <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950 px-2.5 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
+                  🥉 3rd Place
+                </div>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getPerformanceTier(topThree[2].totalScore, kpiConfig?.tierThresholds).badgeColor}`}>
+                  {getPerformanceTier(topThree[2].totalScore, kpiConfig?.tierThresholds).label}
+                </span>
               </div>
               <img
                 src={topThree[2].avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150'}
@@ -330,6 +359,7 @@ export default function KpiLeaderboardPage() {
                 <th className="px-5 py-3">Department</th>
                 <th className="px-5 py-3 text-center">Completed Deliverables</th>
                 <th className="px-5 py-3 text-center">On-Time Clock-Ins</th>
+                <th className="px-5 py-3 text-center">Appraisal Tier</th>
                 <th className="px-5 py-3 text-right">Total KPI Score</th>
                 <th className="px-5 py-3 text-center">Audit</th>
               </tr>
@@ -337,6 +367,7 @@ export default function KpiLeaderboardPage() {
             <tbody className="divide-y divide-black/[0.04] dark:divide-white/[0.06] font-medium">
               {filteredEntries.map((entry) => {
                 const isMe = entry.userId === currentUser.id;
+                const tier = getPerformanceTier(entry.totalScore, kpiConfig?.tierThresholds);
                 return (
                   <tr 
                     key={entry.userId} 
@@ -367,6 +398,11 @@ export default function KpiLeaderboardPage() {
                     <td className="px-5 py-3 text-slate-600 dark:text-slate-300 text-[11px]">{entry.departmentName}</td>
                     <td className="px-5 py-3 text-center font-semibold text-slate-800 dark:text-slate-200 tnum">{entry.completedCount}</td>
                     <td className="px-5 py-3 text-center text-emerald-600 dark:text-emerald-400 font-bold tnum">{entry.onTimeCount}</td>
+                    <td className="px-5 py-3 text-center whitespace-nowrap">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${tier.badgeColor}`}>
+                        {tier.label}
+                      </span>
+                    </td>
                     <td className="px-5 py-3 text-right font-bold text-xs text-slate-900 dark:text-white tnum">{entry.totalScore} pts</td>
                     <td className="px-5 py-3 text-center">
                       <button className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white">
@@ -388,6 +424,12 @@ export default function KpiLeaderboardPage() {
         entry={drilldownEntry}
         tasks={tasks}
         user={allUsers.find(u => u.id === drilldownEntry?.userId)}
+      />
+
+      {/* Superadmin KPI Scoring Weights & Tier Thresholds Manager Modal */}
+      <KpiWeightsManagerModal
+        isOpen={isWeightsModalOpen}
+        onClose={() => setIsWeightsModalOpen(false)}
       />
     </div>
   );

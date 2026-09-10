@@ -52,15 +52,16 @@ export default function Sidebar({ onMobileItemClick }: { onMobileItemClick?: () 
   const isSuperadmin = currentUser.accessTier === 'SUPERADMIN' || role === 'SUPERADMIN' || role === 'MANAGING_CONSULTANT';
   const isDeptHead = currentUser.managementTier === 'DEPT_HEAD';
   const isManager = currentUser.managementTier !== 'NONE';
+  const isHR = role === 'HR_ADMIN' || (currentUser.departmentName === 'Human Resources' && !isSuperadmin);
 
-  // Role Scoping Flags
+  // Role Scoping Flags - Strict isolation barrier: HR cannot see running projects, project data, or QA/QC review
   const canSeeAnalytics = isSuperadmin || isDeptHead || isManager || role === 'BD_LEAD' || role === 'FINANCE_ADMIN';
   const canSeeBD = isSuperadmin || role === 'BD_LEAD' || isDeptHead;
   const canSeeCRM = isSuperadmin || role === 'BD_LEAD' || isDeptHead;
-  const canSeeProjects = isSuperadmin || isManager || role === 'PROJECT_MANAGER' || role === 'FIELD_STAFF' || role === 'TECHNICAL_CONSULTANT';
-  const canSeeField = isSuperadmin || role === 'FIELD_STAFF' || role === 'TECHNICAL_CONSULTANT' || role === 'PROJECT_MANAGER';
+  const canSeeProjects = !isHR && (isSuperadmin || isManager || role === 'PROJECT_MANAGER' || role === 'FIELD_STAFF' || role === 'TECHNICAL_CONSULTANT');
+  const canSeeField = !isHR && (isSuperadmin || role === 'FIELD_STAFF' || role === 'TECHNICAL_CONSULTANT' || role === 'PROJECT_MANAGER');
   const canSeeDocs = true; // Knowledge repository is universal
-  const canSeeQA = isSuperadmin || isManager || role === 'QA_LEAD' || role === 'PROJECT_MANAGER' || role === 'TECHNICAL_CONSULTANT';
+  const canSeeQA = !isHR && (isSuperadmin || isManager || role === 'QA_LEAD' || role === 'PROJECT_MANAGER' || role === 'TECHNICAL_CONSULTANT');
   const canSeeCompliance = isSuperadmin || role === 'COMPLIANCE_OFFICER' || role === 'QA_LEAD';
   const canSeeVault = true; // Universal access to scoped project deliverables & personal uploads
   const canSeeITDesign = isSuperadmin || role === 'IT_LEAD' || role === 'DESIGN_LEAD' || role === 'IT_DESIGN_OFFICER';
@@ -114,6 +115,7 @@ export default function Sidebar({ onMobileItemClick }: { onMobileItemClick?: () 
         { name: 'IT & Design Ops Studio', href: '/operations/it-design', icon: Layers, highlight: '24h Rush', visible: canSeeITDesign },
         { name: 'Milestone Finance & Invoicing', href: '/finance', icon: Receipt, badge: 'WHT/VAT', visible: canSeeFinance },
         { name: 'HR & Human Capital', href: '/hr/staff', icon: UserCheck, visible: canSeeHR },
+        { name: 'Onboarding & Recruitment', href: '/hr/onboarding', icon: Users, highlight: 'Funnel', visible: canSeeHR },
         { name: 'Admin Overview', href: '/admin', icon: Shield, highlight: 'Command', visible: canSeeAdmin },
         { name: 'Superadmin Management', href: '/admin/users', icon: Lock, badge: 'Full Root', visible: canSeeAdmin },
       ]
