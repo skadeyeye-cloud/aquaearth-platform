@@ -279,8 +279,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const storedNotifs = getStoredData<NotificationItem[]>('notifications', INITIAL_NOTIFICATIONS);
       setNotifications(storedNotifs || []);
 
-      const storedUsers = getStoredData<UserProfile[]>('users', INITIAL_USERS);
-      setAllUsers(storedUsers || []);
+      const rawStoredUsers = getStoredData<UserProfile[]>('users', INITIAL_USERS);
+      const storedUsers = (rawStoredUsers || INITIAL_USERS).map(u => {
+        if (u.id === 'usr-1' || u.name === 'Kaine Edike') {
+          return { ...u, avatar: '/avatars/kaine-edike.png' };
+        }
+        return u;
+      });
+      setAllUsers(storedUsers);
 
       const storedAudit = getStoredData<AuditRecord[]>('audit_logs', INITIAL_AUDIT_LOGS);
       setAuditLogs(storedAudit || []);
@@ -313,8 +319,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const savedUser = localStorage.getItem('ae_user_id');
       if (savedUser) {
-        const u = (storedUsers || INITIAL_USERS).find(user => user.id === savedUser);
+        const u = storedUsers.find(user => user.id === savedUser);
         if (u) setCurrentUser(u);
+      } else {
+        const kaine = storedUsers.find(user => user.id === 'usr-1');
+        if (kaine) setCurrentUser(kaine);
       }
     } catch (e) {
       console.warn('[AquaEarth] Storage hydration fallback:', e);

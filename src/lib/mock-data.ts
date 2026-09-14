@@ -18,7 +18,7 @@ export const INITIAL_USERS: UserProfile[] = [
     id: 'usr-1',
     email: 'kaine.edike@aquaearth.com',
     name: 'Kaine Edike',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    avatar: '/avatars/kaine-edike.png',
     jobTitle: 'Founder & Managing Consultant',
     functionalRole: 'MANAGING_CONSULTANT',
     accessTier: 'SUPERADMIN',
@@ -297,7 +297,7 @@ export const INITIAL_TASKS: TaskItem[] = [
         authorId: 'usr-1',
         authorName: 'Kaine Edike',
         authorRole: 'Managing Consultant',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+        avatar: '/avatars/kaine-edike.png',
         text: 'Double check Section 4.3 regarding 100-year wave height extremes against Shell Bonga benchmarking data.',
         timestamp: '2026-08-31 16:30'
       }
@@ -1570,7 +1570,7 @@ export const INITIAL_ATTENDANCE: import('./types').AttendanceRecordItem[] = [
     id: 'att-1',
     userId: 'usr-1',
     userName: 'Kaine Edike',
-    userAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+    userAvatar: '/avatars/kaine-edike.png',
     date: '2026-09-01',
     clockInTime: '07:48:22',
     clockOutTime: undefined,

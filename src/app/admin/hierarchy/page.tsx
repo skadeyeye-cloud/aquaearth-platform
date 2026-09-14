@@ -37,7 +37,7 @@ export default function OrgHierarchyPage() {
               Superadmin & Dept Head
             </span>
             <img
-              src={managingConsultant.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
+              src={managingConsultant.avatar || '/avatars/kaine-edike.png'}
               alt={managingConsultant.name}
               className="w-12 h-12 rounded-2xl object-cover mx-auto ring-2 ring-emerald-400 mt-1"
             />
