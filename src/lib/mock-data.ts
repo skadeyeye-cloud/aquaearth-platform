@@ -16,10 +16,13 @@ import {
   PettyCashAnalysis
 } from './types';
 
+export const DEFAULT_CORPORATE_PASSWORD = 'AquaEarth@2026!';
+
 export const INITIAL_USERS: UserProfile[] = [
   {
     id: 'usr-1',
     email: 'kaine.edike@aquaearth.com',
+    password: DEFAULT_CORPORATE_PASSWORD,
     name: 'Kaine Edike',
     avatar: '/avatars/kaine-edike.png',
     jobTitle: 'Founder & Managing Consultant',

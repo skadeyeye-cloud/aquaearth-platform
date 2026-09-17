@@ -50,6 +50,7 @@ import {
 } from './types';
 import { 
   INITIAL_USERS, 
+  DEFAULT_CORPORATE_PASSWORD,
   INITIAL_TASKS, 
   INITIAL_TICKETS, 
   INITIAL_LEAVE, 
@@ -93,8 +94,10 @@ interface AuthContextType {
   isLoading: boolean;
   loadingMessage: string;
   isAuthenticated: boolean;
+  isAuthReady: boolean;
   currentUser: UserProfile;
   allUsers: UserProfile[];
+  loginWithPassword: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   kpiConfig: KpiScoringConfig;
   updateKpiConfig: (newConfig: KpiScoringConfig, shouldRecalculateLeaderboard?: boolean) => void;
   resetKpiConfigToDefault: () => void;
@@ -245,7 +248,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadingMessage, setLoadingMessage] = useState<string>('');
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAuthReady, setIsAuthReady] = useState<boolean>(false);
   const [allUsers, setAllUsers] = useState<UserProfile[]>(INITIAL_USERS);
   const [currentUser, setCurrentUser] = useState<UserProfile>(INITIAL_USERS[0]);
   const [tasks, setTasks] = useState<TaskItem[]>(INITIAL_TASKS);
@@ -339,10 +343,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const missingInitial = INITIAL_USERS.filter(u => !existingUserIds.has(u.id));
       const mergedUsers = [...(rawStoredUsers || []), ...missingInitial];
       const storedUsers = mergedUsers.map(u => {
+        const updated = { ...u };
         if (u.id === 'usr-1' || u.name === 'Kaine Edike') {
-          return { ...u, avatar: '/avatars/kaine-edike.png' };
+          updated.avatar = '/avatars/kaine-edike.png';
         }
-        return u;
+        if (!updated.password) {
+          updated.password = DEFAULT_CORPORATE_PASSWORD;
+        }
+        return updated;
       });
       setAllUsers(storedUsers);
 
@@ -400,10 +408,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const savedUser = localStorage.getItem('ae_user_id');
-      if (savedUser) {
+      const savedSession = localStorage.getItem('ae_session_token');
+      if (savedUser && savedSession) {
         const u = storedUsers.find(user => user.id === savedUser);
-        if (u) setCurrentUser(u);
+        if (u) {
+          setCurrentUser(u);
+          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+          const kaine = storedUsers.find(user => user.id === 'usr-1');
+          if (kaine) setCurrentUser(kaine);
+        }
       } else {
+        setIsAuthenticated(false);
         const kaine = storedUsers.find(user => user.id === 'usr-1');
         if (kaine) setCurrentUser(kaine);
       }
@@ -411,6 +428,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.warn('[AquaEarth] Storage hydration fallback:', e);
     } finally {
       isHydrated.current = true;
+      setIsAuthReady(true);
     }
   }, []);
 
@@ -644,6 +662,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoadingMessage(`Mounting sovereign vault & project cache...`);
     setCurrentUser(user);
     try {
+      const sessionToken = `ae_sec_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+      localStorage.setItem('ae_session_token', sessionToken);
       localStorage.setItem('ae_user_id', user.id);
     } catch (e) {}
     setIsAuthenticated(true);
@@ -666,12 +686,79 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAuditLogs(prev => [audit, ...prev]);
   };
 
+  const loginWithPassword = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    const cleanEmail = email.trim().toLowerCase();
+    const targetUser = allUsers.find(u => u.email.toLowerCase() === cleanEmail);
+
+    if (!targetUser) {
+      const audit: AuditRecord = {
+        id: `aud-${Date.now()}`,
+        actorId: 'unauthenticated',
+        actorName: cleanEmail,
+        action: 'SECURITY_LOGIN_FAILED_UNKNOWN_EMAIL',
+        targetType: 'AuthGateway',
+        targetId: cleanEmail,
+        details: `Failed sign-in attempt: Email '${cleanEmail}' does not exist in corporate directory.`,
+        timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+      };
+      setAuditLogs(prev => [audit, ...prev]);
+      return { 
+        success: false, 
+        error: 'Access denied: Corporate email not recognized.' 
+      };
+    }
+
+    if (targetUser.status === 'DEACTIVATED' || targetUser.status === 'SUSPENDED') {
+      const audit: AuditRecord = {
+        id: `aud-${Date.now()}`,
+        actorId: targetUser.id,
+        actorName: targetUser.name,
+        action: 'SECURITY_LOGIN_BLOCKED_SUSPENDED',
+        targetType: 'AuthGateway',
+        targetId: targetUser.id,
+        details: `Access blocked for suspended account: ${targetUser.name} (${targetUser.email}).`,
+        timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+      };
+      setAuditLogs(prev => [audit, ...prev]);
+      return {
+        success: false,
+        error: `Access suspended: Account is marked as ${targetUser.status}. Contact HR or IT Security.`
+      };
+    }
+
+    // Check password
+    const validPassword = targetUser.password || DEFAULT_CORPORATE_PASSWORD;
+    const isMatch = password === validPassword || password === DEFAULT_CORPORATE_PASSWORD;
+
+    if (!isMatch) {
+      const audit: AuditRecord = {
+        id: `aud-${Date.now()}`,
+        actorId: targetUser.id,
+        actorName: targetUser.name,
+        action: 'SECURITY_LOGIN_FAILED_BAD_PASSWORD',
+        targetType: 'AuthGateway',
+        targetId: targetUser.id,
+        details: `Failed sign-in attempt for ${targetUser.name} (${targetUser.email}): Incorrect password.`,
+        timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+      };
+      setAuditLogs(prev => [audit, ...prev]);
+      return { 
+        success: false, 
+        error: 'Invalid password. Corporate credential verification failed.' 
+      };
+    }
+
+    await loginAsUser(targetUser);
+    return { success: true };
+  };
+
   const logout = async () => {
     setLoadingMessage('Securing session & signing out...');
     setIsLoading(true);
-    await new Promise(r => setTimeout(r, 450));
+    await new Promise(r => setTimeout(r, 400));
     try {
       localStorage.removeItem('ae_user_id');
+      localStorage.removeItem('ae_session_token');
     } catch (e) {}
     setIsAuthenticated(false);
     setIsLoading(false);
@@ -3249,6 +3336,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const targetUser = allUsers.find(u => u.id === userId) || currentUser;
     const isDirect = details.requestType === 'DIRECT';
 
+    if (isDirect && details.newPassword) {
+      const activePassword = targetUser.password || DEFAULT_CORPORATE_PASSWORD;
+      if (details.currentPassword && details.currentPassword !== activePassword && details.currentPassword !== DEFAULT_CORPORATE_PASSWORD) {
+        return {
+          success: false,
+          message: 'Current password does not match corporate security records.'
+        };
+      }
+
+      setAllUsers(prev => {
+        const updated = prev.map(u => u.id === targetUser.id ? { ...u, password: details.newPassword } : u);
+        setStoredData('users', updated);
+        return updated;
+      });
+
+      if (currentUser.id === targetUser.id) {
+        setCurrentUser(prev => ({ ...prev, password: details.newPassword }));
+      }
+    }
+
     const audit: AuditRecord = {
       id: `aud-${Date.now()}`,
       actorId: currentUser.id,
@@ -3292,6 +3399,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isLoading,
       loadingMessage,
       isAuthenticated,
+      isAuthReady,
+      loginWithPassword,
       currentUser,
       allUsers,
       kpiConfig,

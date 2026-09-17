@@ -1,17 +1,27 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
-import { usePathname } from 'next/navigation';
+import React, { useState, useEffect, Suspense } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth-context';
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
 import LoadingOverlay from '@/components/ui/LoadingOverlay';
 import PageTransition from '@/components/layout/PageTransition';
 import RouteProgressBar from '@/components/layout/RouteProgressBar';
+import { Lock } from 'lucide-react';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { isAuthenticated, isAuthReady } = useAuth();
   const isAuthPage = pathname === '/login' || pathname === '/request-access';
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (isAuthReady && !isAuthenticated && !isAuthPage) {
+      router.replace('/login');
+    }
+  }, [isAuthReady, isAuthenticated, isAuthPage, router]);
 
   if (isAuthPage) {
     return (
@@ -25,6 +35,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {children}
           </PageTransition>
         </main>
+      </div>
+    );
+  }
+
+  // Block unauthorized users from seeing internal dashboard chrome
+  if (!isAuthReady || !isAuthenticated) {
+    return (
+      <div className="min-h-screen w-full bg-[#F5F5F7] dark:bg-[#000000] text-[#1D1D1F] dark:text-[#F6F4F0] flex flex-col items-center justify-center p-6 select-none transition-colors">
+        <div className="w-14 h-14 rounded-2xl bg-white dark:bg-[#111111] border border-black/10 dark:border-white/10 flex items-center justify-center shadow-lg mb-4">
+          <Lock className="w-6 h-6 text-emerald-500 animate-pulse" />
+        </div>
+        <h2 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight">Security Gateway Active</h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Verifying credentials & session keys...</p>
       </div>
     );
   }
