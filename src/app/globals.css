@@ -19,8 +19,8 @@
   --foreground: #F6F4F0;
   --card-bg: #0C0C0D;
   --card-border: rgba(255, 255, 255, 0.08);
-  --nav-bg: rgba(0, 0, 0, 0.88);
-  --sidebar-bg: #050506;
+  --nav-bg: #000000;
+  --sidebar-bg: #000000;
   --text-muted: #A39E93;
   --text-subtle: #6E6961;
 }

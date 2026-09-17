@@ -96,14 +96,14 @@ export default function Header({ onOpenMobileSidebar }: HeaderProps) {
 
   return (
     <>
-      <header className="h-16 bg-[#F5F5F7]/85 dark:bg-[#000000]/88 backdrop-blur-xl sticky top-0 z-20 flex items-center justify-between px-4 sm:px-6 select-none border-b border-black/[0.06] dark:border-white/[0.08] transition-colors gap-2 sm:gap-3">
+      <header className="h-16 bg-[#F5F5F7]/90 dark:bg-black backdrop-blur-xl sticky top-0 z-20 flex items-center justify-between px-4 sm:px-6 select-none border-b border-black/[0.06] dark:border-white/[0.08] transition-colors gap-2 sm:gap-3">
         {/* Left Mobile Menu Trigger, Module Spatial Breadcrumb & Spotlight Search */}
         <div className="flex items-center gap-2.5 flex-1 max-w-xl min-w-0">
           {onOpenMobileSidebar && (
             <button
               type="button"
               onClick={onOpenMobileSidebar}
-              className="md:hidden p-2 rounded-xl text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-black/[0.05] dark:hover:bg-white/[0.08] transition-colors shrink-0 cursor-pointer"
+              className="md:hidden p-2 rounded-xl text-[#1D1D1F] dark:text-[#F6F4F0] hover:bg-black/[0.05] dark:hover:bg-white/[0.08] transition-colors shrink-0 cursor-pointer"
               aria-label="Open Navigation Menu"
             >
               <Menu className="w-5 h-5" />
@@ -118,14 +118,14 @@ export default function Header({ onOpenMobileSidebar }: HeaderProps) {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 4 }}
               transition={{ duration: 0.16, ease: [0.23, 1, 0.32, 1] }}
-              className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.04] dark:border-white/[0.06] text-xs shrink-0 select-none"
+              className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-xl bg-black/[0.04] dark:bg-[#0C0C0D] border border-black/[0.04] dark:border-white/[0.08] text-xs shrink-0 select-none"
             >
               <ModuleIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-              <span className="text-[#86868B] dark:text-[#A1A1A6] text-[11px] font-medium whitespace-nowrap">
+              <span className="text-[#86868B] dark:text-[#A39E93] text-[11px] font-medium whitespace-nowrap">
                 {currentModule.section}
               </span>
-              <span className="text-[#86868B]/40 dark:text-[#A1A1A6]/40 text-[10px]">/</span>
-              <span className="text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold text-[11.5px] whitespace-nowrap">
+              <span className="text-[#86868B]/40 dark:text-[#A39E93]/40 text-[10px]">/</span>
+              <span className="text-[#1D1D1F] dark:text-[#F6F4F0] font-semibold text-[11.5px] whitespace-nowrap">
                 {currentModule.title}
               </span>
             </motion.div>
@@ -139,14 +139,14 @@ export default function Header({ onOpenMobileSidebar }: HeaderProps) {
                 haptics.selection();
                 setIsSpotlightOpen(true);
               }}
-              className="relative flex items-center justify-between w-full pl-8 pr-2.5 py-1.5 bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.07] dark:hover:bg-white/[0.1] border border-black/[0.04] dark:border-white/[0.06] rounded-xl text-xs text-[#86868B] dark:text-[#A1A1A6] transition-all cursor-pointer group"
+              className="relative flex items-center justify-between w-full pl-8 pr-2.5 py-1.5 bg-black/[0.04] dark:bg-[#0C0C0D] hover:bg-black/[0.07] dark:hover:bg-[#151517] border border-black/[0.04] dark:border-white/[0.08] rounded-xl text-xs text-[#86868B] dark:text-[#A39E93] transition-all cursor-pointer group"
               title="Spotlight Search & Quick Module Switcher (Cmd+K)"
             >
-              <Search className="w-3.5 h-3.5 text-[#86868B] dark:text-[#A1A1A6] group-hover:text-[#1D1D1F] dark:group-hover:text-white absolute left-3 top-1/2 -translate-y-1/2 transition-colors" />
-              <span className="truncate text-[11.5px] text-[#86868B] dark:text-[#A1A1A6] font-normal">
+              <Search className="w-3.5 h-3.5 text-[#86868B] dark:text-[#A39E93] group-hover:text-[#1D1D1F] dark:group-hover:text-white absolute left-3 top-1/2 -translate-y-1/2 transition-colors" />
+              <span className="truncate text-[11.5px] text-[#86868B] dark:text-[#A39E93] font-normal">
                 Spotlight search or jump...
               </span>
-              <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-white dark:bg-white/10 text-[9px] font-medium text-[#86868B] dark:text-[#A1A1A6] border border-black/[0.06] dark:border-white/[0.08] shadow-2xs shrink-0">
+              <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-white dark:bg-[#1A1A1C] text-[9px] font-medium text-[#86868B] dark:text-[#A39E93] border border-black/[0.06] dark:border-white/[0.08] shadow-2xs shrink-0">
                 ⌘K
               </kbd>
             </button>
@@ -163,11 +163,11 @@ export default function Header({ onOpenMobileSidebar }: HeaderProps) {
                 haptics.selection();
                 setIsPresenceOpen(!isPresenceOpen);
               }}
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.07] dark:hover:bg-white/[0.1] border border-black/[0.04] dark:border-white/[0.06] transition-all active:scale-95 cursor-pointer"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-black/[0.04] dark:bg-[#0C0C0D] hover:bg-black/[0.07] dark:hover:bg-[#151517] border border-black/[0.04] dark:border-white/[0.08] transition-all active:scale-95 cursor-pointer"
               title="Live Team Presence & Multi-disciplinary Collaboration"
             >
               <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-              <span className="text-[11px] font-medium text-[#1D1D1F] dark:text-[#F5F5F7] tnum">
+              <span className="text-[11px] font-medium text-[#1D1D1F] dark:text-[#F6F4F0] tnum">
                 {activeUsers.length} Online
               </span>
               <div className="flex -space-x-1.5 ml-0.5">
@@ -176,7 +176,7 @@ export default function Header({ onOpenMobileSidebar }: HeaderProps) {
                     key={u.id}
                     src={u.avatar}
                     alt={u.name}
-                    className="w-5 h-5 rounded-full ring-1.5 ring-[#F5F5F7] dark:ring-[#141416] object-cover shrink-0"
+                    className="w-5 h-5 rounded-full ring-1.5 ring-[#F5F5F7] dark:ring-black object-cover shrink-0"
                   />
                 ))}
               </div>
@@ -189,11 +189,11 @@ export default function Header({ onOpenMobileSidebar }: HeaderProps) {
                   onClick={() => setIsPresenceOpen(false)}
                   className="fixed inset-0 z-40"
                 />
-                <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] rounded-2xl shadow-xl p-4 z-50 space-y-3 animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-[#0C0C0D] border border-black/[0.06] dark:border-white/[0.08] rounded-2xl shadow-xl p-4 z-50 space-y-3 animate-in fade-in zoom-in-95 duration-150">
                   <div className="flex items-center justify-between pb-2 border-b border-black/[0.05] dark:border-white/[0.08]">
                     <div className="flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                      <span className="text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">Active Personnel</span>
+                      <span className="text-xs font-semibold text-[#1D1D1F] dark:text-[#F6F4F0]">Active Personnel</span>
                     </div>
                     <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
                       Active Presence
@@ -256,7 +256,7 @@ export default function Header({ onOpenMobileSidebar }: HeaderProps) {
               haptics.impact();
               toggleTheme();
             }}
-            className="p-2 sm:p-2.5 rounded-xl text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-black/[0.05] dark:hover:bg-white/[0.08] transition-all active:scale-[0.94] shrink-0 flex items-center justify-center cursor-pointer"
+            className="p-2 sm:p-2.5 rounded-xl text-[#1D1D1F] dark:text-[#F6F4F0] hover:bg-black/[0.05] dark:hover:bg-white/[0.08] transition-all active:scale-[0.94] shrink-0 flex items-center justify-center cursor-pointer"
             title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
             aria-label={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
           >
@@ -274,13 +274,13 @@ export default function Header({ onOpenMobileSidebar }: HeaderProps) {
               haptics.impact();
               setIsNotificationOpen(prev => !prev);
             }}
-            className="relative p-2 sm:p-2.5 rounded-xl text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-black/[0.05] dark:hover:bg-white/[0.08] transition-all active:scale-[0.94] shrink-0 flex items-center justify-center cursor-pointer"
+            className="relative p-2 sm:p-2.5 rounded-xl text-[#1D1D1F] dark:text-[#F6F4F0] hover:bg-black/[0.05] dark:hover:bg-white/[0.08] transition-all active:scale-[0.94] shrink-0 flex items-center justify-center cursor-pointer"
             title="Open Notification Center"
             aria-label="Open Notification Center"
           >
             <Bell className="w-4 h-4 pointer-events-none" />
             {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-[#F5F5F7] dark:ring-[#141416] pointer-events-none" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-[#F5F5F7] dark:ring-black pointer-events-none" />
             )}
           </button>
 
@@ -292,7 +292,7 @@ export default function Header({ onOpenMobileSidebar }: HeaderProps) {
                 haptics.selection();
                 setIsDropdownOpen(!isDropdownOpen);
               }}
-              className="flex items-center gap-2 p-1.5 pr-2 sm:pr-2.5 rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-black/[0.03] dark:bg-white/[0.06] hover:bg-black/[0.05] dark:hover:bg-white/[0.09] transition-all active:scale-[0.98] cursor-pointer"
+              className="flex items-center gap-2 p-1.5 pr-2 sm:pr-2.5 rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-black/[0.03] dark:bg-[#0C0C0D] hover:bg-black/[0.05] dark:hover:bg-[#151517] transition-all active:scale-[0.98] cursor-pointer"
             >
               <img
                 src={currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
@@ -300,12 +300,12 @@ export default function Header({ onOpenMobileSidebar }: HeaderProps) {
                 className="w-7 h-7 rounded-xl object-cover ring-1 ring-black/[0.06] dark:ring-white/[0.08]"
               />
               <div className="text-left hidden md:block max-w-[130px]">
-                <div className="font-semibold text-xs text-[#1D1D1F] dark:text-[#F5F5F7] leading-none truncate">{currentUser.name}</div>
-                <div className="text-[10px] text-[#86868B] dark:text-[#A1A1A6] font-normal leading-tight mt-0.5 truncate">
+                <div className="font-semibold text-xs text-[#1D1D1F] dark:text-[#F6F4F0] leading-none truncate">{currentUser.name}</div>
+                <div className="text-[10px] text-[#86868B] dark:text-[#A39E93] font-normal leading-tight mt-0.5 truncate">
                   {currentUser.jobTitle}
                 </div>
               </div>
-              <ChevronDown className="w-3.5 h-3.5 text-[#86868B] dark:text-[#A1A1A6] ml-0.5 pointer-events-none" />
+              <ChevronDown className="w-3.5 h-3.5 text-[#86868B] dark:text-[#A39E93] ml-0.5 pointer-events-none" />
             </button>
 
             {/* Persona Menu */}
@@ -316,10 +316,10 @@ export default function Header({ onOpenMobileSidebar }: HeaderProps) {
                   onClick={() => setIsDropdownOpen(false)} 
                 />
                 <div
-                  className="absolute right-0 mt-2 w-72 rounded-2xl bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xl p-2 z-50 space-y-1.5 text-xs origin-top-right transition-transform"
+                  className="absolute right-0 mt-2 w-72 rounded-2xl bg-white dark:bg-[#0C0C0D] border border-black/[0.06] dark:border-white/[0.08] shadow-xl p-2 z-50 space-y-1.5 text-xs origin-top-right transition-transform"
                 >
                   <div className="px-2.5 py-1.5 border-b border-black/[0.04] dark:border-white/[0.06]">
-                    <div className="text-[11px] font-semibold text-[#86868B] dark:text-[#A1A1A6]">
+                    <div className="text-[11px] font-semibold text-[#86868B] dark:text-[#A39E93]">
                       Switch Persona (RBAC Scoped)
                     </div>
                   </div>
