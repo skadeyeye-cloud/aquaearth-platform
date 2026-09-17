@@ -36,7 +36,17 @@ import {
   CandidateApplication,
   InterviewStage,
   InterviewNote,
-  CandidateDocument
+  CandidateDocument,
+  PettyCashFund,
+  PettyCashTransaction,
+  PettyCashAnalysis,
+  BudgetType,
+  BudgetFrequency,
+  BudgetCategory,
+  BudgetApprovalStage,
+  BudgetDeclineOutcome,
+  PettyCashCustodian,
+  PettyCashCategory
 } from './types';
 import { 
   INITIAL_USERS, 
@@ -65,7 +75,10 @@ import {
   INITIAL_BUDGET_REQUESTS,
   INITIAL_STAFF_QUERIES,
   INITIAL_PAYROLL_RECORDS,
-  INITIAL_CANDIDATE_APPLICATIONS
+  INITIAL_CANDIDATE_APPLICATIONS,
+  INITIAL_PETTY_CASH_FUNDS,
+  INITIAL_PETTY_CASH_TRANSACTIONS,
+  INITIAL_PETTY_CASH_ANALYSES
 } from './mock-data';
 import { 
   calculateEventPoints, 
@@ -155,6 +168,36 @@ interface AuthContextType {
   budgetRequests: BudgetRequest[];
   submitBudgetRequest: (request: Omit<BudgetRequest, 'id' | 'requestNumber' | 'status' | 'createdAt'>) => void;
   reviewBudgetRequest: (requestId: string, status: 'APPROVED' | 'DECLINED', comment?: string) => void;
+  submitDepartmentalBudget: (budgetData: {
+    title: string;
+    department: string;
+    amountNgn: number;
+    category: BudgetCategory;
+    justification: string;
+    frequency: BudgetFrequency;
+    miscellaneousAmountNgn?: number;
+    miscellaneousJustification?: string;
+    collatorTarget?: 'GIFT' | 'MARVELOUS' | 'ERICA';
+  }) => BudgetRequest;
+  submitClientFacingBudget: (budgetData: {
+    title: string;
+    projectId: string;
+    amountNgn: number;
+    justification: string;
+    miscellaneousAmountNgn?: number;
+    miscellaneousJustification?: string;
+  }) => BudgetRequest;
+  collateBudget: (budgetId: string, collatorNotes: string) => void;
+  cfoReviewBudget: (budgetId: string, action: 'PROJECT_TO_DR_K' | 'DECLINE_REVISE' | 'DECLINE_DROP', notes: string) => void;
+  approveBudgetAsMD: (budgetId: string, isAlternativeBibi?: boolean, comments?: string) => void;
+  declineBudgetAsMD: (budgetId: string, isAlternativeBibi?: boolean, comments?: string) => void;
+  pettyCashFunds: PettyCashFund[];
+  pettyCashTransactions: PettyCashTransaction[];
+  pettyCashAnalyses: PettyCashAnalysis[];
+  logPettyCashExpense: (data: Omit<PettyCashTransaction, 'id' | 'createdAt'>) => void;
+  generatePettyCashMonthlyAnalysis: (monthYear: string) => PettyCashAnalysis;
+  approvePettyCashReplenishment: (analysisId: string, notes?: string) => void;
+  confirmPaymentWithDrK: (invoiceId: string) => void;
   createEmployee: (employee: Omit<UserProfile, 'id' | 'createdAt'>) => UserProfile;
   suspendEmployee: (userId: string, reason: string) => void;
   reactivateEmployee: (userId: string) => void;
@@ -229,6 +272,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [staffQueries, setStaffQueries] = useState<StaffQuery[]>(INITIAL_STAFF_QUERIES);
   const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>(INITIAL_PAYROLL_RECORDS);
   const [candidateApplications, setCandidateApplications] = useState<CandidateApplication[]>(INITIAL_CANDIDATE_APPLICATIONS);
+  const [pettyCashFunds, setPettyCashFunds] = useState<PettyCashFund[]>(INITIAL_PETTY_CASH_FUNDS);
+  const [pettyCashTransactions, setPettyCashTransactions] = useState<PettyCashTransaction[]>(INITIAL_PETTY_CASH_TRANSACTIONS);
+  const [pettyCashAnalyses, setPettyCashAnalyses] = useState<PettyCashAnalysis[]>(INITIAL_PETTY_CASH_ANALYSES);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   const isHydrated = useRef(false);
@@ -280,7 +326,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setNotifications(storedNotifs || []);
 
       const rawStoredUsers = getStoredData<UserProfile[]>('users', INITIAL_USERS);
-      const storedUsers = (rawStoredUsers || INITIAL_USERS).map(u => {
+      const existingUserIds = new Set((rawStoredUsers || []).map(u => u.id));
+      const missingInitial = INITIAL_USERS.filter(u => !existingUserIds.has(u.id));
+      const mergedUsers = [...(rawStoredUsers || []), ...missingInitial];
+      const storedUsers = mergedUsers.map(u => {
         if (u.id === 'usr-1' || u.name === 'Kaine Edike') {
           return { ...u, avatar: '/avatars/kaine-edike.png' };
         }
@@ -300,8 +349,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const storedFolders = getStoredData<DocumentFolder[]>('document_folders', INITIAL_DOCUMENT_FOLDERS);
       setDocumentFolders(storedFolders || INITIAL_DOCUMENT_FOLDERS);
 
-      const storedBudgets = getStoredData<BudgetRequest[]>('budget_requests', INITIAL_BUDGET_REQUESTS);
-      setBudgetRequests(storedBudgets || INITIAL_BUDGET_REQUESTS);
+      const storedBudgets = getStoredData<BudgetRequest[]>('budget_requests', INITIAL_BUDGET_REQUESTS) || [];
+      const budgetMap = new Map<string, BudgetRequest>();
+      INITIAL_BUDGET_REQUESTS.forEach(b => budgetMap.set(b.id, b));
+      storedBudgets.forEach(b => {
+        const stage: BudgetApprovalStage = b.approvalStage || (b.status === 'APPROVED' ? 'APPROVED' : b.status === 'DECLINED' ? 'DECLINED' : 'MD_PENDING');
+        budgetMap.set(b.id, { ...b, approvalStage: stage });
+      });
+      setBudgetRequests(Array.from(budgetMap.values()));
 
       const storedQueries = getStoredData<StaffQuery[]>('staff_queries', INITIAL_STAFF_QUERIES);
       setStaffQueries(storedQueries || INITIAL_STAFF_QUERIES);
@@ -311,6 +366,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const storedCandidates = getStoredData<CandidateApplication[]>('candidate_applications', INITIAL_CANDIDATE_APPLICATIONS);
       setCandidateApplications(storedCandidates || INITIAL_CANDIDATE_APPLICATIONS);
+
+      const storedPettyFunds = getStoredData<PettyCashFund[]>('petty_cash_funds', INITIAL_PETTY_CASH_FUNDS);
+      setPettyCashFunds(storedPettyFunds || INITIAL_PETTY_CASH_FUNDS);
+
+      const storedPettyTx = getStoredData<PettyCashTransaction[]>('petty_cash_transactions', INITIAL_PETTY_CASH_TRANSACTIONS);
+      setPettyCashTransactions(storedPettyTx || INITIAL_PETTY_CASH_TRANSACTIONS);
+
+      const storedPettyAnalyses = getStoredData<PettyCashAnalysis[]>('petty_cash_analyses', INITIAL_PETTY_CASH_ANALYSES);
+      setPettyCashAnalyses(storedPettyAnalyses || INITIAL_PETTY_CASH_ANALYSES);
 
       const savedTheme = localStorage.getItem('ae_theme') as 'light' | 'dark';
       if (savedTheme) {
@@ -432,6 +496,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isHydrated.current) setStoredData('candidate_applications', candidateApplications);
   }, [candidateApplications]);
+
+  useEffect(() => {
+    if (isHydrated.current) setStoredData('petty_cash_funds', pettyCashFunds);
+  }, [pettyCashFunds]);
+
+  useEffect(() => {
+    if (isHydrated.current) setStoredData('petty_cash_transactions', pettyCashTransactions);
+  }, [pettyCashTransactions]);
+
+  useEffect(() => {
+    if (isHydrated.current) setStoredData('petty_cash_analyses', pettyCashAnalyses);
+  }, [pettyCashAnalyses]);
 
   const toggleTheme = () => {
     setTheme(prev => {
@@ -1959,6 +2035,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return {
         ...req,
         status: status === 'APPROVED' ? 'APPROVED' : 'DECLINED',
+        approvalStage: status === 'APPROVED' ? 'APPROVED' : 'DECLINED',
         reviewedById: currentUser.id,
         reviewedByName: currentUser.name,
         reviewComments: comment || (status === 'APPROVED' ? 'Approved by finance/executive committee.' : 'Declined by reviewer.'),
@@ -1974,6 +2051,590 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       targetType: 'Budget Request',
       targetId: requestId,
       details: `Budget request ${requestId} was ${status.toLowerCase()} by ${currentUser.name} (${currentUser.jobTitle})`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const submitDepartmentalBudget = (budgetData: {
+    title: string;
+    department: string;
+    amountNgn: number;
+    category: BudgetCategory;
+    justification: string;
+    frequency: BudgetFrequency;
+    miscellaneousAmountNgn?: number;
+    miscellaneousJustification?: string;
+    collatorTarget?: 'GIFT' | 'MARVELOUS' | 'ERICA';
+  }): BudgetRequest => {
+    const count = budgetRequests.length + 1;
+    const reqNum = `BGT-2026-${String(count).padStart(3, '0')}`;
+    const target = budgetData.collatorTarget || 'GIFT';
+    
+    let collatedById: string | undefined;
+    let collatedByName: string | undefined;
+    let approvalStage: BudgetApprovalStage = 'IN_COLLATION';
+    let cfoReviewStatus: BudgetRequest['cfoReviewStatus'] = 'PENDING';
+
+    if (target === 'GIFT') {
+      collatedById = 'usr-13';
+      collatedByName = 'Gift';
+    } else if (target === 'MARVELOUS') {
+      collatedById = 'usr-14';
+      collatedByName = 'Marvelous';
+    } else {
+      collatedById = 'usr-11';
+      collatedByName = 'Erica';
+      approvalStage = 'CFO_REVIEW';
+      cfoReviewStatus = 'IN_REVIEW';
+    }
+
+    const newReq: BudgetRequest = {
+      id: `bgt-${Date.now()}`,
+      requestNumber: reqNum,
+      title: budgetData.title,
+      department: budgetData.department,
+      amountNgn: budgetData.amountNgn,
+      category: budgetData.category,
+      justification: budgetData.justification,
+      status: 'PENDING_APPROVAL',
+      requestedById: currentUser.id,
+      requestedByName: currentUser.name,
+      budgetType: 'DEPARTMENTAL',
+      frequency: budgetData.frequency,
+      collatedById,
+      collatedByName,
+      cfoReviewStatus,
+      approvalStage,
+      miscellaneousAmountNgn: budgetData.miscellaneousAmountNgn || 0,
+      miscellaneousJustification: budgetData.miscellaneousJustification,
+      createdAt: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+
+    setBudgetRequests(prev => [newReq, ...prev]);
+
+    const recipientName = target === 'ERICA' ? 'Erica (CFO)' : `${collatedByName} (Finance Officer)`;
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      category: 'FINANCE',
+      title: `Departmental Budget Submitted (${budgetData.frequency})`,
+      message: `${currentUser.name} routed ${reqNum} (₦${budgetData.amountNgn.toLocaleString()}) to ${recipientName} for collation & vetting.`,
+      isRead: false,
+      priority: 'HIGH',
+      timestamp: 'Just now',
+      actionType: 'VIEW_BUDGET',
+      actionTargetId: newReq.id,
+      actionLabel: 'Review Budget',
+      actionUrl: '/finance?tab=budgets'
+    };
+    setNotifications(prev => [notif, ...prev]);
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'BUDGET_REQUEST_SUBMITTED',
+      targetType: 'Departmental Budget',
+      targetId: newReq.id,
+      details: `${currentUser.name} submitted ${budgetData.frequency.toLowerCase()} budget ${reqNum} for ₦${budgetData.amountNgn.toLocaleString()} routed to ${recipientName}.`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+
+    return newReq;
+  };
+
+  const submitClientFacingBudget = (budgetData: {
+    title: string;
+    projectId: string;
+    amountNgn: number;
+    justification: string;
+    miscellaneousAmountNgn?: number;
+    miscellaneousJustification?: string;
+  }): BudgetRequest => {
+    const count = budgetRequests.length + 1;
+    const reqNum = `BGT-2026-${String(count).padStart(3, '0')}`;
+    const project = projects.find(p => p.id === budgetData.projectId);
+
+    const newReq: BudgetRequest = {
+      id: `bgt-${Date.now()}`,
+      requestNumber: reqNum,
+      title: budgetData.title,
+      department: 'Project Management & Commercial',
+      amountNgn: budgetData.amountNgn,
+      category: 'CLIENT_PROJECT_DELIVERY',
+      justification: budgetData.justification,
+      status: 'PENDING_APPROVAL',
+      requestedById: currentUser.id,
+      requestedByName: currentUser.name,
+      budgetType: 'CLIENT_FACING',
+      frequency: 'PER_PROJECT',
+      projectId: budgetData.projectId,
+      projectName: project?.title || 'Client Project',
+      collatedById: 'usr-12',
+      collatedByName: 'Miss Ozioma',
+      presentedToMdBy: 'OZIOMA',
+      approvalStage: 'WITH_OZIOMA',
+      cfoReviewStatus: 'PENDING',
+      miscellaneousAmountNgn: budgetData.miscellaneousAmountNgn || 0,
+      miscellaneousJustification: budgetData.miscellaneousJustification,
+      createdAt: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+
+    setBudgetRequests(prev => [newReq, ...prev]);
+
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      category: 'FINANCE',
+      title: 'Client-Facing Project Budget Submitted',
+      message: `${currentUser.name} submitted project delivery budget ${reqNum} for ${newReq.projectName} (₦${budgetData.amountNgn.toLocaleString()}) to Miss Ozioma for MD presentation.`,
+      isRead: false,
+      priority: 'HIGH',
+      timestamp: 'Just now',
+      actionType: 'VIEW_BUDGET',
+      actionTargetId: newReq.id,
+      actionLabel: 'Review Budget',
+      actionUrl: '/finance?tab=budgets'
+    };
+    setNotifications(prev => [notif, ...prev]);
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'BUDGET_REQUEST_SUBMITTED',
+      targetType: 'Client-Facing Budget',
+      targetId: newReq.id,
+      details: `${currentUser.name} submitted client-facing budget ${reqNum} for ${newReq.projectName} (₦${budgetData.amountNgn.toLocaleString()}). Collated by Miss Ozioma.`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+
+    return newReq;
+  };
+
+  const collateBudget = (budgetId: string, collatorNotes: string) => {
+    setBudgetRequests(prev => prev.map(req => {
+      if (req.id !== budgetId) return req;
+      return {
+        ...req,
+        collatedById: currentUser.id,
+        collatedByName: currentUser.name,
+        collationNotes: collatorNotes,
+        approvalStage: 'CFO_REVIEW',
+        cfoReviewStatus: 'IN_REVIEW'
+      };
+    }));
+
+    const budget = budgetRequests.find(b => b.id === budgetId);
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      category: 'FINANCE',
+      title: 'Budget Collated & Transmitted to CFO',
+      message: `${currentUser.name} collated ${budget?.requestNumber || budgetId} and transmitted to Erica (CFO) for executive vetting.`,
+      isRead: false,
+      priority: 'NORMAL',
+      timestamp: 'Just now',
+      actionType: 'VIEW_BUDGET',
+      actionTargetId: budgetId,
+      actionLabel: 'Vet Budget',
+      actionUrl: '/finance?tab=budgets'
+    };
+    setNotifications(prev => [notif, ...prev]);
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'BUDGET_COLLATED',
+      targetType: 'Budget Request',
+      targetId: budgetId,
+      details: `${currentUser.name} collated budget ${budget?.requestNumber || budgetId} and moved to CFO Review.`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const cfoReviewBudget = (budgetId: string, action: 'PROJECT_TO_DR_K' | 'DECLINE_REVISE' | 'DECLINE_DROP', notes: string) => {
+    setBudgetRequests(prev => prev.map(req => {
+      if (req.id !== budgetId) return req;
+      if (action === 'PROJECT_TO_DR_K') {
+        return {
+          ...req,
+          cfoReviewStatus: 'VETTED_PROJECTED',
+          cfoReviewNotes: notes,
+          presentedToMdBy: 'ERICA',
+          approvalStage: 'MD_PENDING'
+        };
+      } else if (action === 'DECLINE_REVISE') {
+        return {
+          ...req,
+          cfoReviewStatus: 'DECLINED_REVISE',
+          cfoReviewNotes: notes,
+          status: 'DECLINED',
+          approvalStage: 'DECLINED',
+          declineOutcome: 'REVISE_RESUBMIT',
+          reviewedById: currentUser.id,
+          reviewedByName: currentUser.name,
+          reviewedAt: new Date().toISOString().split('T')[0]
+        };
+      } else {
+        return {
+          ...req,
+          cfoReviewStatus: 'DECLINED_DROP',
+          cfoReviewNotes: notes,
+          status: 'DECLINED',
+          approvalStage: 'DECLINED',
+          declineOutcome: 'DROPPED',
+          reviewedById: currentUser.id,
+          reviewedByName: currentUser.name,
+          reviewedAt: new Date().toISOString().split('T')[0]
+        };
+      }
+    }));
+
+    const budget = budgetRequests.find(b => b.id === budgetId);
+    let title = '';
+    let msg = '';
+    let priority: 'HIGH' | 'URGENT' | 'NORMAL' = 'HIGH';
+
+    if (action === 'PROJECT_TO_DR_K') {
+      title = 'CFO Vetted: Budget Projected to Dr. Kaine / Bibi';
+      msg = `Erica (CFO) reviewed and validated ${budget?.requestNumber} (₦${budget?.amountNgn.toLocaleString()}). Awaiting final approval from Dr. Kaine Edike or Bibi (2nd in Command).`;
+      priority = 'URGENT';
+    } else if (action === 'DECLINE_REVISE') {
+      title = 'Budget Returned by CFO for Revision';
+      msg = `Erica (CFO) returned ${budget?.requestNumber} for revision: "${notes}"`;
+    } else {
+      title = 'Budget Declined & Dropped by CFO';
+      msg = `Erica (CFO) dropped ${budget?.requestNumber}: "${notes}"`;
+    }
+
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      category: 'FINANCE',
+      title,
+      message: msg,
+      isRead: false,
+      priority,
+      timestamp: 'Just now',
+      actionType: 'VIEW_BUDGET',
+      actionTargetId: budgetId,
+      actionLabel: 'View Details',
+      actionUrl: '/finance?tab=budgets'
+    };
+    setNotifications(prev => [notif, ...prev]);
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: action === 'PROJECT_TO_DR_K' ? 'BUDGET_CFO_PROJECTED' : 'BUDGET_CFO_DECLINED',
+      targetType: 'Budget Request',
+      targetId: budgetId,
+      details: `Erica (CFO) performed ${action} on ${budget?.requestNumber || budgetId}. Notes: ${notes}`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const approveBudgetAsMD = (budgetId: string, isAlternativeBibi?: boolean, comments?: string) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isBibi = isAlternativeBibi || currentUser.functionalRole === 'DEPUTY_MANAGING_CONSULTANT' || currentUser.name.toLowerCase().includes('bibi');
+
+    setBudgetRequests(prev => prev.map(req => {
+      if (req.id !== budgetId) return req;
+      return {
+        ...req,
+        status: 'APPROVED',
+        approvalStage: 'APPROVED',
+        reviewedById: currentUser.id,
+        reviewedByName: currentUser.name,
+        reviewComments: comments || (isBibi ? 'Approved by Bibi (Executive Director & 2nd in Command) on behalf of Dr. Kaine Edike.' : 'Approved by Dr. Kaine Edike (Founder & Managing Consultant).'),
+        reviewedAt: todayStr,
+        approvedOnBehalfOfDrK: isBibi,
+        drKNotified: isBibi
+      };
+    }));
+
+    const budget = budgetRequests.find(b => b.id === budgetId);
+
+    if (isBibi) {
+      const drKNotif: NotificationItem = {
+        id: `notif-${Date.now()}-drk`,
+        category: 'EXECUTIVE',
+        title: '⚠️ 2nd in Command Approval Stamped',
+        message: `Bibi approved budget ${budget?.requestNumber || budgetId} (₦${budget?.amountNgn.toLocaleString()}) on your behalf to prevent project bottleneck. Immediate awareness recorded.`,
+        isRead: false,
+        priority: 'URGENT',
+        timestamp: 'Just now',
+        actionType: 'VIEW_BUDGET',
+        actionTargetId: budgetId,
+        actionLabel: 'Review Action',
+        actionUrl: '/finance?tab=budgets'
+      };
+      setNotifications(prev => [drKNotif, ...prev]);
+    }
+
+    const approvalNotif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      category: 'FINANCE',
+      title: '🎉 Budget Officially Approved!',
+      message: `${budget?.requestNumber || budgetId} (₦${budget?.amountNgn.toLocaleString()}) approved by ${currentUser.name}. Funds ready for disbursement by Finance (Erica, Gift, Marvelous).`,
+      isRead: false,
+      priority: 'HIGH',
+      timestamp: 'Just now',
+      actionType: 'VIEW_BUDGET',
+      actionTargetId: budgetId,
+      actionLabel: 'View Budget',
+      actionUrl: '/finance?tab=budgets'
+    };
+    setNotifications(prev => [approvalNotif, ...prev]);
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: isBibi ? 'BUDGET_APPROVED_BY_BIBI_ON_BEHALF_OF_DR_K' : 'BUDGET_APPROVED_BY_DR_K',
+      targetType: 'Budget Request',
+      targetId: budgetId,
+      details: `${currentUser.name} approved budget ${budget?.requestNumber || budgetId} for ₦${budget?.amountNgn.toLocaleString()}.${isBibi ? ' (Alternative Superadmin approval on Dr. K behalf).' : ''}`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const declineBudgetAsMD = (budgetId: string, isAlternativeBibi?: boolean, comments?: string) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isBibi = isAlternativeBibi || currentUser.functionalRole === 'DEPUTY_MANAGING_CONSULTANT' || currentUser.name.toLowerCase().includes('bibi');
+
+    setBudgetRequests(prev => prev.map(req => {
+      if (req.id !== budgetId) return req;
+      return {
+        ...req,
+        status: 'DECLINED',
+        approvalStage: 'DECLINED',
+        reviewedById: currentUser.id,
+        reviewedByName: currentUser.name,
+        reviewComments: comments || 'Declined during MD executive review.',
+        reviewedAt: todayStr,
+        approvedOnBehalfOfDrK: isBibi
+      };
+    }));
+
+    const budget = budgetRequests.find(b => b.id === budgetId);
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      category: 'FINANCE',
+      title: 'Budget Request Declined by MD / Executive',
+      message: `${budget?.requestNumber || budgetId} was declined by ${currentUser.name}. Reason: ${comments || 'No comment provided.'}`,
+      isRead: false,
+      priority: 'HIGH',
+      timestamp: 'Just now',
+      actionType: 'VIEW_BUDGET',
+      actionTargetId: budgetId,
+      actionLabel: 'View Budget',
+      actionUrl: '/finance?tab=budgets'
+    };
+    setNotifications(prev => [notif, ...prev]);
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'BUDGET_DECLINED_BY_MD',
+      targetType: 'Budget Request',
+      targetId: budgetId,
+      details: `${currentUser.name} declined budget ${budget?.requestNumber || budgetId}. Comments: ${comments || 'None'}`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const logPettyCashExpense = (data: Omit<PettyCashTransaction, 'id' | 'createdAt'>) => {
+    const newTx: PettyCashTransaction = {
+      ...data,
+      id: `tx-${Date.now()}`,
+      createdAt: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+
+    setPettyCashTransactions(prev => [newTx, ...prev]);
+
+    setPettyCashFunds(prev => prev.map(fund => {
+      if (fund.custodian === data.fundCustodian) {
+        return {
+          ...fund,
+          currentBalanceNgn: Math.max(0, fund.currentBalanceNgn - data.amountNgn)
+        };
+      }
+      return fund;
+    }));
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'PETTY_CASH_EXPENSE_LOGGED',
+      targetType: 'Petty Cash',
+      targetId: newTx.id,
+      details: `${currentUser.name} logged petty cash expense ₦${data.amountNgn.toLocaleString()} for ${data.description} (${data.category}) under ${data.fundCustodian}'s fund.`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const generatePettyCashMonthlyAnalysis = (monthYear: string): PettyCashAnalysis => {
+    const monthTx = pettyCashTransactions.filter(t => t.date.startsWith(monthYear));
+    const giftTx = monthTx.filter(t => t.fundCustodian === 'GIFT');
+    const marvelousTx = monthTx.filter(t => t.fundCustodian === 'MARVELOUS');
+
+    const giftDisbursed = giftTx.reduce((sum, t) => sum + t.amountNgn, 0);
+    const marvelousDisbursed = marvelousTx.reduce((sum, t) => sum + t.amountNgn, 0);
+    const totalDisbursed = giftDisbursed + marvelousDisbursed;
+
+    const giftOpening = 300000;
+    const marvelousOpening = 300000;
+    const giftClosing = Math.max(0, giftOpening - giftDisbursed);
+    const marvelousClosing = Math.max(0, marvelousOpening - marvelousDisbursed);
+
+    const isGift = currentUser.name.toLowerCase().includes('gift') || currentUser.id === 'usr-13';
+
+    const newAnalysis: PettyCashAnalysis = {
+      id: `pca-${Date.now()}`,
+      monthYear,
+      analyzedById: currentUser.id,
+      analyzedByName: currentUser.name,
+      isPrimaryGift: isGift,
+      giftOpeningBalanceNgn: giftOpening,
+      giftDisbursedNgn: giftDisbursed,
+      giftClosingBalanceNgn: giftClosing,
+      marvelousOpeningBalanceNgn: marvelousOpening,
+      marvelousDisbursedNgn: marvelousDisbursed,
+      marvelousClosingBalanceNgn: marvelousClosing,
+      totalDisbursedNgn: totalDisbursed,
+      replenishmentRequestedNgn: totalDisbursed,
+      status: 'SUBMITTED_TO_DR_K',
+      drKNotes: `Monthly petty cash reconciliation submitted by ${currentUser.name} for Dr. Kaine Edike review.`,
+      createdAt: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+
+    setPettyCashAnalyses(prev => [newAnalysis, ...prev]);
+
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      category: 'FINANCE',
+      title: `Monthly Petty Cash Analysis Ready (${monthYear})`,
+      message: `${currentUser.name} submitted petty cash analysis for ${monthYear} (Total spent: ₦${totalDisbursed.toLocaleString()}). Awaiting CFO verification & MD replenishment approval.`,
+      isRead: false,
+      priority: 'HIGH',
+      timestamp: 'Just now',
+      actionType: 'VIEW_BUDGET',
+      actionTargetId: newAnalysis.id,
+      actionLabel: 'View Analysis',
+      actionUrl: '/finance?tab=petty-cash'
+    };
+    setNotifications(prev => [notif, ...prev]);
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'PETTY_CASH_ANALYSIS_SUBMITTED',
+      targetType: 'Petty Cash Analysis',
+      targetId: newAnalysis.id,
+      details: `${currentUser.name} compiled and submitted monthly petty cash reconciliation for ${monthYear}. Total spent: ₦${totalDisbursed.toLocaleString()}.`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+
+    return newAnalysis;
+  };
+
+  const approvePettyCashReplenishment = (analysisId: string, notes?: string) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    setPettyCashAnalyses(prev => prev.map(a => {
+      if (a.id !== analysisId) return a;
+      return {
+        ...a,
+        status: 'APPROVED',
+        approvedByDrK: true,
+        drKNotes: notes || (a.drKNotes ? `${a.drKNotes} | Approved by ${currentUser.name} on ${todayStr}` : `Approved by ${currentUser.name}`)
+      };
+    }));
+
+    setPettyCashFunds(prev => prev.map(fund => ({
+      ...fund,
+      currentBalanceNgn: fund.allocatedAmountNgn,
+      lastReplenishedDate: todayStr
+    })));
+
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      category: 'FINANCE',
+      title: '💵 Petty Cash Replenished (₦600,000)',
+      message: `${currentUser.name} approved petty cash replenishment. Gift's fund (₦300k) and Marvelous's fund (₦300k) reset to full allocation.`,
+      isRead: false,
+      priority: 'HIGH',
+      timestamp: 'Just now',
+      actionType: 'VIEW_BUDGET',
+      actionTargetId: analysisId,
+      actionLabel: 'View Ledger',
+      actionUrl: '/finance?tab=petty-cash'
+    };
+    setNotifications(prev => [notif, ...prev]);
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'PETTY_CASH_REPLENISHED',
+      targetType: 'Petty Cash Fund',
+      targetId: analysisId,
+      details: `${currentUser.name} approved petty cash replenishment for Gift and Marvelous funds back to ₦300,000 each.`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const confirmPaymentWithDrK = (invoiceId: string) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    setInvoices(prev => prev.map(inv => {
+      if (inv.id !== invoiceId) return inv;
+      return {
+        ...inv,
+        confirmedWithDrK: true,
+        confirmedAt: todayStr,
+        status: 'PAID',
+        paidDate: inv.paidDate || todayStr
+      };
+    }));
+
+    const inv = invoices.find(i => i.id === invoiceId);
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      category: 'FINANCE',
+      title: '✅ Inbound Payment Confirmed with Dr. Kaine Edike',
+      message: `Direct confirmation recorded with Dr. Kaine Edike for invoice ${inv?.invoiceNumber} (${inv?.clientName}, ₦${inv?.netPayableNgn.toLocaleString()}). Payment cleared.`,
+      isRead: false,
+      priority: 'HIGH',
+      timestamp: 'Just now',
+      actionType: 'VIEW_PROJECT',
+      actionTargetId: invoiceId,
+      actionLabel: 'View Invoices',
+      actionUrl: '/finance?tab=invoicing'
+    };
+    setNotifications(prev => [notif, ...prev]);
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'PAYMENT_CONFIRMED_WITH_DR_K',
+      targetType: 'Invoice Record',
+      targetId: inv?.invoiceNumber,
+      details: `Payment of ₦${inv?.netPayableNgn.toLocaleString()} for ${inv?.invoiceNumber} confirmed directly with Dr. Kaine Edike by ${currentUser.name}.`,
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
     };
     setAuditLogs(prev => [audit, ...prev]);
@@ -2530,6 +3191,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       budgetRequests,
       submitBudgetRequest,
       reviewBudgetRequest,
+      submitDepartmentalBudget,
+      submitClientFacingBudget,
+      collateBudget,
+      cfoReviewBudget,
+      approveBudgetAsMD,
+      declineBudgetAsMD,
+      pettyCashFunds,
+      pettyCashTransactions,
+      pettyCashAnalyses,
+      logPettyCashExpense,
+      generatePettyCashMonthlyAnalysis,
+      approvePettyCashReplenishment,
+      confirmPaymentWithDrK,
       createEmployee,
       suspendEmployee,
       reactivateEmployee,

@@ -4,6 +4,10 @@ export type ManagementTier = 'NONE' | 'TEAM_LEAD' | 'LINE_MANAGER' | 'DEPT_HEAD'
 export type FunctionalRole =
   | 'SUPERADMIN'
   | 'MANAGING_CONSULTANT'
+  | 'DEPUTY_MANAGING_CONSULTANT'
+  | 'CFO'
+  | 'FINANCE_OFFICER'
+  | 'SENIOR_CONSULTANT'
   | 'BD_LEAD'
   | 'PROJECT_MANAGER'
   | 'TECHNICAL_CONSULTANT'
@@ -435,6 +439,10 @@ export interface InvoiceItem {
   dueDate: string;
   paidDate?: string;
   currency: 'NGN' | 'USD' | 'EUR' | 'GBP';
+  preparedByName?: string;
+  confirmedWithDrK?: boolean;
+  confirmedAt?: string;
+  paymentReceiptUrl?: string;
 }
 
 // Module 12: IT & Design Operations
@@ -505,7 +513,7 @@ export interface AccessRequestItem {
   createdAt: string;
 }
 
-export type NotificationCategory = 'APPROVAL' | 'DEADLINE' | 'QA_REVIEW' | 'COMPLIANCE' | 'KPI_ALERT' | 'SYSTEM';
+export type NotificationCategory = 'APPROVAL' | 'DEADLINE' | 'QA_REVIEW' | 'COMPLIANCE' | 'KPI_ALERT' | 'SYSTEM' | 'FINANCE' | 'EXECUTIVE';
 
 export interface NotificationItem {
   id: string;
@@ -516,7 +524,7 @@ export interface NotificationItem {
   timestamp: string;
   isRead: boolean;
   priority: 'NORMAL' | 'HIGH' | 'URGENT';
-  actionType?: 'APPROVE_BID' | 'REVIEW_QA' | 'RENEW_PERMIT' | 'VIEW_TASK';
+  actionType?: 'APPROVE_BID' | 'REVIEW_QA' | 'RENEW_PERMIT' | 'VIEW_TASK' | 'VIEW_BUDGET' | 'VIEW_PROJECT';
   actionTargetId?: string;
   actionLabel?: string;
   actionUrl?: string;
@@ -577,13 +585,27 @@ export interface DocumentFolder {
   itemCount?: number;
 }
 
-// Module 10: Budget Requests Workflow
+// Module 10: Budget Requests Workflow & SOP
 export type BudgetCategory = 
   | 'FIELD_EXPEDITION' 
   | 'EQUIPMENT_PROCUREMENT' 
   | 'SOFTWARE_LICENSES' 
   | 'SUBCONTRACTOR' 
-  | 'OPERATIONAL_EXPENSE';
+  | 'OPERATIONAL_EXPENSE'
+  | 'CLIENT_PROJECT_DELIVERY'
+  | 'MISCELLANEOUS';
+
+export type BudgetType = 'DEPARTMENTAL' | 'CLIENT_FACING';
+export type BudgetFrequency = 'WEEKLY' | 'PER_PROJECT';
+export type BudgetApprovalStage = 
+  | 'DRAFT' 
+  | 'IN_COLLATION' 
+  | 'WITH_OZIOMA'
+  | 'CFO_REVIEW' 
+  | 'MD_PENDING' 
+  | 'APPROVED' 
+  | 'DECLINED';
+export type BudgetDeclineOutcome = 'REVISE_RESUBMIT' | 'DROPPED';
 
 export type BudgetRequestStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'DECLINED';
 
@@ -598,10 +620,80 @@ export interface BudgetRequest {
   category: BudgetCategory;
   justification: string;
   status: BudgetRequestStatus;
+  budgetType?: BudgetType;
+  frequency?: BudgetFrequency;
+  projectId?: string;
+  projectName?: string;
+  collatedById?: string;
+  collatedByName?: string;
+  collationNotes?: string;
+  cfoReviewStatus?: 'PENDING' | 'IN_REVIEW' | 'CFO_VETTED' | 'VETTED_PROJECTED' | 'DECLINED_REVISE' | 'DECLINED_DROP';
+  cfoReviewNotes?: string;
+  cfoReviewedAt?: string;
+  presentedToMdBy?: 'ERICA' | 'OZIOMA';
+  approvalStage?: BudgetApprovalStage;
+  approvedById?: string;
+  approvedByName?: string;
+  approvedOnBehalfOfDrK?: boolean;
+  drKNotified?: boolean;
+  declineOutcome?: BudgetDeclineOutcome;
+  miscellaneousAmountNgn?: number;
+  miscellaneousJustification?: string;
   reviewedById?: string;
   reviewedByName?: string;
   reviewComments?: string;
   reviewedAt?: string;
+  createdAt: string;
+}
+
+// Petty Cash Operations (SOP Section 4)
+export type PettyCashCustodian = 'GIFT' | 'MARVELOUS';
+export type PettyCashCategory = 
+  | 'WATER_PURCHASE' 
+  | 'TRANSPORTATION_UBER' 
+  | 'MINOR_OPERATIONAL' 
+  | 'OFFICE_SUPPLIES' 
+  | 'EMERGENCY_FIELD';
+
+export interface PettyCashFund {
+  id: string;
+  custodian: PettyCashCustodian;
+  custodianName: string;
+  allocatedAmountNgn: number;
+  currentBalanceNgn: number;
+  allocatedBy: string;
+  lastReplenishedDate: string;
+}
+
+export interface PettyCashTransaction {
+  id: string;
+  fundCustodian: PettyCashCustodian;
+  date: string;
+  amountNgn: number;
+  category: PettyCashCategory;
+  description: string;
+  receiptUrl?: string;
+  approvedByName: string;
+  createdAt: string;
+}
+
+export interface PettyCashAnalysis {
+  id: string;
+  monthYear: string;
+  analyzedById: string;
+  analyzedByName: string;
+  isPrimaryGift: boolean;
+  giftOpeningBalanceNgn: number;
+  giftDisbursedNgn: number;
+  giftClosingBalanceNgn: number;
+  marvelousOpeningBalanceNgn: number;
+  marvelousDisbursedNgn: number;
+  marvelousClosingBalanceNgn: number;
+  totalDisbursedNgn: number;
+  replenishmentRequestedNgn: number;
+  status: 'DRAFT' | 'SUBMITTED_TO_DR_K' | 'APPROVED';
+  approvedByDrK?: boolean;
+  drKNotes?: string;
   createdAt: string;
 }
 

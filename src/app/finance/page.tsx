@@ -19,11 +19,34 @@ import {
   XCircle,
   Tag,
   Briefcase,
-  UserCheck
+  UserCheck,
+  Wallet,
+  Building2,
+  Users,
+  Send,
+  RotateCcw,
+  Sparkles,
+  ArrowRight,
+  ShieldAlert,
+  Crown,
+  Droplets,
+  Truck,
+  Wrench,
+  FileSpreadsheet,
+  AlertCircle
 } from 'lucide-react';
-import { InvoiceItem, BudgetRequest } from '@/lib/types';
+import { 
+  InvoiceItem, 
+  BudgetRequest, 
+  BudgetApprovalStage, 
+  PettyCashCustodian, 
+  PettyCashCategory 
+} from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BudgetRequestModal } from '@/components/finance/BudgetRequestModal';
+import { CfoVettingModal } from '@/components/finance/CfoVettingModal';
+import { CollateBudgetModal } from '@/components/finance/CollateBudgetModal';
+import { PettyCashExpenseModal } from '@/components/finance/PettyCashExpenseModal';
 import { haptics } from '@/lib/haptics';
 
 export default function FinancePage() {
@@ -33,16 +56,32 @@ export default function FinancePage() {
     clients, 
     createInvoice, 
     markInvoicePaid,
+    confirmPaymentWithDrK,
     budgetRequests,
     reviewBudgetRequest,
+    cfoReviewBudget,
+    approveBudgetAsMD,
+    declineBudgetAsMD,
+    pettyCashFunds,
+    pettyCashTransactions,
+    pettyCashAnalyses,
+    generatePettyCashMonthlyAnalysis,
+    approvePettyCashReplenishment,
     currentUser
   } = useAuth();
 
-  const [activeMainTab, setActiveMainTab] = useState<'INVOICES' | 'BUDGETS'>('INVOICES');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ISSUED' | 'PAID'>('ALL');
-  const [budgetStatusFilter, setBudgetStatusFilter] = useState<'ALL' | 'PENDING_APPROVAL' | 'APPROVED' | 'DECLINED'>('ALL');
-  const [isNewInvoiceOpen, setIsNewInvoiceOpen] = useState(false);
+  const [activeMainTab, setActiveMainTab] = useState<'BUDGETS' | 'PETTY_CASH' | 'INVOICES' | 'EXPENSES'>('BUDGETS');
+  const [budgetStageFilter, setBudgetStageFilter] = useState<'ALL' | BudgetApprovalStage>('ALL');
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<'ALL' | 'ISSUED' | 'PAID'>('ALL');
+  const [invoiceCurrency, setInvoiceCurrency] = useState<'NGN' | 'USD'>('NGN');
+  
+  // Modals state
   const [isNewBudgetOpen, setIsNewBudgetOpen] = useState(false);
+  const [isNewInvoiceOpen, setIsNewInvoiceOpen] = useState(false);
+  const [vettingBudget, setVettingBudget] = useState<BudgetRequest | null>(null);
+  const [collatingBudget, setCollatingBudget] = useState<BudgetRequest | null>(null);
+  const [isPettyExpenseOpen, setIsPettyExpenseOpen] = useState(false);
+  const [activeCustodianForExpense, setActiveCustodianForExpense] = useState<PettyCashCustodian>('GIFT');
   const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<InvoiceItem | null>(null);
   const [whtCreditNo, setWhtCreditNo] = useState('WHT-FIRS-2026-');
 
@@ -53,40 +92,61 @@ export default function FinancePage() {
   const [whtRatePercent, setWhtRatePercent] = useState(5.0);
   const [dueDate, setDueDate] = useState('2026-09-25');
 
-  const filteredInvoices = invoices.filter(inv => {
-    if (statusFilter === 'ALL') return true;
-    return inv.status === statusFilter;
+  // Role detection per SOP
+  const isDrK = currentUser.id === 'usr-1' || currentUser.functionalRole === 'MANAGING_CONSULTANT';
+  const isBibi = currentUser.id === 'usr-10' || currentUser.functionalRole === 'DEPUTY_MANAGING_CONSULTANT' || currentUser.name.toLowerCase().includes('bibi');
+  const isErica = currentUser.id === 'usr-11' || currentUser.functionalRole === 'CFO' || currentUser.name.toLowerCase().includes('erica');
+  const isOzioma = currentUser.id === 'usr-12' || currentUser.functionalRole === 'SENIOR_CONSULTANT' || currentUser.name.toLowerCase().includes('ozioma');
+  const isGift = currentUser.id === 'usr-13' || currentUser.name.toLowerCase().includes('gift');
+  const isMarvelous = currentUser.id === 'usr-14' || currentUser.name.toLowerCase().includes('marvelous');
+  const isSuperadmin = currentUser.accessTier === 'SUPERADMIN';
+
+  // Calculations
+  const filteredBudgets = budgetRequests.filter(req => {
+    if (budgetStageFilter === 'ALL') return true;
+    return req.approvalStage === budgetStageFilter;
   });
 
-  const filteredBudgets = budgetRequests.filter(req => {
-    if (budgetStatusFilter === 'ALL') return true;
-    return req.status === budgetStatusFilter;
+  const totalBudgetRequested = budgetRequests.reduce((acc, curr) => acc + curr.amountNgn, 0);
+  const mdPendingBudgetCount = budgetRequests.filter(b => b.approvalStage === 'MD_PENDING').length;
+  const cfoReviewCount = budgetRequests.filter(b => b.approvalStage === 'CFO_REVIEW').length;
+  const inCollationCount = budgetRequests.filter(b => b.approvalStage === 'IN_COLLATION').length;
+  const approvedBudgetAmount = budgetRequests.filter(b => b.status === 'APPROVED').reduce((acc, curr) => acc + curr.amountNgn, 0);
+
+  // Petty Cash Funds
+  const giftFund = pettyCashFunds.find(f => f.custodian === 'GIFT') || {
+    id: 'pcf-gift',
+    custodian: 'GIFT' as const,
+    custodianName: 'Gift',
+    allocatedAmountNgn: 300000,
+    currentBalanceNgn: 212000,
+    allocatedBy: 'Dr. Kaine Edike',
+    lastReplenishedDate: '2026-09-01'
+  };
+
+  const marvelousFund = pettyCashFunds.find(f => f.custodian === 'MARVELOUS') || {
+    id: 'pcf-marvelous',
+    custodian: 'MARVELOUS' as const,
+    custodianName: 'Marvelous',
+    allocatedAmountNgn: 300000,
+    currentBalanceNgn: 184500,
+    allocatedBy: 'Dr. Kaine Edike',
+    lastReplenishedDate: '2026-09-01'
+  };
+
+  const totalPettyCashBalance = giftFund.currentBalanceNgn + marvelousFund.currentBalanceNgn;
+  const totalPettyCashSpent = pettyCashTransactions.reduce((acc, curr) => acc + curr.amountNgn, 0);
+
+  // Invoices Calculations
+  const filteredInvoices = invoices.filter(inv => {
+    if (invoiceStatusFilter === 'ALL') return true;
+    return inv.status === invoiceStatusFilter;
   });
 
   const totalBilledNgn = invoices.reduce((acc, curr) => acc + curr.subtotalNgn, 0);
   const totalPaidNgn = invoices.filter(i => i.status === 'PAID').reduce((acc, curr) => acc + curr.netPayableNgn, 0);
   const totalVatTracked = invoices.reduce((acc, curr) => acc + curr.vatAmountNgn, 0);
   const totalWhtDeductions = invoices.reduce((acc, curr) => acc + curr.whtDeductionNgn, 0);
-
-  // Budget stats
-  const totalBudgetRequested = budgetRequests.reduce((acc, curr) => acc + curr.amountNgn, 0);
-  const pendingBudgetCount = budgetRequests.filter(b => b.status === 'PENDING_APPROVAL').length;
-  const approvedBudgetAmount = budgetRequests.filter(b => b.status === 'APPROVED').reduce((acc, curr) => acc + curr.amountNgn, 0);
-
-  // Permissions
-  const canReviewBudget = 
-    currentUser.accessTier === 'SUPERADMIN' ||
-    currentUser.accessTier === 'ADMIN' ||
-    currentUser.functionalRole === 'MANAGING_CONSULTANT' ||
-    currentUser.functionalRole === 'FINANCE_ADMIN' ||
-    currentUser.managementTier === 'LINE_MANAGER' ||
-    currentUser.managementTier === 'DEPT_HEAD';
-
-  const canSubmitBudget = 
-    currentUser.managementTier !== 'NONE' || 
-    currentUser.accessTier === 'ADMIN' || 
-    currentUser.accessTier === 'SUPERADMIN' ||
-    currentUser.functionalRole === 'FINANCE_ADMIN';
 
   const handleCreateInvoice = (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,7 +165,8 @@ export default function FinancePage() {
       whtCreditNoteReceived: false,
       status: 'ISSUED',
       dueDate,
-      currency: 'NGN'
+      currency: invoiceCurrency,
+      preparedByName: isMarvelous ? 'Marvelous' : (isGift ? 'Gift' : currentUser.name)
     });
 
     setIsNewInvoiceOpen(false);
@@ -120,28 +181,30 @@ export default function FinancePage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header with Active Persona Badge */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="text-[11px] font-semibold text-slate-500 tracking-tight">
-            Module 10 • Financial Operations & Invoicing
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-semibold text-slate-500 tracking-tight">
+              Module 10 • Financial Governance & Invoicing
+            </span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+              Official SOP Enforced
+            </span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mt-0.5">
-            Finance & Capital Disbursements
+            Budget, Invoice & Finance Governance
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Client milestone billing, automated 7.5% VAT / 5% WHT deductions, and departmental budget approval workflows.
+            Multi-stage collation, CFO vetting, Dr. K / Bibi executive authorization, and dual ₦300,000 imprest funds.
           </p>
         </div>
 
+        {/* Action Buttons & Persona Stamping */}
         <div className="flex items-center gap-2">
-          {activeMainTab === 'BUDGETS' ? (
+          {activeMainTab === 'BUDGETS' && (
             <button
               onClick={() => {
-                if (!canSubmitBudget) {
-                  alert('Only Team Leads, Managers, and Admins can submit departmental budget requests.');
-                  return;
-                }
                 setIsNewBudgetOpen(true);
                 haptics.selection();
               }}
@@ -150,129 +213,775 @@ export default function FinancePage() {
               <Plus className="w-3.5 h-3.5" />
               <span>Submit Budget Request</span>
             </button>
-          ) : (
+          )}
+
+          {activeMainTab === 'PETTY_CASH' && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setActiveCustodianForExpense(isMarvelous ? 'MARVELOUS' : 'GIFT');
+                  setIsPettyExpenseOpen(true);
+                  haptics.selection();
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-2xs transition-all active:scale-[0.96]"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Log Petty Cash Expense</span>
+              </button>
+            </div>
+          )}
+
+          {activeMainTab === 'INVOICES' && (
             <button
               onClick={() => setIsNewInvoiceOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-2xs transition-all active:scale-[0.96]"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 text-white rounded-xl text-xs font-semibold shadow-2xs transition-all active:scale-[0.96]"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Generate Milestone Invoice</span>
+              <span>Prepare Milestone Invoice</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Main Module Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
-        <button
-          onClick={() => { setActiveMainTab('INVOICES'); haptics.selection(); }}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-            activeMainTab === 'INVOICES'
-              ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-          }`}
-        >
-          <Receipt className="w-3.5 h-3.5" />
-          <span>Milestone Invoices & Tax Ledger ({invoices.length})</span>
-        </button>
+      {/* SOP Persona Authority Banner */}
+      <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/60 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-slate-900 dark:bg-white/10 text-white flex items-center justify-center font-bold text-xs shrink-0">
+            {currentUser.name.charAt(0)}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-slate-900 dark:text-white">{currentUser.name}</span>
+              <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                {currentUser.jobTitle}
+              </span>
+              {isSuperadmin && (
+                <span className="px-2 py-0.2 rounded-full text-[10px] font-extrabold bg-purple-100 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-300 dark:border-purple-800">
+                  SUPERADMIN
+                </span>
+              )}
+            </div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+              {isDrK && "Founder & Managing Consultant (MD) • Primary Sign-off for All Budgets, Invoices & Petty Cash Allocations"}
+              {isBibi && "Executive Director (2nd in Command) • Authorized to approve budgets on Dr. K's behalf to prevent delays"}
+              {isErica && "Chief Financial Officer (CFO) • Vets, projects, and consolidates budgets. Reviews monthly petty cash"}
+              {isOzioma && "Senior Consultant & Commercial Liaison • Receives PM client-facing budgets and presents to MD"}
+              {isGift && "Finance Officer • Collation Lead & Primary Monthly Petty Cash Analyst (Custodian of ₦300k Fund)"}
+              {isMarvelous && "Finance Officer • Primary Invoice Preparer & Petty Cash Custodian (₦300k Fund)"}
+              {!isDrK && !isBibi && !isErica && !isOzioma && !isGift && !isMarvelous && "Line Manager / Department Member • Can submit budget requests"}
+            </div>
+          </div>
+        </div>
 
+        {/* SLA Status Pill */}
+        <div className="flex items-center gap-2 shrink-0 self-start md:self-auto">
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 text-[11px] font-semibold">
+            <Clock className="w-3.5 h-3.5 animate-spin" />
+            <span>SOP Target: 24h Approval Gate</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Main 4 SOP Tabs */}
+      <div className="flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-2 overflow-x-auto text-xs">
         <button
           onClick={() => { setActiveMainTab('BUDGETS'); haptics.selection(); }}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all relative ${
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap shrink-0 ${
             activeMainTab === 'BUDGETS'
               ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
           <DollarSign className="w-3.5 h-3.5" />
-          <span>Budget Requests & Approvals ({budgetRequests.length})</span>
-          {pendingBudgetCount > 0 && (
-            <span className="w-4 h-4 rounded-full bg-amber-500 text-white text-[10px] font-extrabold flex items-center justify-center animate-pulse">
-              {pendingBudgetCount}
+          <span>1. Budget Approval Workflow</span>
+          {mdPendingBudgetCount > 0 && (
+            <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] font-extrabold flex items-center justify-center animate-pulse">
+              {mdPendingBudgetCount}
             </span>
           )}
         </button>
+
+        <button
+          onClick={() => { setActiveMainTab('PETTY_CASH'); haptics.selection(); }}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap shrink-0 ${
+            activeMainTab === 'PETTY_CASH'
+              ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <Wallet className="w-3.5 h-3.5" />
+          <span>2. Petty Cash & Imprest (Gift & Marvelous)</span>
+        </button>
+
+        <button
+          onClick={() => { setActiveMainTab('INVOICES'); haptics.selection(); }}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap shrink-0 ${
+            activeMainTab === 'INVOICES'
+              ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <Receipt className="w-3.5 h-3.5" />
+          <span>3. Milestone Invoicing & Dr. K Confirmation</span>
+        </button>
+
+        <button
+          onClick={() => { setActiveMainTab('EXPENSES'); haptics.selection(); }}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap shrink-0 ${
+            activeMainTab === 'EXPENSES'
+              ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <TrendingUp className="w-3.5 h-3.5" />
+          <span>4. Fund Retirement & Cost Tracking</span>
+        </button>
       </div>
 
-      {/* Conditional View Rendering */}
-      {activeMainTab === 'INVOICES' ? (
-        <>
-          {/* Financial Telemetry Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+      {/* TAB 1: BUDGET APPROVAL WORKFLOW */}
+      {activeMainTab === 'BUDGETS' && (
+        <div className="space-y-4">
+          {/* Telemetry Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+              <div className="text-[10px] uppercase font-bold text-slate-400">Total Capex Requested</div>
+              <div className="text-xl font-extrabold text-slate-900 dark:text-white tnum">
+                ₦{(totalBudgetRequested / 1000000).toFixed(2)}M
+              </div>
+              <div className="text-[10px] text-slate-500 font-medium">{budgetRequests.length} Total Submissions</div>
+            </div>
+
+            <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+              <div className="text-[10px] uppercase font-bold text-rose-500 flex items-center justify-between">
+                <span>Waiting MD Approval</span>
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+              </div>
+              <div className="text-xl font-extrabold text-rose-600 dark:text-rose-400 tnum">
+                {mdPendingBudgetCount} Requests
+              </div>
+              <div className="text-[10px] text-slate-500 font-medium">Ball-in-court: Dr. Kaine / Bibi</div>
+            </div>
+
+            <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+              <div className="text-[10px] uppercase font-bold text-purple-500">With Erica (CFO Review)</div>
+              <div className="text-xl font-extrabold text-purple-600 dark:text-purple-400 tnum">
+                {cfoReviewCount} Requests
+              </div>
+              <div className="text-[10px] text-slate-500 font-medium">Executive financial vetting</div>
+            </div>
+
+            <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+              <div className="text-[10px] uppercase font-bold text-emerald-500">Approved Disbursements</div>
+              <div className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 tnum">
+                ₦{(approvedBudgetAmount / 1000000).toFixed(2)}M
+              </div>
+              <div className="text-[10px] text-slate-500 font-medium">Ready for wire release</div>
+            </div>
+          </div>
+
+          {/* Stage Filter Buttons */}
+          <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 dark:bg-slate-800/80 rounded-xl text-xs font-semibold overflow-x-auto">
+            {[
+              { id: 'ALL', label: 'All Budgets' },
+              { id: 'MD_PENDING', label: `Pending MD / Bibi (${mdPendingBudgetCount})`, alert: mdPendingBudgetCount > 0 },
+              { id: 'CFO_REVIEW', label: `With Erica (CFO) (${cfoReviewCount})` },
+              { id: 'WITH_OZIOMA', label: 'With Miss Ozioma' },
+              { id: 'IN_COLLATION', label: `In Collation (${inCollationCount})` },
+              { id: 'APPROVED', label: 'Approved' },
+              { id: 'DECLINED', label: 'Declined' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => { setBudgetStageFilter(tab.id as any); haptics.selection(); }}
+                className={`px-3 py-1 rounded-lg transition-all whitespace-nowrap shrink-0 ${
+                  budgetStageFilter === tab.id
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs font-bold'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Budgets Table with Live SLA and Action Buttons */}
+          <div className="apple-glass-card rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50/60 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+                  <tr>
+                    <th className="px-5 py-3">Budget Request</th>
+                    <th className="px-5 py-3">Type & Frequency</th>
+                    <th className="px-5 py-3 text-right">Amount (₦ NGN)</th>
+                    <th className="px-5 py-3">Stage & Ball-in-Court</th>
+                    <th className="px-5 py-3">Vetting & Review History</th>
+                    <th className="px-5 py-3 text-right">SOP Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
+                  {filteredBudgets.map((req) => {
+                    const isPendingMD = req.approvalStage === 'MD_PENDING';
+                    const isWithCFO = req.approvalStage === 'CFO_REVIEW';
+                    const isCollation = req.approvalStage === 'IN_COLLATION';
+                    const isWithOzioma = req.approvalStage === 'WITH_OZIOMA';
+                    const isApproved = req.status === 'APPROVED';
+                    const isDeclined = req.status === 'DECLINED';
+
+                    return (
+                      <tr key={req.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                        {/* Request Title & Department */}
+                        <td className="px-5 py-3.5">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-bold text-slate-900 dark:text-white">{req.requestNumber}</span>
+                            {req.budgetType === 'CLIENT_FACING' ? (
+                              <span className="px-2 py-0.2 rounded-full text-[9px] font-extrabold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                                CLIENT PROJECT
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.2 rounded-full text-[9px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                DEPARTMENTAL
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 mt-0.5">{req.title}</div>
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                            Dept: <strong className="text-slate-700 dark:text-slate-300">{req.department}</strong> • By: {req.requestedByName}
+                          </div>
+                        </td>
+
+                        {/* Frequency & Category */}
+                        <td className="px-5 py-3 text-xs">
+                          <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px] font-medium">
+                            {req.category.replace(/_/g, ' ')}
+                          </span>
+                          <div className="text-[10px] text-slate-400 mt-1">
+                            Frequency: {req.frequency || 'PERIODIC'}
+                          </div>
+                        </td>
+
+                        {/* Amount & Misc */}
+                        <td className="px-5 py-3 text-right">
+                          <div className="font-mono font-bold text-slate-900 dark:text-white text-xs tnum">
+                            ₦{req.amountNgn.toLocaleString()}
+                          </div>
+                          {req.miscellaneousAmountNgn ? (
+                            <div className="text-[10px] text-amber-600 dark:text-amber-400 font-mono mt-0.5">
+                              +₦{req.miscellaneousAmountNgn.toLocaleString()} Misc
+                            </div>
+                          ) : null}
+                        </td>
+
+                        {/* Stage & Ball-in-Court */}
+                        <td className="px-5 py-3">
+                          {isPendingMD && (
+                            <div className="space-y-1">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+                                <Clock className="w-3 h-3 animate-pulse" />
+                                <span>Waiting on MD / Bibi</span>
+                              </span>
+                              <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                                Ball: <strong>Dr. Kaine Edike</strong> / <strong>Bibi</strong>
+                              </div>
+                            </div>
+                          )}
+
+                          {isWithCFO && (
+                            <div className="space-y-1">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                                <ShieldCheck className="w-3 h-3" />
+                                <span>CFO Review & Vetting</span>
+                              </span>
+                              <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                                Ball: <strong>Erica (CFO)</strong>
+                              </div>
+                            </div>
+                          )}
+
+                          {isCollation && (
+                            <div className="space-y-1">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                                <Users className="w-3 h-3" />
+                                <span>Collation with Officers</span>
+                              </span>
+                              <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                                Assigned: <strong>{req.collatedByName || 'Gift / Marvelous'}</strong>
+                              </div>
+                            </div>
+                          )}
+
+                          {isWithOzioma && (
+                            <div className="space-y-1">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                                <Briefcase className="w-3 h-3" />
+                                <span>Commercial Collation</span>
+                              </span>
+                              <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                                Ball: <strong>Miss Ozioma</strong>
+                              </div>
+                            </div>
+                          )}
+
+                          {isApproved && (
+                            <div className="space-y-1">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                <CheckCircle2 className="w-3 h-3" />
+                                <span>Disbursement Approved</span>
+                              </span>
+                              {req.approvedOnBehalfOfDrK && (
+                                <div className="text-[9px] text-purple-600 dark:text-purple-400 font-semibold">
+                                  Approved by Bibi (2nd-in-Command)
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {isDeclined && (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+                              <XCircle className="w-3 h-3" />
+                              <span>{req.declineOutcome === 'REVISE_RESUBMIT' ? 'Returned for Revision' : 'Declined & Dropped'}</span>
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Vetting & Review Notes */}
+                        <td className="px-5 py-3 text-[11px] text-slate-600 dark:text-slate-300 max-w-xs">
+                          {req.cfoReviewNotes && (
+                            <div className="text-purple-700 dark:text-purple-300 mb-1">
+                              <strong>CFO Note:</strong> {req.cfoReviewNotes}
+                            </div>
+                          )}
+                          {req.reviewComments && (
+                            <div className="text-emerald-700 dark:text-emerald-300">
+                              <strong>MD Note:</strong> {req.reviewComments}
+                            </div>
+                          )}
+                          {!req.cfoReviewNotes && !req.reviewComments && (
+                            <span className="text-slate-400 italic">No vetting comments logged</span>
+                          )}
+                        </td>
+
+                        {/* Action Buttons based on logged in persona */}
+                        <td className="px-5 py-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {/* MD Approval Gate for Dr. K */}
+                            {isPendingMD && isDrK && (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    approveBudgetAsMD(req.id, false, 'Approved by Dr. Kaine Edike (MD).');
+                                    haptics.success();
+                                  }}
+                                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold shadow-2xs active:scale-95 transition-all"
+                                >
+                                  Approve (Dr. K)
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    const reason = prompt('Reason for declining:') || 'Declined during MD review.';
+                                    declineBudgetAsMD(req.id, false, reason);
+                                    haptics.impact();
+                                  }}
+                                  className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-[10px] font-bold border border-rose-200 transition-all"
+                                >
+                                  Decline
+                                </button>
+                              </>
+                            )}
+
+                            {/* Alternative Approval Gate for Bibi (2nd in Command) */}
+                            {isPendingMD && isBibi && !isDrK && (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    approveBudgetAsMD(req.id, true, 'Approved by Bibi on behalf of Dr. Kaine Edike (2nd in Command SLA clause).');
+                                    haptics.success();
+                                  }}
+                                  title="Approve on Dr. K's behalf to avoid project bottleneck (SOP Section 1)"
+                                  className="px-2.5 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-[10px] font-bold shadow-2xs active:scale-95 transition-all"
+                                >
+                                  Approve on Dr. K Behalf
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    const reason = prompt('Reason for declining:') || 'Declined during 2nd-in-command review.';
+                                    declineBudgetAsMD(req.id, true, reason);
+                                    haptics.impact();
+                                  }}
+                                  className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-[10px] font-bold border border-rose-200 transition-all"
+                                >
+                                  Decline
+                                </button>
+                              </>
+                            )}
+
+                            {/* CFO Review Action for Erica */}
+                            {isWithCFO && (isErica || isSuperadmin) && (
+                              <button
+                                onClick={() => setVettingBudget(req)}
+                                className="px-2.5 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-[10px] font-bold shadow-2xs active:scale-95 transition-all flex items-center gap-1"
+                              >
+                                <ShieldCheck className="w-3 h-3" />
+                                <span>CFO Vet</span>
+                              </button>
+                            )}
+
+                            {/* Collation Action for Gift & Marvelous */}
+                            {isCollation && (isGift || isMarvelous || isSuperadmin) && (
+                              <button
+                                onClick={() => setCollatingBudget(req)}
+                                className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold shadow-2xs active:scale-95 transition-all flex items-center gap-1"
+                              >
+                                <Send className="w-3 h-3" />
+                                <span>Collate & Forward</span>
+                              </button>
+                            )}
+
+                            {/* Ozioma Action for Client Project Budgets */}
+                            {isWithOzioma && (isOzioma || isSuperadmin) && (
+                              <button
+                                onClick={() => {
+                                  cfoReviewBudget(req.id, 'PROJECT_TO_DR_K', 'Miss Ozioma reviewed client project budget against contract scope. Projected to Dr. Kaine Edike.');
+                                  haptics.success();
+                                }}
+                                className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[10px] font-bold shadow-2xs active:scale-95 transition-all flex items-center gap-1"
+                              >
+                                <Crown className="w-3 h-3" />
+                                <span>Present to Dr. K</span>
+                              </button>
+                            )}
+
+                            {isApproved && (
+                              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                                Ready for Wire
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: PETTY CASH & IMPREST LEDGER */}
+      {activeMainTab === 'PETTY_CASH' && (
+        <div className="space-y-5">
+          {/* Dual Imprest Fund Cards (Gift & Marvelous - SOP Section 4) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Gift's Fund Card */}
+            <div className="apple-glass-card rounded-3xl p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-bold">
+                    G
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-sm text-slate-900 dark:text-white">Gift's Imprest Fund</h3>
+                      <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
+                        Primary Collation
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Office water dispensers, stationery & HQ repairs</p>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <div className="text-[10px] uppercase font-bold text-slate-400">Available Balance</div>
+                  <div className="text-xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
+                    ₦{giftFund.currentBalanceNgn.toLocaleString()}
+                  </div>
+                </div>
+              </div>
+
+              {/* Progress Bar of Fund Burn */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-[11px] text-slate-500">
+                  <span>Spent: ₦{(giftFund.allocatedAmountNgn - giftFund.currentBalanceNgn).toLocaleString()}</span>
+                  <span>Cap: ₦{giftFund.allocatedAmountNgn.toLocaleString()}</span>
+                </div>
+                <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                    style={{ width: `${(giftFund.currentBalanceNgn / giftFund.allocatedAmountNgn) * 100}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+                <span className="text-slate-400 text-[11px]">Allocated by: <strong>Dr. Kaine Edike</strong></span>
+                <button
+                  onClick={() => {
+                    setActiveCustodianForExpense('GIFT');
+                    setIsPettyExpenseOpen(true);
+                    haptics.selection();
+                  }}
+                  className="px-3 py-1 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 text-white rounded-lg text-xs font-semibold shadow-2xs active:scale-95 transition-all"
+                >
+                  Log Voucher (Gift)
+                </button>
+              </div>
+            </div>
+
+            {/* Marvelous's Fund Card */}
+            <div className="apple-glass-card rounded-3xl p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-500/10 dark:bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold">
+                    M
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-sm text-slate-900 dark:text-white">Marvelous's Imprest Fund</h3>
+                      <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300">
+                        Invoicing & Logistics
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Uber courier, lab dispatches & field emergencies</p>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <div className="text-[10px] uppercase font-bold text-slate-400">Available Balance</div>
+                  <div className="text-xl font-extrabold font-mono text-blue-600 dark:text-blue-400">
+                    ₦{marvelousFund.currentBalanceNgn.toLocaleString()}
+                  </div>
+                </div>
+              </div>
+
+              {/* Progress Bar of Fund Burn */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-[11px] text-slate-500">
+                  <span>Spent: ₦{(marvelousFund.allocatedAmountNgn - marvelousFund.currentBalanceNgn).toLocaleString()}</span>
+                  <span>Cap: ₦{marvelousFund.allocatedAmountNgn.toLocaleString()}</span>
+                </div>
+                <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-blue-500 rounded-full transition-all duration-300"
+                    style={{ width: `${(marvelousFund.currentBalanceNgn / marvelousFund.allocatedAmountNgn) * 100}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+                <span className="text-slate-400 text-[11px]">Allocated by: <strong>Dr. Kaine Edike</strong></span>
+                <button
+                  onClick={() => {
+                    setActiveCustodianForExpense('MARVELOUS');
+                    setIsPettyExpenseOpen(true);
+                    haptics.selection();
+                  }}
+                  className="px-3 py-1 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 text-white rounded-lg text-xs font-semibold shadow-2xs active:scale-95 transition-all"
+                >
+                  Log Voucher (Marvelous)
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Monthly Analysis & Replenishment Panel (SOP Section 4) */}
+          <div className="p-4 rounded-3xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <h4 className="font-bold text-slate-900 dark:text-white">Monthly Petty Cash Reconciliation Analysis</h4>
+              </div>
+              <p className="text-slate-500 dark:text-slate-400 text-[11px]">
+                Per SOP Section 4, Gift is primarily responsible for monthly analysis (Marvelous is backup). Reconciles all physical vouchers and triggers MD replenishment back to ₦300,000.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => {
+                  const currentMonth = new Date().toISOString().substring(0, 7);
+                  generatePettyCashMonthlyAnalysis(currentMonth);
+                  haptics.success();
+                }}
+                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold shadow-2xs active:scale-95 transition-all"
+              >
+                Compile Monthly Analysis
+              </button>
+
+              {(isDrK || isBibi || isSuperadmin) && (
+                <button
+                  onClick={() => {
+                    const latest = pettyCashAnalyses[0];
+                    if (latest) {
+                      approvePettyCashReplenishment(latest.id, 'Replenishment approved by MD/Executive.');
+                      haptics.success();
+                    } else {
+                      alert('Please compile monthly analysis first.');
+                    }
+                  }}
+                  className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 text-white rounded-xl font-bold shadow-2xs active:scale-95 transition-all flex items-center gap-1.5"
+                >
+                  <DollarSign className="w-3.5 h-3.5" />
+                  <span>Approve ₦600k Replenishment</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Imprest Transaction Vouchers Table */}
+          <div className="apple-glass-card rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+            <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <h3 className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider">
+                Imprest Expense Ledger & Supporting Receipts ({pettyCashTransactions.length})
+              </h3>
+              <span className="text-[11px] text-slate-400">Total Spent This Month: ₦{totalPettyCashSpent.toLocaleString()}</span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50/60 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+                  <tr>
+                    <th className="px-5 py-3">Date & Fund</th>
+                    <th className="px-5 py-3">Expense Category</th>
+                    <th className="px-5 py-3">Description / Purpose</th>
+                    <th className="px-5 py-3 text-right">Amount (₦ NGN)</th>
+                    <th className="px-5 py-3">Receipt / Voucher</th>
+                    <th className="px-5 py-3">Custodian Sign-off</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
+                  {pettyCashTransactions.map((tx) => (
+                    <tr key={tx.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                      <td className="px-5 py-3.5">
+                        <div className="font-mono text-xs font-bold text-slate-900 dark:text-white">{tx.date}</div>
+                        <span className={`px-2 py-0.2 rounded-full text-[9px] font-bold ${
+                          tx.fundCustodian === 'GIFT' 
+                            ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300' 
+                            : 'bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300'
+                        }`}>
+                          {tx.fundCustodian}'S FUND
+                        </span>
+                      </td>
+
+                      <td className="px-5 py-3 text-xs">
+                        <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-[11px]">
+                          {tx.category.replace(/_/g, ' ')}
+                        </span>
+                      </td>
+
+                      <td className="px-5 py-3 text-xs text-slate-700 dark:text-slate-300 max-w-sm">
+                        {tx.description}
+                      </td>
+
+                      <td className="px-5 py-3 text-right font-mono font-bold text-xs text-slate-900 dark:text-white tnum">
+                        ₦{tx.amountNgn.toLocaleString()}
+                      </td>
+
+                      <td className="px-5 py-3 text-xs">
+                        {tx.receiptUrl ? (
+                          <span className="text-emerald-600 dark:text-emerald-400 font-mono text-[11px] underline cursor-pointer">
+                            {tx.receiptUrl}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 italic">Voucher on file</span>
+                        )}
+                      </td>
+
+                      <td className="px-5 py-3 text-xs text-slate-500">
+                        {tx.approvedByName}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: MILESTONE INVOICING & DR. K CONFIRMATION */}
+      {activeMainTab === 'INVOICES' && (
+        <div className="space-y-4">
+          {/* Telemetry Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
               <div className="text-[10px] uppercase font-bold text-slate-400">Total Billed Gross</div>
               <div className="text-xl font-extrabold text-slate-900 dark:text-white tnum">₦{(totalBilledNgn / 1000000).toFixed(1)}M</div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">{invoices.length} Milestone Invoices</div>
+              <div className="text-[10px] text-slate-500 font-medium">{invoices.length} Milestone Invoices</div>
             </div>
 
             <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
               <div className="text-[10px] uppercase font-bold text-slate-400">Cash Collected (Net)</div>
               <div className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 tnum">₦{(totalPaidNgn / 1000000).toFixed(1)}M</div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Reconciled bank transfers</div>
+              <div className="text-[10px] text-slate-500 font-medium">Reconciled wire payments</div>
             </div>
 
             <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
               <div className="text-[10px] uppercase font-bold text-slate-400">7.5% VAT Tracked</div>
               <div className="text-xl font-extrabold text-purple-600 dark:text-purple-400 tnum">₦{(totalVatTracked / 1000000).toFixed(2)}M</div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Federal Inland Revenue (FIRS)</div>
+              <div className="text-[10px] text-slate-500 font-medium">FIRS Compliance Ledger</div>
             </div>
 
             <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
               <div className="text-[10px] uppercase font-bold text-slate-400">WHT Deductions (5%)</div>
               <div className="text-xl font-extrabold text-amber-600 dark:text-amber-400 tnum">₦{(totalWhtDeductions / 1000000).toFixed(2)}M</div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Credit note reconciliation</div>
+              <div className="text-[10px] text-slate-500 font-medium">Credit note reconciliation</div>
             </div>
           </div>
 
-          {/* Segmented Filter */}
-          <div className="flex items-center justify-between">
+          {/* Filter & Preparer Notice */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-1 p-1 bg-slate-100/80 dark:bg-slate-800/80 rounded-xl text-xs font-semibold">
               <button
-                onClick={() => setStatusFilter('ALL')}
-                className={`px-3 py-1 rounded-lg transition-all active:scale-[0.96] ${
-                  statusFilter === 'ALL' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                onClick={() => setInvoiceStatusFilter('ALL')}
+                className={`px-3 py-1 rounded-lg transition-all ${
+                  invoiceStatusFilter === 'ALL' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs font-bold' : 'text-slate-500'
                 }`}
               >
                 All Invoices ({invoices.length})
               </button>
               <button
-                onClick={() => setStatusFilter('ISSUED')}
-                className={`px-3 py-1 rounded-lg transition-all active:scale-[0.96] ${
-                  statusFilter === 'ISSUED' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                onClick={() => setInvoiceStatusFilter('ISSUED')}
+                className={`px-3 py-1 rounded-lg transition-all ${
+                  invoiceStatusFilter === 'ISSUED' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs font-bold' : 'text-slate-500'
                 }`}
               >
                 Awaiting Payment ({invoices.filter(i => i.status === 'ISSUED').length})
               </button>
               <button
-                onClick={() => setStatusFilter('PAID')}
-                className={`px-3 py-1 rounded-lg transition-all active:scale-[0.96] ${
-                  statusFilter === 'PAID' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                onClick={() => setInvoiceStatusFilter('PAID')}
+                className={`px-3 py-1 rounded-lg transition-all ${
+                  invoiceStatusFilter === 'PAID' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs font-bold' : 'text-slate-500'
                 }`}
               >
-                Settled & Reconciled ({invoices.filter(i => i.status === 'PAID').length})
+                Settled ({invoices.filter(i => i.status === 'PAID').length})
               </button>
+            </div>
+
+            <div className="text-[11px] text-slate-500 flex items-center gap-2">
+              <span className="font-semibold text-slate-700 dark:text-slate-300">SOP Rule:</span> Marvelous is primary preparer; confirmation required directly with Dr. Kaine Edike before clearance.
             </div>
           </div>
 
-          {/* Invoices List */}
+          {/* Invoices List Table */}
           <div className="apple-glass-card rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50/60 dark:bg-slate-800/60 border-b border-black/[0.05] dark:border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+                <thead className="bg-slate-50/60 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
                   <tr>
                     <th className="px-5 py-3">Invoice & Client</th>
                     <th className="px-5 py-3">Milestone Description</th>
-                    <th className="px-5 py-3 text-right">Subtotal</th>
-                    <th className="px-5 py-3 text-right">7.5% VAT</th>
-                    <th className="px-5 py-3 text-right">5% WHT</th>
+                    <th className="px-5 py-3">Preparer (SOP)</th>
                     <th className="px-5 py-3 text-right">Net Payable</th>
                     <th className="px-5 py-3">Status</th>
+                    <th className="px-5 py-3">Dr. K Confirmation</th>
                     <th className="px-5 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-black/[0.04] dark:divide-slate-800 font-medium">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
                   {filteredInvoices.map((inv) => {
                     const isPaid = inv.status === 'PAID';
+                    const isConfirmed = inv.confirmedWithDrK;
+
                     return (
                       <tr key={inv.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
                         <td className="px-5 py-3.5">
@@ -284,16 +993,10 @@ export default function FinancePage() {
                           {inv.milestoneDescription}
                         </td>
 
-                        <td className="px-5 py-3 text-right font-mono font-semibold text-slate-700 dark:text-slate-300 tnum">
-                          ₦{inv.subtotalNgn.toLocaleString()}
-                        </td>
-
-                        <td className="px-5 py-3 text-right font-mono text-purple-700 dark:text-purple-400 font-semibold tnum">
-                          +₦{inv.vatAmountNgn.toLocaleString()}
-                        </td>
-
-                        <td className="px-5 py-3 text-right font-mono text-amber-700 dark:text-amber-400 font-semibold tnum">
-                          -₦{inv.whtDeductionNgn.toLocaleString()}
+                        <td className="px-5 py-3 text-xs">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                            {inv.preparedByName || 'Marvelous (Lead)'}
+                          </span>
                         </td>
 
                         <td className="px-5 py-3 text-right font-mono font-bold text-xs text-slate-900 dark:text-white tnum">
@@ -302,183 +1005,50 @@ export default function FinancePage() {
 
                         <td className="px-5 py-3">
                           <span className={`px-2 py-0.2 rounded-full text-[10px] font-bold ${
-                            isPaid ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                            isPaid 
+                              ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' 
+                              : 'bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
                           }`}>
                             {inv.status}
                           </span>
                         </td>
 
-                        <td className="px-5 py-3 text-right space-x-1.5">
-                          {!isPaid ? (
-                            <button
-                              onClick={() => setSelectedInvoiceForPayment(inv)}
-                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold shadow-2xs active:scale-[0.96]"
-                            >
-                              Record Payment
-                            </button>
+                        <td className="px-5 py-3">
+                          {isConfirmed ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Confirmed with Dr. K</span>
+                            </span>
                           ) : (
-                            <span className="text-[10px] text-slate-400 font-mono">
-                              {inv.whtCreditNoteNumber ? `Cert: ${inv.whtCreditNoteNumber}` : 'Direct Transfer'}
+                            <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">
+                              Pending MD Verification
                             </span>
                           )}
                         </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </>
-      ) : (
-        /* Budget Requests View */
-        <>
-          {/* Budget Telemetry Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div className="text-[10px] uppercase font-bold text-slate-400">Total Requested Capex</div>
-              <div className="text-xl font-extrabold text-slate-900 dark:text-white tnum">
-                ₦{(totalBudgetRequested / 1000000).toFixed(2)}M
-              </div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Across all departments</div>
-            </div>
 
-            <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div className="text-[10px] uppercase font-bold text-slate-400">Pending Executive Review</div>
-              <div className="text-xl font-extrabold text-amber-600 dark:text-amber-400 tnum">
-                {pendingBudgetCount} Requests
-              </div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Awaiting Admin/Manager sign-off</div>
-            </div>
+                        <td className="px-5 py-3 text-right space-x-1.5">
+                          {!isConfirmed && (
+                            <button
+                              onClick={() => {
+                                confirmPaymentWithDrK(inv.id);
+                                haptics.success();
+                              }}
+                              title="SOP Requirement: Confirm receipt directly with Dr. Kaine Edike"
+                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold shadow-2xs active:scale-[0.96]"
+                            >
+                              Confirm with Dr. K
+                            </button>
+                          )}
 
-            <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div className="text-[10px] uppercase font-bold text-slate-400">Approved Disbursements</div>
-              <div className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 tnum">
-                ₦{(approvedBudgetAmount / 1000000).toFixed(2)}M
-              </div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Released to teams</div>
-            </div>
-          </div>
-
-          {/* Budget Filter */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1 p-1 bg-slate-100/80 dark:bg-slate-800/80 rounded-xl text-xs font-semibold">
-              {(['ALL', 'PENDING_APPROVAL', 'APPROVED', 'DECLINED'] as const).map((st) => (
-                <button
-                  key={st}
-                  onClick={() => { setBudgetStatusFilter(st); haptics.selection(); }}
-                  className={`px-3 py-1 rounded-lg transition-all active:scale-[0.96] ${
-                    budgetStatusFilter === st
-                      ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs font-bold'
-                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  {st === 'ALL' ? 'All Requests' : st === 'PENDING_APPROVAL' ? 'Pending Review' : st === 'APPROVED' ? 'Approved' : 'Declined'}
-                </button>
-              ))}
-            </div>
-
-            <span className="text-xs text-slate-500 dark:text-slate-400">
-              {canReviewBudget ? '✓ Authorized as Reviewer' : 'Requester View'}
-            </span>
-          </div>
-
-          {/* Budget Requests Table */}
-          <div className="apple-glass-card rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50/60 dark:bg-slate-800/60 border-b border-black/[0.05] dark:border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
-                  <tr>
-                    <th className="px-5 py-3">Request Number & Title</th>
-                    <th className="px-5 py-3">Department & Requester</th>
-                    <th className="px-5 py-3">Category</th>
-                    <th className="px-5 py-3 text-right">Amount (₦ NGN)</th>
-                    <th className="px-5 py-3">Status</th>
-                    <th className="px-5 py-3">Review Notes</th>
-                    {canReviewBudget && <th className="px-5 py-3 text-right">Manager Action</th>}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-black/[0.04] dark:divide-slate-800 font-medium">
-                  {filteredBudgets.map((req) => {
-                    const isPending = req.status === 'PENDING_APPROVAL';
-                    const isApproved = req.status === 'APPROVED';
-
-                    return (
-                      <tr key={req.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
-                        <td className="px-5 py-3.5">
-                          <div className="font-mono text-xs font-bold text-slate-900 dark:text-white">{req.requestNumber}</div>
-                          <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 mt-0.5">{req.title}</div>
-                          <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">{req.justification}</p>
-                        </td>
-
-                        <td className="px-5 py-3 text-xs">
-                          <div className="font-bold text-slate-800 dark:text-slate-200">{req.department}</div>
-                          <div className="text-[11px] text-slate-500">By {req.requestedByName}</div>
-                        </td>
-
-                        <td className="px-5 py-3 text-[11px]">
-                          <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium">
-                            {req.category.replace('_', ' ')}
-                          </span>
-                        </td>
-
-                        <td className="px-5 py-3 text-right font-mono font-bold text-slate-900 dark:text-white text-xs tnum">
-                          ₦{req.amountNgn.toLocaleString()}
-                        </td>
-
-                        <td className="px-5 py-3">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            isApproved
-                              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                              : isPending
-                              ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
-                              : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
-                          }`}>
-                            {req.status.replace('_', ' ')}
-                          </span>
-                        </td>
-
-                        <td className="px-5 py-3 text-[11px] text-slate-500 max-w-xs">
-                          {req.reviewedByName ? (
-                            <div>
-                              <span className="font-semibold text-slate-700 dark:text-slate-300">Reviewed by {req.reviewedByName}:</span> {req.reviewComments || 'Approved.'}
-                            </div>
-                          ) : (
-                            <span className="text-slate-400 italic">Pending review</span>
+                          {!isPaid && (
+                            <button
+                              onClick={() => setSelectedInvoiceForPayment(inv)}
+                              className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 text-white rounded-lg text-[10px] font-bold shadow-2xs active:scale-[0.96]"
+                            >
+                              Record Payment
+                            </button>
                           )}
                         </td>
-
-                        {canReviewBudget && (
-                          <td className="px-5 py-3 text-right">
-                            {isPending ? (
-                              <div className="flex items-center justify-end gap-1.5">
-                                <button
-                                  onClick={() => {
-                                    reviewBudgetRequest(req.id, 'APPROVED', 'Approved for operational disbursement.');
-                                    haptics.success();
-                                  }}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-bold shadow-2xs active:scale-95 transition-all"
-                                >
-                                  <Check className="w-3 h-3" />
-                                  <span>Approve</span>
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    const reason = prompt('Enter reason for declining budget request:') || 'Declined upon managerial review.';
-                                    reviewBudgetRequest(req.id, 'DECLINED', reason);
-                                    haptics.impact();
-                                  }}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300 rounded-lg text-[11px] font-bold border border-rose-200 dark:border-rose-800 transition-all"
-                                >
-                                  <XCircle className="w-3 h-3" />
-                                  <span>Decline</span>
-                                </button>
-                              </div>
-                            ) : (
-                              <span className="text-[10px] text-slate-400 font-mono">Done</span>
-                            )}
-                          </td>
-                        )}
                       </tr>
                     );
                   })}
@@ -486,8 +1056,54 @@ export default function FinancePage() {
               </table>
             </div>
           </div>
-        </>
+        </div>
       )}
+
+      {/* TAB 4: FUND RETIREMENT & EXPENSE TRACKING */}
+      {activeMainTab === 'EXPENSES' && (
+        <div className="space-y-4">
+          <div className="p-5 rounded-3xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-2">
+            <h3 className="font-bold text-sm text-slate-900 dark:text-white">Fund Retirement & Project Expenditure Reconciliation</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-3xl">
+              Per AquaEarth Financial SOP Section 5: All advances granted for field campaigns, soil testing, and bathymetric surveys must be retired within 48 hours of mobilization completion. Unspent balances are refunded back to treasury accounts, backed by physical receipts and miscellaneous justification logs.
+            </p>
+          </div>
+
+          <div className="apple-glass-card rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs p-5">
+            <div className="text-center py-12 space-y-3">
+              <ShieldCheck className="w-10 h-10 text-emerald-500 mx-auto opacity-80" />
+              <h4 className="font-bold text-sm text-slate-900 dark:text-white">All Active Mobilizations Fully Collated</h4>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                No outstanding unretired cash advances past the 48-hour window. Active projects are within authorized capex thresholds.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODALS */}
+      <BudgetRequestModal
+        isOpen={isNewBudgetOpen}
+        onClose={() => setIsNewBudgetOpen(false)}
+      />
+
+      <CfoVettingModal
+        isOpen={!!vettingBudget}
+        budget={vettingBudget}
+        onClose={() => setVettingBudget(null)}
+      />
+
+      <CollateBudgetModal
+        isOpen={!!collatingBudget}
+        budget={collatingBudget}
+        onClose={() => setCollatingBudget(null)}
+      />
+
+      <PettyCashExpenseModal
+        isOpen={isPettyExpenseOpen}
+        defaultCustodian={activeCustodianForExpense}
+        onClose={() => setIsPettyExpenseOpen(false)}
+      />
 
       {/* Record Payment Modal */}
       <AnimatePresence>
@@ -497,7 +1113,7 @@ export default function FinancePage() {
             <motion.div initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-sm w-full border border-slate-200 dark:border-slate-800 p-6 space-y-4 z-10 text-xs">
               <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold border-b border-slate-200 dark:border-slate-800 pb-2">
                 <ShieldCheck className="w-4 h-4" />
-                <span>Reconcile Client Payment</span>
+                <span>Reconcile Client Wire Payment</span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Confirm receipt of wire transfer for invoice <strong className="text-slate-900 dark:text-white font-mono">{selectedInvoiceForPayment.invoiceNumber}</strong> ({selectedInvoiceForPayment.clientName}).
@@ -515,7 +1131,7 @@ export default function FinancePage() {
                 </div>
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
                   <button type="button" onClick={() => setSelectedInvoiceForPayment(null)} className="px-3 py-1.5 text-slate-500 font-semibold">Cancel</button>
-                  <button type="submit" className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold shadow-xs active:scale-[0.96]">Confirm Receipt</button>
+                  <button type="submit" className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold shadow-xs active:scale-[0.96]">Confirm Wire Cleared</button>
                 </div>
               </form>
             </motion.div>
@@ -530,7 +1146,10 @@ export default function FinancePage() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsNewInvoiceOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-md" />
             <motion.div initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-md w-full border border-slate-200 dark:border-slate-800 p-6 space-y-4 z-10 text-xs">
               <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Generate Client Milestone Invoice</h3>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Prepare Milestone Invoice</h3>
+                  <p className="text-[10px] text-slate-500">Prepared by: Marvelous (Primary Preparer)</p>
+                </div>
                 <button onClick={() => setIsNewInvoiceOpen(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">&times;</button>
               </div>
 
@@ -555,63 +1174,62 @@ export default function FinancePage() {
                     required
                     value={milestoneDescription}
                     onChange={(e) => setMilestoneDescription(e.target.value)}
-                    placeholder="e.g. Milestone 2: 50% Draft EIA Submission"
                     className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Gross Subtotal (₦ NGN)</label>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Subtotal (₦ NGN)</label>
                     <input
                       type="number"
                       required
+                      step={100000}
                       value={subtotalNgn}
                       onChange={(e) => setSubtotalNgn(Number(e.target.value))}
-                      className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-mono tnum text-slate-900 dark:text-white"
+                      className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-mono font-bold text-slate-900 dark:text-white"
                     />
                   </div>
-
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">WHT Deduction (%)</label>
-                    <select
-                      value={whtRatePercent}
-                      onChange={(e) => setWhtRatePercent(Number(e.target.value))}
-                      className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white"
-                    >
-                      <option value={5.0}>5.0% (Consulting & Technical)</option>
-                      <option value={10.0}>10.0% (Corporate Construction)</option>
-                      <option value={0.0}>0.0% (Exempt / Free Trade Zone)</option>
-                    </select>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Due Date</label>
+                    <input
+                      type="date"
+                      required
+                      value={dueDate}
+                      onChange={(e) => setDueDate(e.target.value)}
+                      className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
+                    />
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Payment Due Date</label>
-                  <input
-                    type="date"
-                    required
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
-                  />
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1 font-mono text-[11px]">
+                  <div className="flex justify-between text-slate-500">
+                    <span>Subtotal:</span>
+                    <span>₦{Number(subtotalNgn).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-purple-600 dark:text-purple-400 font-semibold">
+                    <span>+ 7.5% VAT:</span>
+                    <span>₦{(Number(subtotalNgn) * 0.075).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-amber-600 dark:text-amber-400 font-semibold">
+                    <span>- 5.0% WHT:</span>
+                    <span>₦{(Number(subtotalNgn) * 0.05).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-slate-900 dark:text-white border-t border-slate-200 dark:border-slate-700 pt-1 text-xs">
+                    <span>Net Payable:</span>
+                    <span>₦{(Number(subtotalNgn) * 1.025).toLocaleString()}</span>
+                  </div>
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
                   <button type="button" onClick={() => setIsNewInvoiceOpen(false)} className="px-3 py-1.5 text-slate-500 font-semibold">Cancel</button>
-                  <button type="submit" className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold shadow-xs active:scale-[0.96]">Issue Milestone Invoice</button>
+                  <button type="submit" className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 text-white rounded-xl font-bold shadow-xs active:scale-[0.96]">Issue Invoice</button>
                 </div>
               </form>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
-
-      {/* Budget Request Modal */}
-      <BudgetRequestModal
-        isOpen={isNewBudgetOpen}
-        onClose={() => setIsNewBudgetOpen(false)}
-      />
     </div>
   );
 }

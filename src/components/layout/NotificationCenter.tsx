@@ -10,13 +10,15 @@ import {
   ShieldCheck, 
   Award, 
   ExternalLink, 
-  X,
-  Lock,
-  Sparkles,
-  AlertOctagon,
-  FileCheck2,
-  Cpu,
-  Layers
+  X, 
+  Lock, 
+  Sparkles, 
+  AlertOctagon, 
+  FileCheck2, 
+  Cpu, 
+  Layers,
+  DollarSign,
+  ShieldAlert
 } from 'lucide-react';
 import { NotificationCategory, NotificationItem } from '@/lib/types';
 
@@ -123,6 +125,34 @@ const CATEGORY_THEMES: Record<NotificationCategory, {
     iconColor: 'text-sky-600 dark:text-sky-400',
     actionText: 'text-sky-700 dark:text-sky-400 hover:text-sky-800',
     icon: Cpu
+  },
+  FINANCE: {
+    label: 'Finance & Accounts',
+    dotColor: 'bg-emerald-500',
+    pillBg: 'bg-emerald-500/10 dark:bg-emerald-500/20',
+    pillText: 'text-emerald-700 dark:text-emerald-300',
+    pillBorder: 'border-emerald-500/30',
+    cardBorderUnread: 'border-emerald-500/40 dark:border-emerald-400/40',
+    cardRingUnread: 'ring-1 ring-emerald-500/20',
+    cardBgUnread: 'bg-emerald-500/[0.03] dark:bg-emerald-500/[0.05]',
+    iconBg: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+    iconColor: 'text-emerald-600 dark:text-emerald-400',
+    actionText: 'text-emerald-700 dark:text-emerald-400 hover:text-emerald-800',
+    icon: DollarSign
+  },
+  EXECUTIVE: {
+    label: 'Executive Escalation',
+    dotColor: 'bg-purple-500 animate-pulse',
+    pillBg: 'bg-purple-500/10 dark:bg-purple-500/20',
+    pillText: 'text-purple-700 dark:text-purple-300',
+    pillBorder: 'border-purple-500/30',
+    cardBorderUnread: 'border-purple-500/40 dark:border-purple-400/40',
+    cardRingUnread: 'ring-1 ring-purple-500/20',
+    cardBgUnread: 'bg-purple-500/[0.03] dark:bg-purple-500/[0.05]',
+    iconBg: 'bg-purple-500/15 text-purple-600 dark:text-purple-400',
+    iconColor: 'text-purple-600 dark:text-purple-400',
+    actionText: 'text-purple-700 dark:text-purple-400 hover:text-purple-800',
+    icon: ShieldAlert
   }
 };
 
@@ -203,6 +233,8 @@ export default function NotificationCenter({ isOpen, onClose }: NotificationCent
             {[
               { id: 'ALL', label: 'All Alerts' },
               { id: 'APPROVAL', label: 'Approvals', color: 'text-amber-600 dark:text-amber-400' },
+              { id: 'FINANCE', label: 'Finance & SOP', color: 'text-emerald-600 dark:text-emerald-400' },
+              { id: 'EXECUTIVE', label: 'Executive', color: 'text-purple-600 dark:text-purple-400' },
               { id: 'DEADLINE', label: 'Deadlines', color: 'text-rose-600 dark:text-rose-400' },
               { id: 'QA_REVIEW', label: 'QA SLA', color: 'text-indigo-600 dark:text-indigo-400' },
               { id: 'COMPLIANCE', label: 'Permits', color: 'text-teal-600 dark:text-teal-400' },
