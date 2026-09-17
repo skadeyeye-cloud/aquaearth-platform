@@ -89,7 +89,6 @@ export default function Sidebar({ onMobileItemClick }: { onMobileItemClick?: () 
     {
       title: 'Executive Intelligence',
       items: [
-        { name: 'Command & Analytics', href: '/analytics', icon: BarChart3, visible: canSeeAnalytics },
         { name: 'KPI Leaderboard', href: '/kpi/leaderboard', icon: Award, visible: true },
       ]
     },
@@ -123,23 +122,22 @@ export default function Sidebar({ onMobileItemClick }: { onMobileItemClick?: () 
         { name: 'Milestone Finance & Invoicing', href: '/finance', icon: Receipt, visible: canSeeFinance },
         { name: 'HR & Human Capital', href: '/hr/staff', icon: UserCheck, visible: canSeeHR },
         { name: 'Onboarding & Recruitment', href: '/hr/onboarding', icon: Users, visible: canSeeHR },
-        { name: 'Admin Overview', href: '/admin', icon: Shield, visible: canSeeAdmin },
-        { name: 'Superadmin Management', href: '/admin/users', icon: Lock, visible: canSeeAdmin },
+        { name: 'User Access & Roles', href: '/admin/users', icon: Lock, visible: canSeeAdmin },
       ]
     }
   ];
 
   return (
-    <aside className="w-full md:w-64 bg-[#FBFBFD] dark:bg-[#18181A] border-r border-black/[0.06] dark:border-white/[0.08] flex flex-col h-full select-none shrink-0 transition-colors">
+    <aside className="w-full md:w-64 bg-[#FBFBFD] dark:bg-[#000000] border-r border-black/[0.06] dark:border-white/[0.08] flex flex-col h-full select-none shrink-0 transition-colors">
       {/* Brand Header */}
       <div className="h-16 flex items-center gap-3 px-5 border-b border-black/[0.06] dark:border-white/[0.08]">
         <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-xs font-bold text-xs tracking-tight">
           AE
         </div>
         <div>
-          <div className="font-semibold text-xs text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight flex items-center gap-1.5">
+          <div className="font-semibold text-xs text-[#1D1D1F] dark:text-[#F6F4F0] tracking-tight flex items-center gap-1.5">
             AquaEarth
-            <span className="text-[10px] font-medium bg-black/[0.04] dark:bg-white/[0.08] text-[#86868B] dark:text-[#A1A1A6] px-1.5 py-0.2 rounded-md">
+            <span className="text-[10px] font-medium bg-black/[0.04] dark:bg-white/[0.08] text-[#86868B] dark:text-[#A39E93] px-1.5 py-0.2 rounded-md">
               Ops
             </span>
           </div>

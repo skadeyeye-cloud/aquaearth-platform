@@ -31,7 +31,8 @@ import {
   HardDrive,
   Layers,
   Receipt,
-  Shield
+  Shield,
+  Lock
 } from 'lucide-react';
 import NotificationCenter from './NotificationCenter';
 import BiometricAuthModal from '@/components/auth/BiometricAuthModal';
@@ -70,7 +71,6 @@ export default function Header({ onOpenMobileSidebar }: HeaderProps) {
     if (path.startsWith('/tasks')) return { section: 'Workspace', title: 'My Tasks', icon: CheckCircle2 };
     if (path.startsWith('/hr/attendance')) return { section: 'Workspace', title: 'Daily Attendance', icon: CalendarCheck };
     if (path.startsWith('/directory')) return { section: 'Workspace', title: 'Staff Directory', icon: Compass };
-    if (path.startsWith('/analytics')) return { section: 'Executive Intelligence', title: 'Command & Analytics', icon: BarChart3 };
     if (path.startsWith('/kpi')) return { section: 'Executive Intelligence', title: 'KPI Leaderboard', icon: Award };
     if (path.startsWith('/bd')) return { section: 'Commercial Engine', title: 'BD & Tendering', icon: Briefcase };
     if (path.startsWith('/crm')) return { section: 'Commercial Engine', title: 'Client CRM', icon: Users };
@@ -82,7 +82,7 @@ export default function Header({ onOpenMobileSidebar }: HeaderProps) {
     if (path.startsWith('/vault')) return { section: 'Quality & Governance', title: 'AquaEarth Vault', icon: HardDrive };
     if (path.startsWith('/operations/it-design')) return { section: 'Operational Support', title: 'IT & Design Studio', icon: Layers };
     if (path.startsWith('/finance')) return { section: 'Operational Support', title: 'Milestone Finance', icon: Receipt };
-    if (path.startsWith('/admin')) return { section: 'Administration', title: 'Admin Command', icon: Shield };
+    if (path.startsWith('/admin')) return { section: 'Administration', title: 'User Access & Roles', icon: Lock };
     return { section: 'Operations', title: 'Platform Hub', icon: LayoutGrid };
   };
 
@@ -96,7 +96,7 @@ export default function Header({ onOpenMobileSidebar }: HeaderProps) {
 
   return (
     <>
-      <header className="h-16 bg-[#F5F5F7]/85 dark:bg-[#141416]/85 backdrop-blur-xl sticky top-0 z-20 flex items-center justify-between px-4 sm:px-6 select-none border-b border-black/[0.06] dark:border-white/[0.08] transition-colors gap-2 sm:gap-3">
+      <header className="h-16 bg-[#F5F5F7]/85 dark:bg-[#000000]/88 backdrop-blur-xl sticky top-0 z-20 flex items-center justify-between px-4 sm:px-6 select-none border-b border-black/[0.06] dark:border-white/[0.08] transition-colors gap-2 sm:gap-3">
         {/* Left Mobile Menu Trigger, Module Spatial Breadcrumb & Spotlight Search */}
         <div className="flex items-center gap-2.5 flex-1 max-w-xl min-w-0">
           {onOpenMobileSidebar && (

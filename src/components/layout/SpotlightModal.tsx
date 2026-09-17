@@ -23,6 +23,7 @@ import {
   Receipt,
   UserCheck,
   Shield,
+  Lock,
   ArrowRight,
   Command,
   CornerDownLeft,
@@ -44,7 +45,6 @@ const MODULES: ModuleItem[] = [
   { id: 'tasks', name: 'My Tasks & Workflows', section: 'Workspace', href: '/tasks', icon: CheckCircle2, description: 'Task execution, approvals, and KPI milestone scoring', badge: 'Workflow' },
   { id: 'attendance', name: 'Daily Attendance Radar', section: 'Workspace', href: '/hr/attendance', icon: CalendarCheck, description: 'WAT clock-in, geofence stations, and punctuality bonus', badge: '+10 KPI' },
   { id: 'directory', name: 'Staff Directory', section: 'Workspace', href: '/directory', icon: Compass, description: 'Colleague directory, skills, and emergency dispatch' },
-  { id: 'analytics', name: 'Command & Analytics', section: 'Executive Intelligence', href: '/analytics', icon: BarChart3, description: 'Real-time financial telemetry, cashflow, and Board pack', badge: 'Live Digest' },
   { id: 'kpi', name: 'KPI Leaderboard', section: 'Executive Intelligence', href: '/kpi/leaderboard', icon: Award, description: 'Company-wide performance rankings, tiers, and trophy badges' },
   { id: 'bd', name: 'BD & Tendering Pipeline', section: 'Commercial Engine', href: '/bd/pipeline', icon: Briefcase, description: 'Kanban opportunities, win/loss stats, and Managing Consultant gate', badge: 'Pipeline' },
   { id: 'crm', name: 'Client & Stakeholder CRM', section: 'Commercial Engine', href: '/crm/accounts', icon: Users, description: 'Commercial clients, statutory regulators, and engagement logs' },
@@ -56,7 +56,7 @@ const MODULES: ModuleItem[] = [
   { id: 'vault', name: 'AquaEarth Sovereign Vault', section: 'Quality & Governance', href: '/vault', icon: HardDrive, description: 'Encrypted cold archival, client download logs, and audit trails', badge: 'Sovereign' },
   { id: 'it-design', name: 'IT & Design Ops Studio', section: 'Operational Support', href: '/operations/it-design', icon: Layers, description: 'Hardware assets, SIM pools, and 24-hour rush design queue', badge: '24h Rush' },
   { id: 'finance', name: 'Milestone Finance & Invoicing', section: 'Operational Support', href: '/finance', icon: Receipt, description: 'Milestone billing, 7.5% VAT, 5% WHT, and FIRS credit notes', badge: 'WHT/VAT' },
-  { id: 'admin', name: 'Admin Overview', section: 'Administration', href: '/admin', icon: Shield, description: 'System security, role-based scoping, and audit logs', badge: 'Command' },
+  { id: 'users', name: 'User Access & Roles', section: 'Administration', href: '/admin/users', icon: Lock, description: 'System security, role-based scoping, and staff provisioning' },
 ];
 
 interface SpotlightModalProps {

@@ -1674,26 +1674,69 @@ export const INITIAL_NOTIFICATIONS: import('./types').NotificationItem[] = [
 ];
 
 export const INITIAL_ATTENDANCE: import('./types').AttendanceRecordItem[] = [
+  // September 2026 (Current Month & Today)
   {
-    id: 'att-1',
+    id: 'att-2026-09-17-kaine',
     userId: 'usr-1',
     userName: 'Kaine Edike',
     userAvatar: '/avatars/kaine-edike.png',
-    date: '2026-09-01',
-    clockInTime: '07:48:22',
+    date: '2026-09-17',
+    clockInTime: '07:44:18',
+    clockOutTime: '18:10:45',
+    locationTag: 'Lekki HQ (Executive Suite)',
+    status: 'PRESENT',
+    kpiAwarded: 10,
+    coordinates: '6.4698°N, 3.5852°E',
+    notes: 'Presided over Board prep & Finance review.'
+  },
+  {
+    id: 'att-2026-09-17-bibi',
+    userId: 'usr-2',
+    userName: 'Bibi',
+    userAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
+    date: '2026-09-17',
+    clockInTime: '07:51:30',
+    clockOutTime: '17:45:00',
+    locationTag: 'Lekki HQ (Operations Deck)',
+    status: 'PRESENT',
+    kpiAwarded: 10,
+    coordinates: '6.4698°N, 3.5852°E',
+    notes: 'Executive oversight on Total E&P ESIA submission.'
+  },
+  {
+    id: 'att-2026-09-17-erica',
+    userId: 'usr-3',
+    userName: 'Erica',
+    userAvatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150',
+    date: '2026-09-17',
+    clockInTime: '08:02:10',
+    clockOutTime: '17:30:15',
+    locationTag: 'Lekki HQ (Finance Wing)',
+    status: 'PRESENT',
+    kpiAwarded: 10,
+    coordinates: '6.4698°N, 3.5852°E',
+    notes: 'CFO budget vetting & imprest balance audit.'
+  },
+  {
+    id: 'att-2026-09-17-ozioma',
+    userId: 'usr-10',
+    userName: 'Miss Ozioma',
+    userAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150',
+    date: '2026-09-17',
+    clockInTime: '08:05:40',
     clockOutTime: undefined,
-    locationTag: 'Lekki HQ',
+    locationTag: 'Lekki HQ (Commercial)',
     status: 'PRESENT',
     kpiAwarded: 10,
     coordinates: '6.4698°N, 3.5852°E'
   },
   {
-    id: 'att-2',
+    id: 'att-2026-09-17-femi',
     userId: 'usr-4',
     userName: 'Engr. Femi Adebayo',
     userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-    date: '2026-09-01',
-    clockInTime: '08:02:14',
+    date: '2026-09-17',
+    clockInTime: '07:58:20',
     clockOutTime: undefined,
     locationTag: 'Escravos Field Base',
     status: 'PRESENT',
@@ -1701,12 +1744,12 @@ export const INITIAL_ATTENDANCE: import('./types').AttendanceRecordItem[] = [
     coordinates: '5.5833°N, 5.1667°E'
   },
   {
-    id: 'att-3',
+    id: 'att-2026-09-17-ngozi',
     userId: 'usr-5',
     userName: 'Dr. Ngozi Eze',
     userAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
-    date: '2026-09-01',
-    clockInTime: '07:55:00',
+    date: '2026-09-17',
+    clockInTime: '07:49:15',
     clockOutTime: undefined,
     locationTag: 'Lekki Environmental Lab',
     status: 'PRESENT',
@@ -1714,18 +1757,378 @@ export const INITIAL_ATTENDANCE: import('./types').AttendanceRecordItem[] = [
     coordinates: '6.4698°N, 3.5852°E'
   },
   {
-    id: 'att-4',
+    id: 'att-2026-09-17-tunde',
     userId: 'usr-6',
     userName: 'Tunde Bakare',
     userAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
-    date: '2026-09-01',
-    clockInTime: '08:35:10',
+    date: '2026-09-17',
+    clockInTime: '08:22:45',
     clockOutTime: undefined,
     locationTag: 'Escravos Barge',
     status: 'LATE',
     kpiAwarded: 0,
     coordinates: '5.5833°N, 5.1667°E',
-    notes: 'Helicopter transfer delayed by weather.'
+    notes: 'Tide level held safety launch vessel 15 mins.'
+  },
+  {
+    id: 'att-2026-09-17-gift',
+    userId: 'usr-9',
+    userName: 'Gift',
+    userAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+    date: '2026-09-17',
+    clockInTime: '07:55:00',
+    clockOutTime: undefined,
+    locationTag: 'Lekki HQ (Finance)',
+    status: 'PRESENT',
+    kpiAwarded: 10,
+    coordinates: '6.4698°N, 3.5852°E'
+  },
+  {
+    id: 'att-2026-09-17-marvelous',
+    userId: 'usr-8',
+    userName: 'Marvelous',
+    userAvatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150',
+    date: '2026-09-17',
+    clockInTime: '08:01:25',
+    clockOutTime: undefined,
+    locationTag: 'Lekki HQ (Finance)',
+    status: 'PRESENT',
+    kpiAwarded: 10,
+    coordinates: '6.4698°N, 3.5852°E'
+  },
+  {
+    id: 'att-2026-09-15-kaine',
+    userId: 'usr-1',
+    userName: 'Kaine Edike',
+    userAvatar: '/avatars/kaine-edike.png',
+    date: '2026-09-15',
+    clockInTime: '07:42:00',
+    clockOutTime: '18:40:00',
+    locationTag: 'Lekki HQ',
+    status: 'PRESENT',
+    kpiAwarded: 10,
+    coordinates: '6.4698°N, 3.5852°E'
+  },
+  {
+    id: 'att-2026-09-15-femi',
+    userId: 'usr-4',
+    userName: 'Engr. Femi Adebayo',
+    userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+    date: '2026-09-15',
+    clockInTime: '08:04:12',
+    clockOutTime: '17:20:00',
+    locationTag: 'Escravos Field Base',
+    status: 'PRESENT',
+    kpiAwarded: 10,
+    coordinates: '5.5833°N, 5.1667°E'
+  },
+  {
+    id: 'att-2026-09-14-ngozi',
+    userId: 'usr-5',
+    userName: 'Dr. Ngozi Eze',
+    userAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
+    date: '2026-09-14',
+    clockInTime: '07:48:30',
+    clockOutTime: '17:15:00',
+    locationTag: 'Lekki Environmental Lab',
+    status: 'PRESENT',
+    kpiAwarded: 10,
+    coordinates: '6.4698°N, 3.5852°E'
+  },
+  {
+    id: 'att-2026-09-10-tunde',
+    userId: 'usr-6',
+    userName: 'Tunde Bakare',
+    userAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
+    date: '2026-09-10',
+    clockInTime: '07:56:00',
+    clockOutTime: '17:50:00',
+    locationTag: 'Escravos Field Base',
+    status: 'PRESENT',
+    kpiAwarded: 10,
+    coordinates: '5.5833°N, 5.1667°E'
+  },
+  // August 2026 (Q3 / H2)
+  {
+    id: 'att-2026-08-28-kaine',
+    userId: 'usr-1',
+    userName: 'Kaine Edike',
+    userAvatar: '/avatars/kaine-edike.png',
+    date: '2026-08-28',
+    clockInTime: '07:39:10',
+    clockOutTime: '19:00:00',
+    locationTag: 'Lekki HQ',
+    status: 'PRESENT',
+    kpiAwarded: 10,
+    coordinates: '6.4698°N, 3.5852°E'
+  },
+  {
+    id: 'att-2026-08-28-bibi',
+    userId: 'usr-2',
+    userName: 'Bibi',
+    userAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
+    date: '2026-08-28',
+    clockInTime: '07:50:11',
+    clockOutTime: '17:40:00',
+    locationTag: 'Lekki HQ',
+    status: 'PRESENT',
+    kpiAwarded: 10,
+    coordinates: '6.4698°N, 3.5852°E'
+  },
+  {
+    id: 'att-2026-08-20-femi',
+    userId: 'usr-4',
+    userName: 'Engr. Femi Adebayo',
+    userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+    date: '2026-08-20',
+    clockInTime: '08:01:00',
+    clockOutTime: '17:10:00',
+    locationTag: 'Escravos Field Base',
+    status: 'PRESENT',
+    kpiAwarded: 10,
+    coordinates: '5.5833°N, 5.1667°E'
+  },
+  {
+    id: 'att-2026-08-14-ngozi',
+    userId: 'usr-5',
+    userName: 'Dr. Ngozi Eze',
+    userAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
+    date: '2026-08-14',
+    clockInTime: '07:52:19',
+    clockOutTime: '17:25:00',
+    locationTag: 'Lekki Environmental Lab',
+    status: 'PRESENT',
+    kpiAwarded: 10,
+    coordinates: '6.4698°N, 3.5852°E'
+  },
+  {
+    id: 'att-2026-08-04-tunde',
+    userId: 'usr-6',
+    userName: 'Tunde Bakare',
+    userAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
+    date: '2026-08-04',
+    clockInTime: '08:29:40',
+    clockOutTime: '17:45:00',
+    locationTag: 'Escravos Barge',
+    status: 'LATE',
+    kpiAwarded: 0,
+    coordinates: '5.5833°N, 5.1667°E',
+    notes: 'Fuel barge bunkering delay.'
+  },
+  // July 2026 (Q3 / H2)
+  {
+    id: 'att-2026-07-29-kaine',
+    userId: 'usr-1',
+    userName: 'Kaine Edike',
+    userAvatar: '/avatars/kaine-edike.png',
+    date: '2026-07-29',
+    clockInTime: '07:45:00',
+    clockOutTime: '18:15:00',
+    locationTag: 'Lekki HQ',
+    status: 'PRESENT',
+    kpiAwarded: 10,
+    coordinates: '6.4698°N, 3.5852°E'
+  },
+  {
+    id: 'att-2026-07-15-erica',
+    userId: 'usr-3',
+    userName: 'Erica',
+    userAvatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150',
+    date: '2026-07-15',
+    clockInTime: '07:59:00',
+    clockOutTime: '17:35:00',
+    locationTag: 'Lekki HQ',
+    status: 'PRESENT',
+    kpiAwarded: 10,
+    coordinates: '6.4698°N, 3.5852°E'
+  },
+  {
+    id: 'att-2026-07-03-femi',
+    userId: 'usr-4',
+    userName: 'Engr. Femi Adebayo',
+    userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+    date: '2026-07-03',
+    clockInTime: '08:00:30',
+    clockOutTime: '17:05:00',
+    locationTag: 'Escravos Field Base',
+    status: 'PRESENT',
+    kpiAwarded: 10,
+    coordinates: '5.5833°N, 5.1667°E'
+  },
+  // June 2026 (Q2 / H1)
+  {
+    id: 'att-2026-06-25-kaine',
+    userId: 'usr-1',
+    userName: 'Kaine Edike',
+    userAvatar: '/avatars/kaine-edike.png',
+    date: '2026-06-25',
+    clockInTime: '07:38:00',
+    clockOutTime: '18:30:00',
+    locationTag: 'Lekki HQ',
+    status: 'PRESENT',
+    kpiAwarded: 10,
+    coordinates: '6.4698°N, 3.5852°E'
+  },
+  {
+    id: 'att-2026-06-15-bibi',
+    userId: 'usr-2',
+    userName: 'Bibi',
+    userAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
+    date: '2026-06-15',
+    clockInTime: '07:54:10',
+    clockOutTime: '17:20:00',
+    locationTag: 'Lekki HQ',
+    status: 'PRESENT',
+    kpiAwarded: 10,
+    coordinates: '6.4698°N, 3.5852°E'
+  },
+  {
+    id: 'att-2026-06-02-ngozi',
+    userId: 'usr-5',
+    userName: 'Dr. Ngozi Eze',
+    userAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
+    date: '2026-06-02',
+    clockInTime: '07:46:00',
+    clockOutTime: '17:15:00',
+    locationTag: 'Lekki Environmental Lab',
+    status: 'PRESENT',
+    kpiAwarded: 10,
+    coordinates: '6.4698°N, 3.5852°E'
+  },
+  // May 2026 (Q2 / H1)
+  {
+    id: 'att-2026-05-20-femi',
+    userId: 'usr-4',
+    userName: 'Engr. Femi Adebayo',
+    userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+    date: '2026-05-20',
+    clockInTime: '07:58:00',
+    clockOutTime: '17:00:00',
+    locationTag: 'Escravos Field Base',
+    status: 'PRESENT',
+    kpiAwarded: 10,
+    coordinates: '5.5833°N, 5.1667°E'
+  },
+  {
+    id: 'att-2026-05-08-tunde',
+    userId: 'usr-6',
+    userName: 'Tunde Bakare',
+    userAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
+    date: '2026-05-08',
+    clockInTime: '08:01:10',
+    clockOutTime: '17:30:00',
+    locationTag: 'Escravos Field Base',
+    status: 'PRESENT',
+    kpiAwarded: 10,
+    coordinates: '5.5833°N, 5.1667°E'
+  },
+  // April 2026 (Q2 / H1)
+  {
+    id: 'att-2026-04-22-kaine',
+    userId: 'usr-1',
+    userName: 'Kaine Edike',
+    userAvatar: '/avatars/kaine-edike.png',
+    date: '2026-04-22',
+    clockInTime: '07:41:00',
+    clockOutTime: '18:25:00',
+    locationTag: 'Lekki HQ',
+    status: 'PRESENT',
+    kpiAwarded: 10,
+    coordinates: '6.4698°N, 3.5852°E'
+  },
+  {
+    id: 'att-2026-04-10-erica',
+    userId: 'usr-3',
+    userName: 'Erica',
+    userAvatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150',
+    date: '2026-04-10',
+    clockInTime: '07:58:30',
+    clockOutTime: '17:40:00',
+    locationTag: 'Lekki HQ',
+    status: 'PRESENT',
+    kpiAwarded: 10,
+    coordinates: '6.4698°N, 3.5852°E'
+  },
+  // March 2026 (Q1 / H1)
+  {
+    id: 'att-2026-03-27-ngozi',
+    userId: 'usr-5',
+    userName: 'Dr. Ngozi Eze',
+    userAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
+    date: '2026-03-27',
+    clockInTime: '07:50:00',
+    clockOutTime: '17:10:00',
+    locationTag: 'Lekki Environmental Lab',
+    status: 'PRESENT',
+    kpiAwarded: 10,
+    coordinates: '6.4698°N, 3.5852°E'
+  },
+  {
+    id: 'att-2026-03-12-kaine',
+    userId: 'usr-1',
+    userName: 'Kaine Edike',
+    userAvatar: '/avatars/kaine-edike.png',
+    date: '2026-03-12',
+    clockInTime: '07:40:00',
+    clockOutTime: '18:50:00',
+    locationTag: 'Lekki HQ',
+    status: 'PRESENT',
+    kpiAwarded: 10,
+    coordinates: '6.4698°N, 3.5852°E'
+  },
+  // February 2026 (Q1 / H1)
+  {
+    id: 'att-2026-02-18-bibi',
+    userId: 'usr-2',
+    userName: 'Bibi',
+    userAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
+    date: '2026-02-18',
+    clockInTime: '07:52:00',
+    clockOutTime: '17:35:00',
+    locationTag: 'Lekki HQ',
+    status: 'PRESENT',
+    kpiAwarded: 10,
+    coordinates: '6.4698°N, 3.5852°E'
+  },
+  {
+    id: 'att-2026-02-05-femi',
+    userId: 'usr-4',
+    userName: 'Engr. Femi Adebayo',
+    userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+    date: '2026-02-05',
+    clockInTime: '08:03:00',
+    clockOutTime: '17:15:00',
+    locationTag: 'Escravos Field Base',
+    status: 'PRESENT',
+    kpiAwarded: 10,
+    coordinates: '5.5833°N, 5.1667°E'
+  },
+  // January 2026 (Q1 / H1)
+  {
+    id: 'att-2026-01-22-kaine',
+    userId: 'usr-1',
+    userName: 'Kaine Edike',
+    userAvatar: '/avatars/kaine-edike.png',
+    date: '2026-01-22',
+    clockInTime: '07:44:00',
+    clockOutTime: '18:30:00',
+    locationTag: 'Lekki HQ',
+    status: 'PRESENT',
+    kpiAwarded: 10,
+    coordinates: '6.4698°N, 3.5852°E'
+  },
+  {
+    id: 'att-2026-01-08-tunde',
+    userId: 'usr-6',
+    userName: 'Tunde Bakare',
+    userAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
+    date: '2026-01-08',
+    clockInTime: '07:59:00',
+    clockOutTime: '17:20:00',
+    locationTag: 'Escravos Field Base',
+    status: 'PRESENT',
+    kpiAwarded: 10,
+    coordinates: '5.5833°N, 5.1667°E'
   }
 ];
 
@@ -2036,8 +2439,9 @@ export const INITIAL_STAFF_QUERIES: StaffQuery[] = [
 ];
 
 export const INITIAL_PAYROLL_RECORDS: PayrollRecord[] = [
+  // September 2026 (Current Cycle)
   {
-    id: 'pay-1',
+    id: 'pay-2026-09-usr-1',
     staffId: 'usr-1',
     staffName: 'Kaine Edike',
     department: 'Executive Leadership',
@@ -2046,14 +2450,75 @@ export const INITIAL_PAYROLL_RECORDS: PayrollRecord[] = [
     hazardAllowanceNgn: 0,
     fieldPerDiemNgn: 250000,
     performanceBonusNgn: 750000,
+    customBenefits: [
+      { id: 'cb-1-1', name: 'Executive Medical Shield', amountNgn: 250000 },
+      { id: 'cb-1-2', name: 'Board Advisory Retainer', amountNgn: 300000 }
+    ],
     pensionDeductionNgn: 360000,
     taxPayeNgn: 850000,
-    netPayNgn: 4290000,
+    netPayNgn: 4840000,
     monthYear: '2026-09',
     paymentStatus: 'APPROVED'
   },
   {
-    id: 'pay-2',
+    id: 'pay-2026-09-usr-10',
+    staffId: 'usr-10',
+    staffName: 'Bibi',
+    department: 'Executive Leadership',
+    jobTitle: 'Executive Director (2nd in Command)',
+    baseSalaryNgn: 3800000,
+    hazardAllowanceNgn: 0,
+    fieldPerDiemNgn: 200000,
+    performanceBonusNgn: 600000,
+    customBenefits: [
+      { id: 'cb-10-1', name: 'Executive Health Cover', amountNgn: 200000 }
+    ],
+    pensionDeductionNgn: 304000,
+    taxPayeNgn: 680000,
+    netPayNgn: 3816000,
+    monthYear: '2026-09',
+    paymentStatus: 'APPROVED'
+  },
+  {
+    id: 'pay-2026-09-usr-11',
+    staffId: 'usr-11',
+    staffName: 'Erica',
+    department: 'Finance & Accounts',
+    jobTitle: 'Chief Financial Officer (CFO)',
+    baseSalaryNgn: 3500000,
+    hazardAllowanceNgn: 0,
+    fieldPerDiemNgn: 150000,
+    performanceBonusNgn: 500000,
+    customBenefits: [
+      { id: 'cb-11-1', name: 'ICAN Fellowship & Dues', amountNgn: 75000 }
+    ],
+    pensionDeductionNgn: 280000,
+    taxPayeNgn: 620000,
+    netPayNgn: 3325000,
+    monthYear: '2026-09',
+    paymentStatus: 'APPROVED'
+  },
+  {
+    id: 'pay-2026-09-usr-12',
+    staffId: 'usr-12',
+    staffName: 'Miss Ozioma',
+    department: 'Project Management & Commercial',
+    jobTitle: 'Senior Consultant & Commercial Liaison',
+    baseSalaryNgn: 2900000,
+    hazardAllowanceNgn: 150000,
+    fieldPerDiemNgn: 350000,
+    performanceBonusNgn: 450000,
+    customBenefits: [
+      { id: 'cb-12-1', name: 'Commercial Travel Subsidy', amountNgn: 100000 }
+    ],
+    pensionDeductionNgn: 232000,
+    taxPayeNgn: 510000,
+    netPayNgn: 3208000,
+    monthYear: '2026-09',
+    paymentStatus: 'APPROVED'
+  },
+  {
+    id: 'pay-2026-09-usr-4',
     staffId: 'usr-4',
     staffName: 'Engr. Femi Adebayo',
     department: 'Geotechnical & Geophysics',
@@ -2062,14 +2527,17 @@ export const INITIAL_PAYROLL_RECORDS: PayrollRecord[] = [
     hazardAllowanceNgn: 350000,
     fieldPerDiemNgn: 400000,
     performanceBonusNgn: 400000,
+    customBenefits: [
+      { id: 'cb-4-1', name: 'Offshore Hazard Insurance', amountNgn: 150000 }
+    ],
     pensionDeductionNgn: 224000,
     taxPayeNgn: 480000,
-    netPayNgn: 3246000,
+    netPayNgn: 3396000,
     monthYear: '2026-09',
     paymentStatus: 'APPROVED'
   },
   {
-    id: 'pay-3',
+    id: 'pay-2026-09-usr-5',
     staffId: 'usr-5',
     staffName: 'Dr. Ngozi Eze',
     department: 'Environmental & Social',
@@ -2078,14 +2546,55 @@ export const INITIAL_PAYROLL_RECORDS: PayrollRecord[] = [
     hazardAllowanceNgn: 200000,
     fieldPerDiemNgn: 300000,
     performanceBonusNgn: 485000,
+    customBenefits: [
+      { id: 'cb-5-1', name: 'Field Ecology Equipment Stipend', amountNgn: 80000 }
+    ],
     pensionDeductionNgn: 208000,
     taxPayeNgn: 440000,
-    netPayNgn: 2937000,
+    netPayNgn: 3017000,
     monthYear: '2026-09',
     paymentStatus: 'APPROVED'
   },
   {
-    id: 'pay-4',
+    id: 'pay-2026-09-usr-2',
+    staffId: 'usr-2',
+    staffName: 'Chidi Okafor',
+    department: 'IT & Digital Operations',
+    jobTitle: 'IT Team Lead & Systems Admin',
+    baseSalaryNgn: 2200000,
+    hazardAllowanceNgn: 0,
+    fieldPerDiemNgn: 100000,
+    performanceBonusNgn: 300000,
+    customBenefits: [
+      { id: 'cb-2-1', name: 'Starlink Maritime Hub Subsidy', amountNgn: 60000 }
+    ],
+    pensionDeductionNgn: 176000,
+    taxPayeNgn: 350000,
+    netPayNgn: 2134000,
+    monthYear: '2026-09',
+    paymentStatus: 'APPROVED'
+  },
+  {
+    id: 'pay-2026-09-usr-3',
+    staffId: 'usr-3',
+    staffName: 'Amina Bello',
+    department: 'Human Resources',
+    jobTitle: 'HR Administrator & Talent Lead',
+    baseSalaryNgn: 2100000,
+    hazardAllowanceNgn: 0,
+    fieldPerDiemNgn: 50000,
+    performanceBonusNgn: 250000,
+    customBenefits: [
+      { id: 'cb-3-1', name: 'CIPM Continuing Professional Grant', amountNgn: 40000 }
+    ],
+    pensionDeductionNgn: 168000,
+    taxPayeNgn: 320000,
+    netPayNgn: 1952000,
+    monthYear: '2026-09',
+    paymentStatus: 'APPROVED'
+  },
+  {
+    id: 'pay-2026-09-usr-6',
     staffId: 'usr-6',
     staffName: 'Tunde Bakare',
     department: 'Geotechnical & Geophysics',
@@ -2094,14 +2603,17 @@ export const INITIAL_PAYROLL_RECORDS: PayrollRecord[] = [
     hazardAllowanceNgn: 450000,
     fieldPerDiemNgn: 500000,
     performanceBonusNgn: 220000,
+    customBenefits: [
+      { id: 'cb-6-1', name: 'Escravos Camp Subsidy', amountNgn: 90000 }
+    ],
     pensionDeductionNgn: 128000,
     taxPayeNgn: 240000,
-    netPayNgn: 2402000,
+    netPayNgn: 2492000,
     monthYear: '2026-09',
     paymentStatus: 'DRAFT'
   },
   {
-    id: 'pay-5',
+    id: 'pay-2026-09-usr-7',
     staffId: 'usr-7',
     staffName: 'Halima Yusuf',
     department: 'Geoinformatics & Survey',
@@ -2110,11 +2622,189 @@ export const INITIAL_PAYROLL_RECORDS: PayrollRecord[] = [
     hazardAllowanceNgn: 150000,
     fieldPerDiemNgn: 200000,
     performanceBonusNgn: 200000,
+    customBenefits: [
+      { id: 'cb-7-1', name: 'GIS Cloud Compute Allowance', amountNgn: 50000 }
+    ],
     pensionDeductionNgn: 112000,
     taxPayeNgn: 190000,
-    netPayNgn: 1648000,
+    netPayNgn: 1698000,
     monthYear: '2026-09',
     paymentStatus: 'DRAFT'
+  },
+  {
+    id: 'pay-2026-09-usr-13',
+    staffId: 'usr-13',
+    staffName: 'Gift',
+    department: 'Finance & Accounts',
+    jobTitle: 'Finance Officer (Collation Lead)',
+    baseSalaryNgn: 1500000,
+    hazardAllowanceNgn: 0,
+    fieldPerDiemNgn: 80000,
+    performanceBonusNgn: 180000,
+    customBenefits: [
+      { id: 'cb-13-1', name: 'Accounting Professional Dev', amountNgn: 50000 }
+    ],
+    pensionDeductionNgn: 120000,
+    taxPayeNgn: 210000,
+    netPayNgn: 1480000,
+    monthYear: '2026-09',
+    paymentStatus: 'DRAFT'
+  },
+  {
+    id: 'pay-2026-09-usr-14',
+    staffId: 'usr-14',
+    staffName: 'Marvelous',
+    department: 'Finance & Accounts',
+    jobTitle: 'Finance Officer (Invoicing Lead)',
+    baseSalaryNgn: 1500000,
+    hazardAllowanceNgn: 0,
+    fieldPerDiemNgn: 80000,
+    performanceBonusNgn: 180000,
+    customBenefits: [
+      { id: 'cb-14-1', name: 'Invoicing & Treasury Training', amountNgn: 50000 }
+    ],
+    pensionDeductionNgn: 120000,
+    taxPayeNgn: 210000,
+    netPayNgn: 1480000,
+    monthYear: '2026-09',
+    paymentStatus: 'DRAFT'
+  },
+
+  // August 2026 (Completed & Disbursed Cycle)
+  {
+    id: 'pay-2026-08-usr-1',
+    staffId: 'usr-1',
+    staffName: 'Kaine Edike',
+    department: 'Executive Leadership',
+    jobTitle: 'Founder & Managing Consultant',
+    baseSalaryNgn: 4500000,
+    hazardAllowanceNgn: 0,
+    fieldPerDiemNgn: 220000,
+    performanceBonusNgn: 700000,
+    customBenefits: [
+      { id: 'cb-aug-1-1', name: 'Executive Medical Shield', amountNgn: 250000 }
+    ],
+    pensionDeductionNgn: 360000,
+    taxPayeNgn: 850000,
+    netPayNgn: 4460000,
+    monthYear: '2026-08',
+    paymentStatus: 'DISBURSED'
+  },
+  {
+    id: 'pay-2026-08-usr-10',
+    staffId: 'usr-10',
+    staffName: 'Bibi',
+    department: 'Executive Leadership',
+    jobTitle: 'Executive Director (2nd in Command)',
+    baseSalaryNgn: 3800000,
+    hazardAllowanceNgn: 0,
+    fieldPerDiemNgn: 180000,
+    performanceBonusNgn: 550000,
+    customBenefits: [
+      { id: 'cb-aug-10-1', name: 'Executive Health Cover', amountNgn: 200000 }
+    ],
+    pensionDeductionNgn: 304000,
+    taxPayeNgn: 680000,
+    netPayNgn: 3746000,
+    monthYear: '2026-08',
+    paymentStatus: 'DISBURSED'
+  },
+  {
+    id: 'pay-2026-08-usr-11',
+    staffId: 'usr-11',
+    staffName: 'Erica',
+    department: 'Finance & Accounts',
+    jobTitle: 'Chief Financial Officer (CFO)',
+    baseSalaryNgn: 3500000,
+    hazardAllowanceNgn: 0,
+    fieldPerDiemNgn: 120000,
+    performanceBonusNgn: 480000,
+    customBenefits: [
+      { id: 'cb-aug-11-1', name: 'ICAN Fellowship & Dues', amountNgn: 75000 }
+    ],
+    pensionDeductionNgn: 280000,
+    taxPayeNgn: 620000,
+    netPayNgn: 3275000,
+    monthYear: '2026-08',
+    paymentStatus: 'DISBURSED'
+  },
+  {
+    id: 'pay-2026-08-usr-4',
+    staffId: 'usr-4',
+    staffName: 'Engr. Femi Adebayo',
+    department: 'Geotechnical & Geophysics',
+    jobTitle: 'Head of Geotechnical Engineering',
+    baseSalaryNgn: 2800000,
+    hazardAllowanceNgn: 350000,
+    fieldPerDiemNgn: 380000,
+    performanceBonusNgn: 380000,
+    customBenefits: [
+      { id: 'cb-aug-4-1', name: 'Offshore Hazard Insurance', amountNgn: 150000 }
+    ],
+    pensionDeductionNgn: 224000,
+    taxPayeNgn: 480000,
+    netPayNgn: 3356000,
+    monthYear: '2026-08',
+    paymentStatus: 'DISBURSED'
+  },
+  {
+    id: 'pay-2026-08-usr-5',
+    staffId: 'usr-5',
+    staffName: 'Dr. Ngozi Eze',
+    department: 'Environmental & Social',
+    jobTitle: 'Lead Environmental Consultant',
+    baseSalaryNgn: 2600000,
+    hazardAllowanceNgn: 200000,
+    fieldPerDiemNgn: 280000,
+    performanceBonusNgn: 450000,
+    customBenefits: [
+      { id: 'cb-aug-5-1', name: 'Field Ecology Equipment Stipend', amountNgn: 80000 }
+    ],
+    pensionDeductionNgn: 208000,
+    taxPayeNgn: 440000,
+    netPayNgn: 2962000,
+    monthYear: '2026-08',
+    paymentStatus: 'DISBURSED'
+  },
+
+  // July 2026 (Historical Disbursed Cycle)
+  {
+    id: 'pay-2026-07-usr-1',
+    staffId: 'usr-1',
+    staffName: 'Kaine Edike',
+    department: 'Executive Leadership',
+    jobTitle: 'Founder & Managing Consultant',
+    baseSalaryNgn: 4500000,
+    hazardAllowanceNgn: 0,
+    fieldPerDiemNgn: 200000,
+    performanceBonusNgn: 650000,
+    customBenefits: [
+      { id: 'cb-jul-1-1', name: 'Executive Medical Shield', amountNgn: 250000 }
+    ],
+    pensionDeductionNgn: 360000,
+    taxPayeNgn: 850000,
+    netPayNgn: 4390000,
+    monthYear: '2026-07',
+    paymentStatus: 'DISBURSED'
+  },
+  {
+    id: 'pay-2026-07-usr-4',
+    staffId: 'usr-4',
+    staffName: 'Engr. Femi Adebayo',
+    department: 'Geotechnical & Geophysics',
+    jobTitle: 'Head of Geotechnical Engineering',
+    baseSalaryNgn: 2800000,
+    hazardAllowanceNgn: 350000,
+    fieldPerDiemNgn: 350000,
+    performanceBonusNgn: 350000,
+    customBenefits: [
+      { id: 'cb-jul-4-1', name: 'Offshore Hazard Insurance', amountNgn: 150000 }
+    ],
+    pensionDeductionNgn: 224000,
+    taxPayeNgn: 480000,
+    netPayNgn: 3296000,
+    monthYear: '2026-07',
+    paymentStatus: 'DISBURSED'
   }
 ];
 

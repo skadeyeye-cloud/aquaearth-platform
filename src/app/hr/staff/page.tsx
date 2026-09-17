@@ -21,7 +21,10 @@ import {
   XCircle,
   FileText,
   Clock,
-  ShieldAlert
+  ShieldAlert,
+  Calendar,
+  Sparkles,
+  Edit3
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { haptics } from '@/lib/haptics';
@@ -29,6 +32,7 @@ import CsvStaffImporterModal from '@/components/directory/CsvStaffImporterModal'
 import StaffProfileDrawer from '@/components/directory/StaffProfileDrawer';
 import { NewEmployeeModal } from '@/components/hr/NewEmployeeModal';
 import { StaffQueryModal } from '@/components/hr/StaffQueryModal';
+import { EditCompensationModal } from '@/components/hr/EditCompensationModal';
 
 export default function HRStaffPage() {
   const { 
@@ -42,6 +46,7 @@ export default function HRStaffPage() {
     resolveStaffQuery,
     payrollRecords,
     updatePayrollRecord,
+    createMonthlyPayrollRun,
     currentUser
   } = useAuth();
 
@@ -50,6 +55,11 @@ export default function HRStaffPage() {
   const [isNewEmployeeOpen, setIsNewEmployeeOpen] = useState(false);
   const [isNewQueryOpen, setIsNewQueryOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+
+  // Monthly Payroll & Compensation state
+  const [selectedPayrollMonth, setSelectedPayrollMonth] = useState<string>('2026-09');
+  const [editingPayrollRecord, setEditingPayrollRecord] = useState<PayrollRecord | null>(null);
+  const [isEditCompensationOpen, setIsEditCompensationOpen] = useState(false);
 
   const isHR = currentUser.functionalRole === 'HR_ADMIN' || currentUser.accessTier === 'SUPERADMIN';
 
@@ -464,122 +474,271 @@ export default function HRStaffPage() {
       )}
 
       {/* Tab: Payroll, Bonuses & Benefits */}
-      {activeTab === 'PAYROLL' && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-            <div className="apple-glass-card p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
-              <div className="text-[10px] uppercase font-bold text-slate-400">Total Net Payroll (Sept 2026)</div>
-              <div className="text-xl font-extrabold text-slate-900 dark:text-white tnum">
-                ₦{(payrollRecords.reduce((acc, curr) => acc + curr.netPayNgn, 0) / 1000000).toFixed(2)}M
+      {activeTab === 'PAYROLL' && (() => {
+        const availableMonths = Array.from(new Set([
+          '2026-09',
+          '2026-08',
+          '2026-07',
+          ...payrollRecords.map(p => p.monthYear)
+        ])).sort().reverse();
+
+        const currentMonthRecords = payrollRecords.filter(p => p.monthYear === selectedPayrollMonth);
+        const totalNet = currentMonthRecords.reduce((acc, curr) => acc + curr.netPayNgn, 0);
+        const totalAllowances = currentMonthRecords.reduce((acc, curr) => acc + curr.hazardAllowanceNgn + curr.fieldPerDiemNgn, 0);
+        const totalBonuses = currentMonthRecords.reduce((acc, curr) => acc + curr.performanceBonusNgn, 0);
+        const totalCustomBenefits = currentMonthRecords.reduce((acc, curr) => {
+          const bSum = (curr.customBenefits || []).reduce((s, b) => s + (Number(b.amountNgn) || 0), 0);
+          return acc + bSum;
+        }, 0);
+        const totalDeductions = currentMonthRecords.reduce((acc, curr) => acc + curr.taxPayeNgn + curr.pensionDeductionNgn, 0);
+
+        const formatMonthLabel = (mStr: string) => {
+          const parts = mStr.split('-');
+          if (parts.length < 2) return mStr;
+          const [y, m] = parts;
+          const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+          const monthIdx = parseInt(m, 10) - 1;
+          return `${monthNames[monthIdx] || m} ${y}`;
+        };
+
+        const handleStartNewMonthlyRun = () => {
+          const targetMonth = prompt('Enter Year-Month for new payroll run (e.g. 2026-10):', '2026-10');
+          if (targetMonth && /^\d{4}-\d{2}$/.test(targetMonth)) {
+            createMonthlyPayrollRun(targetMonth);
+            setSelectedPayrollMonth(targetMonth);
+            haptics.success();
+          } else if (targetMonth) {
+            alert('Invalid format. Please enter YYYY-MM (e.g., 2026-10)');
+          }
+        };
+
+        return (
+          <div className="space-y-4">
+            {/* Monthly Horizon Switcher & Controls */}
+            <div className="apple-glass-card p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1 shrink-0 px-1">
+                  <Calendar className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  Cycle:
+                </span>
+                {availableMonths.map((m) => {
+                  const isSelected = selectedPayrollMonth === m;
+                  const countForMonth = payrollRecords.filter(p => p.monthYear === m).length;
+                  return (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => {
+                        setSelectedPayrollMonth(m);
+                        haptics.selection();
+                      }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                        isSelected
+                          ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs'
+                          : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      {formatMonthLabel(m)}
+                      <span className={`ml-1.5 text-[10px] px-1.5 py-0.2 rounded-full ${
+                        isSelected 
+                          ? 'bg-white/20 dark:bg-black/20 text-white dark:text-slate-900' 
+                          : 'bg-black/[0.05] dark:bg-white/[0.08] text-slate-500'
+                      }`}>
+                        {countForMonth}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
-              <div className="text-[10px] text-slate-500">{payrollRecords.length} staff records</div>
+
+              {isHR && (
+                <button
+                  type="button"
+                  onClick={handleStartNewMonthlyRun}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-xs transition-all active:scale-[0.96] cursor-pointer whitespace-nowrap shrink-0 w-full sm:w-auto justify-center"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>+ New Monthly Run</span>
+                </button>
+              )}
             </div>
 
-            <div className="apple-glass-card p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
-              <div className="text-[10px] uppercase font-bold text-slate-400">Hazard & Field Per Diem</div>
-              <div className="text-xl font-extrabold text-amber-600 dark:text-amber-400 tnum">
-                ₦{(payrollRecords.reduce((acc, curr) => acc + curr.hazardAllowanceNgn + curr.fieldPerDiemNgn, 0) / 1000).toFixed(0)}k
+            {/* Metric Overview Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <div className="apple-glass-card p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+                <div className="text-[10px] uppercase font-bold text-slate-400">Total Net Payroll ({formatMonthLabel(selectedPayrollMonth)})</div>
+                <div className="text-xl font-extrabold text-slate-900 dark:text-white tnum">
+                  ₦{(totalNet / 1000000).toFixed(2)}M
+                </div>
+                <div className="text-[10px] text-slate-500">{currentMonthRecords.length} staff records</div>
               </div>
-              <div className="text-[10px] text-slate-500">Offshore & field allowances</div>
+
+              <div className="apple-glass-card p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+                <div className="text-[10px] uppercase font-bold text-slate-400">Hazard & Field Per Diem</div>
+                <div className="text-xl font-extrabold text-amber-600 dark:text-amber-400 tnum">
+                  ₦{(totalAllowances / 1000).toFixed(0)}k
+                </div>
+                <div className="text-[10px] text-slate-500">Offshore & field allowances</div>
+              </div>
+
+              <div className="apple-glass-card p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+                <div className="text-[10px] uppercase font-bold text-slate-400">Bonuses & Custom Benefits</div>
+                <div className="text-xl font-extrabold text-purple-600 dark:text-purple-400 tnum">
+                  ₦{((totalBonuses + totalCustomBenefits) / 1000).toFixed(0)}k
+                </div>
+                <div className="text-[10px] text-slate-500">
+                  ₦{(totalBonuses / 1000).toFixed(0)}k bonus + ₦{(totalCustomBenefits / 1000).toFixed(0)}k benefits
+                </div>
+              </div>
+
+              <div className="apple-glass-card p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+                <div className="text-[10px] uppercase font-bold text-slate-400">PAYE Tax & Pension</div>
+                <div className="text-xl font-extrabold text-blue-600 dark:text-blue-400 tnum">
+                  ₦{(totalDeductions / 1000).toFixed(0)}k
+                </div>
+                <div className="text-[10px] text-slate-500">Remitted to FIRS & PFA</div>
+              </div>
             </div>
 
-            <div className="apple-glass-card p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
-              <div className="text-[10px] uppercase font-bold text-slate-400">Performance Bonuses</div>
-              <div className="text-xl font-extrabold text-purple-600 dark:text-purple-400 tnum">
-                ₦{(payrollRecords.reduce((acc, curr) => acc + curr.performanceBonusNgn, 0) / 1000).toFixed(0)}k
-              </div>
-              <div className="text-[10px] text-slate-500">KPI excellence bonuses</div>
-            </div>
-
-            <div className="apple-glass-card p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
-              <div className="text-[10px] uppercase font-bold text-slate-400">PAYE Tax & Pension</div>
-              <div className="text-xl font-extrabold text-blue-600 dark:text-blue-400 tnum">
-                ₦{(payrollRecords.reduce((acc, curr) => acc + curr.taxPayeNgn + curr.pensionDeductionNgn, 0) / 1000).toFixed(0)}k
-              </div>
-              <div className="text-[10px] text-slate-500">Remitted to FIRS & PFA</div>
-            </div>
-          </div>
-
-          <div className="apple-glass-card rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50/60 dark:bg-slate-800/60 border-b border-black/[0.05] dark:border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
-                  <tr>
-                    <th className="px-5 py-3">Staff Name</th>
-                    <th className="px-5 py-3">Job Title & Dept</th>
-                    <th className="px-5 py-3 text-right">Base Salary</th>
-                    <th className="px-5 py-3 text-right">Hazard / Per Diem</th>
-                    <th className="px-5 py-3 text-right">Bonus</th>
-                    <th className="px-5 py-3 text-right">Tax & Pension</th>
-                    <th className="px-5 py-3 text-right">Net Payable</th>
-                    <th className="px-5 py-3">Status</th>
-                    <th className="px-5 py-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-black/[0.04] dark:divide-slate-800 font-medium">
-                  {payrollRecords.map((p) => {
-                    const isDisbursed = p.paymentStatus === 'DISBURSED';
-                    const isApproved = p.paymentStatus === 'APPROVED';
-
-                    return (
-                      <tr key={p.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
-                        <td className="px-5 py-3 font-bold text-slate-900 dark:text-white">{p.staffName}</td>
-                        <td className="px-5 py-3 text-[11px] text-slate-500 dark:text-slate-400">
-                          <div>{p.jobTitle}</div>
-                          <div className="text-[10px] text-slate-400">{p.department}</div>
-                        </td>
-                        <td className="px-5 py-3 text-right font-mono font-semibold text-slate-800 dark:text-slate-200 tnum">
-                          ₦{p.baseSalaryNgn.toLocaleString()}
-                        </td>
-                        <td className="px-5 py-3 text-right font-mono text-amber-700 dark:text-amber-400 tnum">
-                          +₦{(p.hazardAllowanceNgn + p.fieldPerDiemNgn).toLocaleString()}
-                        </td>
-                        <td className="px-5 py-3 text-right font-mono text-purple-700 dark:text-purple-400 tnum">
-                          +₦{p.performanceBonusNgn.toLocaleString()}
-                        </td>
-                        <td className="px-5 py-3 text-right font-mono text-rose-700 dark:text-rose-400 tnum">
-                          -₦{(p.taxPayeNgn + p.pensionDeductionNgn).toLocaleString()}
-                        </td>
-                        <td className="px-5 py-3 text-right font-mono font-extrabold text-slate-900 dark:text-white text-xs tnum">
-                          ₦{p.netPayNgn.toLocaleString()}
-                        </td>
-                        <td className="px-5 py-3">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            isDisbursed
-                              ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200'
-                              : isApproved
-                              ? 'bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200'
-                              : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-                          }`}>
-                            {p.paymentStatus}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3 text-right space-x-1.5">
-                          {!isDisbursed && (
-                            <button
-                              onClick={() => {
-                                const nextStatus = isApproved ? 'DISBURSED' : 'APPROVED';
-                                updatePayrollRecord({
-                                  ...p,
-                                  paymentStatus: nextStatus
-                                });
-                                haptics.success();
-                              }}
-                              className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-[10px] font-bold transition-all active:scale-95"
-                            >
-                              {isApproved ? 'Mark Disbursed' : 'Approve'}
-                            </button>
-                          )}
-                        </td>
+            {/* Payroll Ledger Table */}
+            {currentMonthRecords.length > 0 ? (
+              <div className="apple-glass-card rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50/60 dark:bg-slate-800/60 border-b border-black/[0.05] dark:border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+                      <tr>
+                        <th className="px-5 py-3">Staff Member</th>
+                        <th className="px-5 py-3">Job Title & Dept</th>
+                        <th className="px-5 py-3 text-right">Base Salary</th>
+                        <th className="px-5 py-3 text-right">Hazard / Per Diem</th>
+                        <th className="px-5 py-3 text-right">Bonus</th>
+                        <th className="px-5 py-3 text-right">Custom Benefits</th>
+                        <th className="px-5 py-3 text-right">Tax & Pension</th>
+                        <th className="px-5 py-3 text-right">Net Payable</th>
+                        <th className="px-5 py-3">Status</th>
+                        <th className="px-5 py-3 text-right">Actions</th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                    </thead>
+                    <tbody className="divide-y divide-black/[0.04] dark:divide-slate-800 font-medium">
+                      {currentMonthRecords.map((p) => {
+                        const isDisbursed = p.paymentStatus === 'DISBURSED';
+                        const isApproved = p.paymentStatus === 'APPROVED';
+                        const staffBenefits = p.customBenefits || [];
+                        const staffBenefitsTotal = staffBenefits.reduce((sum, b) => sum + (Number(b.amountNgn) || 0), 0);
+
+                        return (
+                          <tr key={p.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                            <td className="px-5 py-3 font-bold text-slate-900 dark:text-white">
+                              {p.staffName}
+                            </td>
+                            <td className="px-5 py-3 text-[11px] text-slate-500 dark:text-slate-400">
+                              <div>{p.jobTitle}</div>
+                              <div className="text-[10px] text-slate-400">{p.department}</div>
+                            </td>
+                            <td className="px-5 py-3 text-right font-mono font-semibold text-slate-800 dark:text-slate-200 tnum">
+                              ₦{p.baseSalaryNgn.toLocaleString()}
+                            </td>
+                            <td className="px-5 py-3 text-right font-mono text-amber-700 dark:text-amber-400 tnum">
+                              +₦{(p.hazardAllowanceNgn + p.fieldPerDiemNgn).toLocaleString()}
+                            </td>
+                            <td className="px-5 py-3 text-right font-mono text-purple-700 dark:text-purple-400 tnum">
+                              +₦{p.performanceBonusNgn.toLocaleString()}
+                            </td>
+                            <td className="px-5 py-3 text-right font-mono tnum">
+                              {staffBenefitsTotal > 0 ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/40 text-[11px] font-bold" title={staffBenefits.map(b => `${b.name}: ₦${b.amountNgn.toLocaleString()}`).join(', ')}>
+                                  <Sparkles className="w-3 h-3 text-amber-500" />
+                                  +₦{staffBenefitsTotal.toLocaleString()}
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 text-[11px]">—</span>
+                              )}
+                            </td>
+                            <td className="px-5 py-3 text-right font-mono text-rose-700 dark:text-rose-400 tnum">
+                              -₦{(p.taxPayeNgn + p.pensionDeductionNgn).toLocaleString()}
+                            </td>
+                            <td className="px-5 py-3 text-right font-mono font-extrabold text-slate-900 dark:text-white text-xs tnum">
+                              ₦{p.netPayNgn.toLocaleString()}
+                            </td>
+                            <td className="px-5 py-3">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                isDisbursed
+                                  ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200'
+                                  : isApproved
+                                  ? 'bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200'
+                                  : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                              }`}>
+                                {p.paymentStatus}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3 text-right space-x-1.5 whitespace-nowrap">
+                              {isHR && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingPayrollRecord(p);
+                                    setIsEditCompensationOpen(true);
+                                    haptics.selection();
+                                  }}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-[10px] font-bold transition-all active:scale-95 cursor-pointer"
+                                  title="Edit Figures & Benefits"
+                                >
+                                  <Edit3 className="w-3 h-3" />
+                                  <span>Edit</span>
+                                </button>
+                              )}
+
+                              {!isDisbursed && isHR && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const nextStatus = isApproved ? 'DISBURSED' : 'APPROVED';
+                                    updatePayrollRecord({
+                                      ...p,
+                                      paymentStatus: nextStatus
+                                    });
+                                    haptics.success();
+                                  }}
+                                  className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-[10px] font-bold transition-all active:scale-95 cursor-pointer"
+                                >
+                                  {isApproved ? 'Disburse' : 'Approve'}
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <div className="apple-glass-card p-12 text-center rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
+                <Calendar className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto" />
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  No Payroll Run for {formatMonthLabel(selectedPayrollMonth)}
+                </h3>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  There are no payroll records generated yet for this period. Click below to generate draft payroll records for all active employees.
+                </p>
+                {isHR && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      createMonthlyPayrollRun(selectedPayrollMonth);
+                      haptics.success();
+                    }}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-xs active:scale-[0.97] transition-all cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Generate {formatMonthLabel(selectedPayrollMonth)} Payroll</span>
+                  </button>
+                )}
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Tab 4: Certifications */}
       {activeTab === 'CERTS' && (
@@ -683,6 +842,17 @@ export default function HRStaffPage() {
       <StaffQueryModal
         isOpen={isNewQueryOpen}
         onClose={() => setIsNewQueryOpen(false)}
+      />
+
+      {/* Edit Compensation & Custom Benefits Modal */}
+      <EditCompensationModal
+        isOpen={isEditCompensationOpen}
+        onClose={() => {
+          setIsEditCompensationOpen(false);
+          setEditingPayrollRecord(null);
+        }}
+        record={editingPayrollRecord}
+        onSave={(updated) => updatePayrollRecord(updated)}
       />
     </div>
   );

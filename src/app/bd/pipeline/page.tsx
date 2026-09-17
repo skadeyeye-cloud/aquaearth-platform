@@ -74,6 +74,7 @@ export default function BdPipelinePage() {
   const [estimatedValue, setEstimatedValue] = useState(45000000);
   const [currency, setCurrency] = useState<'NGN' | 'USD' | 'EUR' | 'GBP'>('NGN');
   const [source, setSource] = useState('Public Tender RFP');
+  const [referredByStaffId, setReferredByStaffId] = useState('');
   const [submissionDeadline, setSubmissionDeadline] = useState('2026-09-18 17:00');
   const [technicalLeadId, setTechnicalLeadId] = useState('usr-4');
 
@@ -118,6 +119,7 @@ export default function BdPipelinePage() {
     e.preventDefault();
     const client = clients.find(c => c.id === clientId);
     const techLead = allUsers.find(u => u.id === technicalLeadId);
+    const referringStaff = allUsers.find(u => u.id === referredByStaffId);
 
     createOpportunity({
       title,
@@ -127,7 +129,9 @@ export default function BdPipelinePage() {
       estimatedValue: Number(estimatedValue),
       currency,
       stage: 'IDENTIFIED',
-      source,
+      source: source === 'Staff / Employee Referral' && referringStaff ? `Employee Referral (${referringStaff.name})` : source,
+      referredByStaffId: source === 'Staff / Employee Referral' ? referredByStaffId : undefined,
+      referredByStaffName: source === 'Staff / Employee Referral' ? referringStaff?.name : undefined,
       submissionDeadline,
       bdOwnerId: currentUser.id,
       bdOwnerName: currentUser.name,
@@ -137,6 +141,7 @@ export default function BdPipelinePage() {
 
     setIsNewOppOpen(false);
     setTitle('');
+    setReferredByStaffId('');
     haptics.success();
   };
 
@@ -338,6 +343,20 @@ export default function BdPipelinePage() {
                         <span>Lead: <span className="font-medium text-slate-700 dark:text-slate-300">{opp.bdOwnerName}</span></span>
                         <span>•</span>
                         <span>Due: <span className="font-medium text-slate-700 dark:text-slate-300">{opp.submissionDeadline}</span></span>
+                        {opp.referredByStaffName ? (
+                          <>
+                            <span>•</span>
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 whitespace-nowrap shrink-0">
+                              <Users className="w-3 h-3" />
+                              <span>Referred by {opp.referredByStaffName}</span>
+                            </span>
+                          </>
+                        ) : opp.source ? (
+                          <>
+                            <span>•</span>
+                            <span className="text-[11px] text-slate-500 dark:text-slate-400">Source: {opp.source}</span>
+                          </>
+                        ) : null}
                         {opp.serviceLines?.length > 0 && (
                           <>
                             <span>•</span>
@@ -526,6 +545,7 @@ export default function BdPipelinePage() {
                       onChange={(e) => setSource(e.target.value)}
                       className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
                     >
+                      <option value="Staff / Employee Referral">Staff / Employee Referral (Internal Lead)</option>
                       <option value="Public Tender RFP">Public Tender RFP</option>
                       <option value="Existing Client Repeat">Existing Client Repeat</option>
                       <option value="Direct Client Referral">Direct Client Referral</option>
@@ -533,6 +553,30 @@ export default function BdPipelinePage() {
                     </select>
                   </div>
                 </div>
+
+                {source === 'Staff / Employee Referral' && (
+                  <div className="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 rounded-2xl space-y-1.5">
+                    <label className="block text-[11px] font-bold text-emerald-800 dark:text-emerald-300">
+                      Referring Staff Member *
+                    </label>
+                    <select
+                      required
+                      value={referredByStaffId}
+                      onChange={(e) => setReferredByStaffId(e.target.value)}
+                      className="w-full p-2 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-white"
+                    >
+                      <option value="">-- Select Any AquaEarth Staff Member ({allUsers.length} available) --</option>
+                      {allUsers.map(u => (
+                        <option key={u.id} value={u.id}>
+                          {u.name} — {u.jobTitle} ({u.departmentName})
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-[10px] text-emerald-700 dark:text-emerald-400">
+                      Employees who refer client contracts receive commercial deal commission credit & leadership visibility.
+                    </p>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>

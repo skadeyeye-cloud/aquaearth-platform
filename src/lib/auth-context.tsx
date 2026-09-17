@@ -207,6 +207,7 @@ interface AuthContextType {
   resolveStaffQuery: (queryId: string, resolution: 'PROCEEDING' | 'FORMAL_WARNING' | 'CANCELLED', notes: string) => void;
   payrollRecords: PayrollRecord[];
   updatePayrollRecord: (record: PayrollRecord) => void;
+  createMonthlyPayrollRun: (monthYear: string) => void;
   candidateApplications: CandidateApplication[];
   advanceCandidateStage: (candidateId: string, newStage: InterviewStage, note?: Omit<InterviewNote, 'stage'>, document?: Omit<CandidateDocument, 'id' | 'stage' | 'uploadedAt'>) => void;
   convertCandidateToEmployee: (candidateId: string, role?: string) => UserProfile;
@@ -219,7 +220,7 @@ interface AuthContextType {
   approveHighValueBid: (oppId: string) => void;
   convertWonToProject: (oppId: string) => string;
   addClientCommunication: (clientId: string, log: { author: string; channel: string; summary: string; projectTag?: string }) => void;
-  createProject: (project: Omit<ProjectRecord, 'id' | 'createdAt'>) => void;
+  createProject: (project: Omit<ProjectRecord, 'id' | 'createdAt'>) => ProjectRecord;
   closeOutAndArchiveProject: (projectId: string) => void;
   createFieldRecord: (record: Omit<FieldRecordItem, 'id' | 'timestamp' | 'watermarkText'>) => void;
   uploadDocument: (doc: Omit<DocumentItem, 'id' | 'documentNumber' | 'uploadedAt'>) => void;
@@ -290,7 +291,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setTasks(sanitizedTasks);
 
       const storedAttendance = getStoredData<AttendanceRecordItem[]>('attendance', INITIAL_ATTENDANCE);
-      setAttendanceRecords(storedAttendance || []);
+      if (storedAttendance && storedAttendance.length < INITIAL_ATTENDANCE.length) {
+        const existingIds = new Set(storedAttendance.map(a => a.id));
+        const merged = [...storedAttendance, ...INITIAL_ATTENDANCE.filter(a => !existingIds.has(a.id))];
+        setAttendanceRecords(merged);
+      } else {
+        setAttendanceRecords(storedAttendance || INITIAL_ATTENDANCE);
+      }
 
       const storedTickets = getStoredData<SupportTicket[]>('tickets', INITIAL_TICKETS);
       setTickets(storedTickets || []);
@@ -362,7 +369,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setStaffQueries(storedQueries || INITIAL_STAFF_QUERIES);
 
       const storedPayroll = getStoredData<PayrollRecord[]>('payroll_records', INITIAL_PAYROLL_RECORDS);
-      setPayrollRecords(storedPayroll || INITIAL_PAYROLL_RECORDS);
+      if (storedPayroll && storedPayroll.length >= INITIAL_PAYROLL_RECORDS.length) {
+        setPayrollRecords(storedPayroll);
+      } else {
+        const payrollMap = new Map<string, PayrollRecord>();
+        INITIAL_PAYROLL_RECORDS.forEach(p => payrollMap.set(p.id, p));
+        if (storedPayroll) {
+          storedPayroll.forEach(p => payrollMap.set(p.id, p));
+        }
+        setPayrollRecords(Array.from(payrollMap.values()));
+      }
 
       const storedCandidates = getStoredData<CandidateApplication[]>('candidate_applications', INITIAL_CANDIDATE_APPLICATIONS);
       setCandidateApplications(storedCandidates || INITIAL_CANDIDATE_APPLICATIONS);
@@ -691,7 +707,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const timestampStr = now.toISOString().replace('T', ' ').substring(0, 16);
 
     // Identify user role tiers
-    const isAdmin = currentUser.accessTier === 'SUPERADMIN' || 
+    const isDrKaine = currentUser.id === 'usr-1' || currentUser.name.toLowerCase().includes('kaine');
+    const isAdmin = isDrKaine ||
+                    currentUser.accessTier === 'SUPERADMIN' || 
                     currentUser.functionalRole === 'SUPERADMIN' || 
                     currentUser.functionalRole === 'MANAGING_CONSULTANT';
 
@@ -702,11 +720,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Resolve target assignee: defaults to currentUser if not specified
     const targetAssignee = (taskData.assigneeId && allUsers.find(u => u.id === taskData.assigneeId)) || currentUser;
     const isSelfAssigned = targetAssignee.id === currentUser.id;
+    const isAssigneeAdmin = targetAssignee.id === 'usr-1' || 
+                            targetAssignee.name.toLowerCase().includes('kaine') ||
+                            targetAssignee.accessTier === 'SUPERADMIN' ||
+                            targetAssignee.functionalRole === 'SUPERADMIN' ||
+                            targetAssignee.functionalRole === 'MANAGING_CONSULTANT';
 
-    // Rule 1: Admins do NOT need approvals on tasks!
-    // Rule 2: Admins, Team Leads, and Line Managers can assign tasks to people under them, which are pre-approved!
+    // Rule 1: Dr. Kaine and Superadmins do NOT need approvals on tasks!
+    // Rule 2: Tasks assigned to Dr. Kaine or Superadmins never need approvals!
+    // Rule 3: Admins, Team Leads, and Line Managers can assign tasks to subordinates, which are pre-approved!
     // Only non-manager officers creating tasks for themselves require line manager approval.
-    const needsApproval = !isAdmin && !(isManagerOrLead && !isSelfAssigned);
+    const needsApproval = !isAdmin && !isAssigneeAdmin && !(isManagerOrLead && !isSelfAssigned);
     const approvalStatus: TaskItem['approvalStatus'] = needsApproval ? 'PENDING_APPROVAL' : 'APPROVED';
 
     // Find manager for the task
@@ -1326,7 +1350,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return newProjectCode;
   };
 
-  const createProject = (projectData: Omit<ProjectRecord, 'id' | 'createdAt'>) => {
+  const createProject = (projectData: Omit<ProjectRecord, 'id' | 'createdAt'>): ProjectRecord => {
     const newProj: ProjectRecord = {
       ...projectData,
       id: `prj-${Date.now()}`,
@@ -1345,6 +1369,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
     };
     setAuditLogs(prev => [audit, ...prev]);
+    return newProj;
   };
 
   const closeOutAndArchiveProject = (projectId: string) => {
@@ -2833,7 +2858,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updatePayrollRecord = (record: PayrollRecord) => {
-    setPayrollRecords(prev => prev.map(r => r.id === record.id ? record : r));
+    const totalBenefits = (record.customBenefits || []).reduce((sum, b) => sum + (Number(b.amountNgn) || 0), 0);
+    const gross = (Number(record.baseSalaryNgn) || 0) + 
+                  (Number(record.hazardAllowanceNgn) || 0) + 
+                  (Number(record.fieldPerDiemNgn) || 0) + 
+                  (Number(record.performanceBonusNgn) || 0) + 
+                  totalBenefits;
+    const deductions = (Number(record.pensionDeductionNgn) || 0) + (Number(record.taxPayeNgn) || 0);
+    const calculatedNet = Math.max(0, gross - deductions);
+    const updatedRecord: PayrollRecord = {
+      ...record,
+      baseSalaryNgn: Number(record.baseSalaryNgn) || 0,
+      hazardAllowanceNgn: Number(record.hazardAllowanceNgn) || 0,
+      fieldPerDiemNgn: Number(record.fieldPerDiemNgn) || 0,
+      performanceBonusNgn: Number(record.performanceBonusNgn) || 0,
+      pensionDeductionNgn: Number(record.pensionDeductionNgn) || 0,
+      taxPayeNgn: Number(record.taxPayeNgn) || 0,
+      netPayNgn: calculatedNet
+    };
+
+    setPayrollRecords(prev => prev.map(r => r.id === updatedRecord.id ? updatedRecord : r));
 
     const audit: AuditRecord = {
       id: `aud-${Date.now()}`,
@@ -2842,7 +2886,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       action: 'PAYROLL_RECORD_UPDATED',
       targetType: 'Payroll & Remuneration',
       targetId: record.id,
-      details: `${currentUser.name} updated payroll for ${record.staffName} (Net: ₦${record.netPayNgn.toLocaleString()}, Status: ${record.paymentStatus})`,
+      details: `${currentUser.name} updated payroll for ${record.staffName} (${record.monthYear}, Net: ₦${calculatedNet.toLocaleString()}, Status: ${record.paymentStatus})`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const createMonthlyPayrollRun = (monthYear: string) => {
+    setPayrollRecords(prev => {
+      const existingStaffIds = new Set(prev.filter(p => p.monthYear === monthYear).map(p => p.staffId));
+      const newRecords: PayrollRecord[] = [];
+
+      allUsers.filter(u => u.status === 'ACTIVE').forEach(user => {
+        if (!existingStaffIds.has(user.id)) {
+          const prevRecord = prev.find(p => p.staffId === user.id);
+          const baseSalary = prevRecord ? prevRecord.baseSalaryNgn : 1500000;
+          const hazard = prevRecord ? prevRecord.hazardAllowanceNgn : 0;
+          const perDiem = 0;
+          const bonus = 0;
+          const pension = Math.round(baseSalary * 0.08);
+          const tax = Math.round(baseSalary * 0.14);
+          const benefits = prevRecord?.customBenefits ? [...prevRecord.customBenefits] : [];
+          const totalBenefits = benefits.reduce((s, b) => s + b.amountNgn, 0);
+          const net = baseSalary + hazard + perDiem + bonus + totalBenefits - pension - tax;
+
+          newRecords.push({
+            id: `pay-${monthYear}-${user.id}`,
+            staffId: user.id,
+            staffName: user.name,
+            department: user.departmentName || 'Operations',
+            jobTitle: user.jobTitle,
+            baseSalaryNgn: baseSalary,
+            hazardAllowanceNgn: hazard,
+            fieldPerDiemNgn: perDiem,
+            performanceBonusNgn: bonus,
+            customBenefits: benefits,
+            pensionDeductionNgn: pension,
+            taxPayeNgn: tax,
+            netPayNgn: Math.max(0, net),
+            monthYear,
+            paymentStatus: 'DRAFT'
+          });
+        }
+      });
+
+      return [...newRecords, ...prev];
+    });
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'PAYROLL_MONTH_GENERATED',
+      targetType: 'Payroll & Remuneration',
+      targetId: monthYear,
+      details: `${currentUser.name} generated monthly payroll run for ${monthYear}`,
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
     };
     setAuditLogs(prev => [audit, ...prev]);
@@ -3213,6 +3311,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       resolveStaffQuery,
       payrollRecords,
       updatePayrollRecord,
+      createMonthlyPayrollRun,
       candidateApplications,
       advanceCandidateStage,
       convertCandidateToEmployee,

@@ -17,10 +17,15 @@ import {
   Building, 
   Radio,
   Lock,
-  Download
+  Download,
+  Filter,
+  Search,
+  ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { haptics, playNotificationChime } from '@/lib/haptics';
+
+type TimeHorizon = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'H1' | 'H2' | 'YEARLY';
 
 export default function AttendancePage() {
   const { 
@@ -38,6 +43,12 @@ export default function AttendancePage() {
   const [clockOutNotes, setClockOutNotes] = useState('');
   const [isClockOutModalOpen, setIsClockOutModalOpen] = useState(false);
   const [alertBanner, setAlertBanner] = useState<{ message: string; type: 'success' | 'warning' } | null>(null);
+
+  // Multi-Horizon State for Superadmins & Managers
+  const [timeHorizon, setTimeHorizon] = useState<TimeHorizon>('DAILY');
+  const [selectedQuarter, setSelectedQuarter] = useState<'Q1' | 'Q2' | 'Q3' | 'Q4'>('Q3');
+  const [selectedStaffFilter, setSelectedStaffFilter] = useState<string>('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -83,7 +94,9 @@ export default function AttendancePage() {
   // Role Scoping Flags
   const isSuperadmin = currentUser.accessTier === 'SUPERADMIN' || 
                        currentUser.functionalRole === 'SUPERADMIN' || 
-                       currentUser.functionalRole === 'MANAGING_CONSULTANT';
+                       currentUser.functionalRole === 'MANAGING_CONSULTANT' ||
+                       currentUser.id === 'usr-1' ||
+                       currentUser.name.toLowerCase().includes('kaine');
 
   const isHr = currentUser.functionalRole === 'HR_ADMIN' || 
                currentUser.departmentName?.toLowerCase().includes('human resources') || 
@@ -93,69 +106,106 @@ export default function AttendancePage() {
                           currentUser.managementTier === 'TEAM_LEAD' || 
                           currentUser.managementTier === 'DEPT_HEAD';
 
-  const isEmployeeOnly = !isSuperadmin && !isHr && !isManagerOrLead;
+  const canSeeEveryone = isSuperadmin || isHr;
+  const isEmployeeOnly = !canSeeEveryone && !isManagerOrLead;
 
   // Filter attendance records based on role
-  let scopedRecords = attendanceRecords;
+  let baseScopedRecords = attendanceRecords;
 
-  if (isSuperadmin || isHr) {
-    scopedRecords = attendanceRecords;
+  if (canSeeEveryone) {
+    baseScopedRecords = attendanceRecords;
   } else if (isManagerOrLead) {
     const supervisedUserIds = new Set(
       allUsers
         .filter(u => u.id === currentUser.id || u.managerId === currentUser.id || u.departmentName === currentUser.departmentName)
         .map(u => u.id)
     );
-    scopedRecords = attendanceRecords.filter(a => supervisedUserIds.has(a.userId));
+    baseScopedRecords = attendanceRecords.filter(a => supervisedUserIds.has(a.userId));
   } else {
-    scopedRecords = attendanceRecords.filter(a => a.userId === currentUser.id);
+    baseScopedRecords = attendanceRecords.filter(a => a.userId === currentUser.id);
   }
+
+  // Filter by Time Horizon
+  const horizonRecords = baseScopedRecords.filter(rec => {
+    const recDate = rec.date;
+    if (!recDate) return true;
+
+    if (timeHorizon === 'DAILY') {
+      return recDate === todayStr || recDate === '2026-09-17' || recDate === '2026-09-01';
+    }
+    if (timeHorizon === 'WEEKLY') {
+      return recDate >= '2026-09-08' && recDate <= '2026-09-17';
+    }
+    if (timeHorizon === 'MONTHLY') {
+      return recDate.startsWith('2026-09');
+    }
+    if (timeHorizon === 'QUARTERLY') {
+      if (selectedQuarter === 'Q1') return recDate >= '2026-01-01' && recDate <= '2026-03-31';
+      if (selectedQuarter === 'Q2') return recDate >= '2026-04-01' && recDate <= '2026-06-30';
+      if (selectedQuarter === 'Q3') return recDate >= '2026-07-01' && recDate <= '2026-09-30';
+      if (selectedQuarter === 'Q4') return recDate >= '2026-10-01' && recDate <= '2026-12-31';
+    }
+    if (timeHorizon === 'H1') {
+      return recDate >= '2026-01-01' && recDate <= '2026-06-30';
+    }
+    if (timeHorizon === 'H2') {
+      return recDate >= '2026-07-01' && recDate <= '2026-12-31';
+    }
+    if (timeHorizon === 'YEARLY') {
+      return recDate.startsWith('2026');
+    }
+    return true;
+  });
+
+  // Filter by Staff member & Search query
+  const filteredRecords = horizonRecords.filter(rec => {
+    const matchesStaff = selectedStaffFilter === 'ALL' || rec.userId === selectedStaffFilter;
+    const matchesSearch = !searchQuery || 
+                          rec.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          rec.locationTag.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (rec.notes && rec.notes.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchesStaff && matchesSearch;
+  });
+
+  // Calculate telemetry metrics
+  const totalShifts = filteredRecords.length;
+  const onTimeShifts = filteredRecords.filter(r => r.status === 'PRESENT').length;
+  const lateShifts = filteredRecords.filter(r => r.status === 'LATE').length;
+  const punctualityRate = totalShifts > 0 ? Math.round((onTimeShifts / totalShifts) * 100) : 100;
+  const totalKpiEarned = filteredRecords.reduce((acc, curr) => acc + (curr.kpiAwarded || 0), 0);
 
   return (
     <div className="space-y-6 select-none">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400 tracking-tight flex-wrap">
+          <div className="flex items-center gap-2 text-[11px] font-semibold text-[#86868B] tracking-tight flex-wrap">
             <span>HR & Human Capital • Module 9</span>
-            <span className="text-[10px] font-bold px-2 py-0.2 rounded-md bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 whitespace-nowrap shrink-0">
-              {isSuperadmin ? 'Company-Wide Roll Call' : isHr ? 'HR Governance Ledger' : isManagerOrLead ? 'Department Supervisory Scope' : 'Personal Timesheet Record'}
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-black/[0.05] dark:bg-white/[0.08] text-[#1D1D1F] dark:text-[#F6F4F0] whitespace-nowrap shrink-0">
+              {canSeeEveryone ? "Company-Wide Attendance Oversight" : isManagerOrLead ? 'Department Supervisory Scope' : 'Personal Timesheet Record'}
             </span>
           </div>
-          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight mt-0.5">
-            {isEmployeeOnly ? 'My Daily Station Attendance' : 'Attendance & Shift Timesheet'}
+          <h1 className="text-2xl font-semibold text-[#1D1D1F] dark:text-[#F6F4F0] tracking-tight mt-0.5">
+            {isEmployeeOnly ? 'My Daily Station Attendance' : "Attendance & Clock-In Oversight"}
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            {isEmployeeOnly
+          <p className="text-xs text-[#86868B]">
+            {canSeeEveryone
+              ? "Comprehensive multi-horizon view of all staff clock-in timestamps, station locations, and punctuality records."
+              : isEmployeeOnly
               ? 'Biometric digital clock-in, station logging, and automatic +10 on-time KPI point sync.'
               : 'Station verification, daily roll calls, and shift supervision across operating bases.'}
           </p>
         </div>
 
         {/* Live Digital Clock Badge */}
-        <div className="flex items-center gap-2.5 p-2.5 px-4 bg-white dark:bg-[#0c0c0e] border border-black/[0.08] dark:border-white/[0.12] rounded-2xl shadow-xs shrink-0">
-          <Clock className="w-4 h-4 text-emerald-500 animate-pulse shrink-0" />
+        <div className="flex items-center gap-3 p-3 px-4 bg-white dark:bg-[#0C0C0D] border border-black/[0.06] dark:border-white/[0.08] rounded-2xl shadow-xs shrink-0">
+          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
           <div className="text-right">
-            <div className="font-mono font-extrabold text-sm text-slate-900 dark:text-white tracking-tight tnum whitespace-nowrap shrink-0">{currentTime || '08:00:00'} WAT</div>
-            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap shrink-0">{currentDate}</div>
+            <div className="font-mono font-semibold text-sm text-[#1D1D1F] dark:text-[#F6F4F0] tracking-tight tnum whitespace-nowrap shrink-0">{currentTime || '08:00:00'} WAT</div>
+            <div className="text-[10px] text-[#86868B] font-medium whitespace-nowrap shrink-0">{currentDate}</div>
           </div>
         </div>
       </div>
-
-      {/* Confidentiality Notice for Staff */}
-      {isEmployeeOnly && (
-        <div className="p-4 bg-slate-50 dark:bg-white/[0.03] border border-black/[0.08] dark:border-white/[0.1] rounded-2xl flex items-center justify-between text-xs text-slate-600 dark:text-slate-300 gap-3">
-          <div className="flex items-center gap-2.5">
-            <Lock className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <span>
-              <b>Confidential Attendance Ledger:</b> Your daily station logs and shift timestamps are confidential to you, your Line Manager, and HR Governance.
-            </span>
-          </div>
-          <span className="text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/20 whitespace-nowrap shrink-0">
-            GPS Verified
-          </span>
-        </div>
-      )}
 
       {/* Dynamic Feedback Banner */}
       <AnimatePresence>
@@ -166,8 +216,8 @@ export default function AttendancePage() {
             exit={{ opacity: 0, y: -10 }}
             className={`p-4 rounded-2xl border flex items-center justify-between text-xs font-semibold ${
               alertBanner.type === 'success' 
-                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400' 
-                : 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400'
+                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400' 
+                : 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400'
             }`}
           >
             <div className="flex items-center gap-2">
@@ -179,16 +229,174 @@ export default function AttendancePage() {
         )}
       </AnimatePresence>
 
-      {/* Main Clock-In / Clock-Out Widget */}
+      {/* Superadmin / HR Multi-Horizon Segmented Control Bar */}
+      {!isEmployeeOnly && (
+        <div className="bg-white dark:bg-[#0C0C0D] border border-black/[0.06] dark:border-white/[0.08] rounded-3xl p-4 space-y-3 shadow-xs">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            {/* Horizon Switcher */}
+            <div className="flex items-center gap-1 p-1 bg-black/[0.04] dark:bg-white/[0.06] rounded-2xl overflow-x-auto">
+              <button
+                onClick={() => { haptics.selection(); setTimeHorizon('DAILY'); }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap shrink-0 ${
+                  timeHorizon === 'DAILY' ? 'bg-white dark:bg-[#1C1C1E] text-[#1D1D1F] dark:text-[#F6F4F0] shadow-xs font-semibold' : 'text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white'
+                }`}
+              >
+                Daily (Today)
+              </button>
+
+              <button
+                onClick={() => { haptics.selection(); setTimeHorizon('WEEKLY'); }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap shrink-0 ${
+                  timeHorizon === 'WEEKLY' ? 'bg-white dark:bg-[#1C1C1E] text-[#1D1D1F] dark:text-[#F6F4F0] shadow-xs font-semibold' : 'text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white'
+                }`}
+              >
+                Weekly
+              </button>
+
+              <button
+                onClick={() => { haptics.selection(); setTimeHorizon('MONTHLY'); }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap shrink-0 ${
+                  timeHorizon === 'MONTHLY' ? 'bg-white dark:bg-[#1C1C1E] text-[#1D1D1F] dark:text-[#F6F4F0] shadow-xs font-semibold' : 'text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white'
+                }`}
+              >
+                Monthly (Sept)
+              </button>
+
+              <button
+                onClick={() => { haptics.selection(); setTimeHorizon('QUARTERLY'); }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap shrink-0 ${
+                  timeHorizon === 'QUARTERLY' ? 'bg-white dark:bg-[#1C1C1E] text-[#1D1D1F] dark:text-[#F6F4F0] shadow-xs font-semibold' : 'text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white'
+                }`}
+              >
+                Quarterly
+              </button>
+
+              <button
+                onClick={() => { haptics.selection(); setTimeHorizon('H1'); }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap shrink-0 ${
+                  timeHorizon === 'H1' ? 'bg-white dark:bg-[#1C1C1E] text-[#1D1D1F] dark:text-[#F6F4F0] shadow-xs font-semibold' : 'text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white'
+                }`}
+              >
+                H1 (Jan–Jun)
+              </button>
+
+              <button
+                onClick={() => { haptics.selection(); setTimeHorizon('H2'); }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap shrink-0 ${
+                  timeHorizon === 'H2' ? 'bg-white dark:bg-[#1C1C1E] text-[#1D1D1F] dark:text-[#F6F4F0] shadow-xs font-semibold' : 'text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white'
+                }`}
+              >
+                H2 (Jul–Dec)
+              </button>
+
+              <button
+                onClick={() => { haptics.selection(); setTimeHorizon('YEARLY'); }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap shrink-0 ${
+                  timeHorizon === 'YEARLY' ? 'bg-white dark:bg-[#1C1C1E] text-[#1D1D1F] dark:text-[#F6F4F0] shadow-xs font-semibold' : 'text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white'
+                }`}
+              >
+                Yearly (2026)
+              </button>
+            </div>
+
+            {/* Sub-selector for Quarters */}
+            {timeHorizon === 'QUARTERLY' && (
+              <div className="flex items-center gap-1.5 bg-black/[0.03] dark:bg-white/[0.04] p-1 rounded-xl">
+                {(['Q1', 'Q2', 'Q3', 'Q4'] as const).map(q => (
+                  <button
+                    key={q}
+                    onClick={() => { haptics.selection(); setSelectedQuarter(q); }}
+                    className={`px-2.5 py-1 text-xs font-semibold rounded-lg ${
+                      selectedQuarter === q ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'text-[#86868B]'
+                    }`}
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Filtering row: Staff Filter & Search */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-black/[0.04] dark:border-white/[0.06]">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <span className="text-xs text-[#86868B] font-medium whitespace-nowrap shrink-0">Filter Staff:</span>
+              <select
+                value={selectedStaffFilter}
+                onChange={(e) => setSelectedStaffFilter(e.target.value)}
+                className="px-3 py-1.5 bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.06] dark:border-white/[0.08] rounded-xl text-xs font-medium text-[#1D1D1F] dark:text-[#F6F4F0] focus:outline-none"
+              >
+                <option value="ALL">All Staff Directory ({allUsers.length} Personnel)</option>
+                {allUsers.map(u => (
+                  <option key={u.id} value={u.id}>
+                    {u.name} ({u.jobTitle})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="relative w-full sm:w-64">
+              <Search className="w-3.5 h-3.5 text-[#86868B] absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search staff, station, notes..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.06] dark:border-white/[0.08] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0] placeholder:text-[#86868B] focus:outline-none"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Telemetry Summary Cards (Visible in Multi-Horizon Mode) */}
+      {!isEmployeeOnly && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white dark:bg-[#0C0C0D] border border-black/[0.06] dark:border-white/[0.08] rounded-3xl p-5 space-y-1 shadow-xs">
+            <div className="text-[10px] uppercase font-semibold text-[#86868B]">Total Shift Records</div>
+            <div className="text-2xl font-semibold text-[#1D1D1F] dark:text-[#F6F4F0] font-mono tnum">
+              {totalShifts}
+            </div>
+            <div className="text-[11px] text-[#86868B]">In active horizon scope</div>
+          </div>
+
+          <div className="bg-white dark:bg-[#0C0C0D] border border-black/[0.06] dark:border-white/[0.08] rounded-3xl p-5 space-y-1 shadow-xs">
+            <div className="text-[10px] uppercase font-semibold text-[#86868B]">Punctuality Rate</div>
+            <div className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400 font-mono tnum">
+              {punctualityRate}%
+            </div>
+            <div className="text-[11px] text-[#86868B]">{onTimeShifts} on-time vs {lateShifts} late</div>
+          </div>
+
+          <div className="bg-white dark:bg-[#0C0C0D] border border-black/[0.06] dark:border-white/[0.08] rounded-3xl p-5 space-y-1 shadow-xs">
+            <div className="text-[10px] uppercase font-semibold text-[#86868B]">Total KPI Points Earned</div>
+            <div className="text-2xl font-semibold text-amber-600 dark:text-amber-400 font-mono tnum">
+              +{totalKpiEarned} pts
+            </div>
+            <div className="text-[11px] text-[#86868B]">+10 pts per prompt check-in</div>
+          </div>
+
+          <div className="bg-white dark:bg-[#0C0C0D] border border-black/[0.06] dark:border-white/[0.08] rounded-3xl p-5 space-y-1 shadow-xs">
+            <div className="text-[10px] uppercase font-semibold text-[#86868B]">Active Field Stations</div>
+            <div className="text-2xl font-semibold text-blue-600 dark:text-blue-400 font-mono tnum">
+              4 Bases
+            </div>
+            <div className="text-[11px] text-[#86868B]">Lekki, Escravos, Bonny, Lab</div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Clock-In / Clock-Out Widget & Scoped Roll Call */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-1 bg-white dark:bg-[#0c0c0e] border border-black/[0.08] dark:border-white/[0.12] rounded-3xl p-6 space-y-5 shadow-xs">
+        {/* Left: Station Punch Widget */}
+        <div className="lg:col-span-1 bg-white dark:bg-[#0C0C0D] border border-black/[0.06] dark:border-white/[0.08] rounded-3xl p-6 space-y-5 shadow-xs">
           <div className="flex items-center justify-between pb-3 border-b border-black/[0.05] dark:border-white/[0.08]">
             <div className="flex items-center gap-2">
-              <Radio className="w-4 h-4 text-emerald-500 animate-pulse" />
-              <h3 className="font-bold text-xs text-slate-900 dark:text-white">Daily Station Check-In</h3>
+              <Radio className="w-4 h-4 text-emerald-500" />
+              <h3 className="font-semibold text-xs text-[#1D1D1F] dark:text-[#F6F4F0]">My Station Check-In</h3>
             </div>
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-              isClockedOut ? 'bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300' :
+              isClockedOut ? 'bg-black/[0.05] dark:bg-white/10 text-[#86868B]' :
               isClockedIn ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' :
               'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
             }`}>
@@ -197,57 +405,56 @@ export default function AttendancePage() {
           </div>
 
           {/* Current User Snapshot */}
-          <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-white/[0.03] rounded-2xl border border-black/[0.04] dark:border-white/[0.06]">
-            <img
-              src={currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
-              alt={currentUser.name}
-              className="w-10 h-10 rounded-xl object-cover ring-1 ring-black/[0.08] dark:ring-white/10"
+          <div className="flex items-center gap-3 p-3 bg-black/[0.02] dark:bg-white/[0.03] rounded-2xl border border-black/[0.04] dark:border-white/[0.06]">
+            <img 
+              src={currentUser.avatar || '/avatars/kaine-edike.png'} 
+              alt={currentUser.name} 
+              className="w-9 h-9 rounded-xl object-cover ring-1 ring-black/[0.06] dark:ring-white/10"
             />
-            <div className="truncate">
-              <div className="font-bold text-xs text-slate-900 dark:text-white truncate">{currentUser.name}</div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{currentUser.jobTitle}</div>
+            <div className="min-w-0">
+              <div className="font-semibold text-xs text-[#1D1D1F] dark:text-[#F6F4F0] truncate">{currentUser.name}</div>
+              <div className="text-[10px] text-[#86868B] truncate">{currentUser.jobTitle}</div>
             </div>
           </div>
 
-          {/* Location Station Selector */}
+          {/* Station Selection */}
           {!isClockedIn && (
-            <div className="space-y-1.5 text-xs">
-              <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                Operating Base / Station
-              </label>
+            <div className="space-y-2">
+              <label className="block text-[11px] font-medium text-[#86868B]">Select Assigned Operating Base</label>
               <select
                 value={locationTag}
                 onChange={(e) => setLocationTag(e.target.value)}
-                className="w-full p-2.5 bg-slate-50 dark:bg-[#121216] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200"
+                className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.08] rounded-xl text-xs font-medium text-[#1D1D1F] dark:text-[#F6F4F0]"
               >
                 <option value="Lekki HQ Survey Lab">Lekki HQ Survey Lab (Lagos)</option>
                 <option value="Escravos Field Base">Escravos Field Base (Delta)</option>
-                <option value="Bonny Island Terminal">Bonny Island Terminal (Rivers)</option>
-                <option value="Remote / Offshore Platform">Remote / Offshore Platform</option>
+                <option value="Bonny Island Offshore Base">Bonny Island Offshore Base (Rivers)</option>
+                <option value="Lekki Environmental Lab">Lekki Environmental Lab (Lagos)</option>
+                <option value="Remote / Client Site">Remote / Client Offshore Vessel</option>
               </select>
             </div>
           )}
 
-          {/* Clock In / Out Action Buttons */}
-          <div className="space-y-2 pt-2">
+          {/* Action Trigger */}
+          <div className="pt-2">
             {!isClockedIn ? (
               <button
                 onClick={handleClockIn}
-                className="w-full py-3 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-2xl font-bold shadow-xs text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.97]"
+                className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-xs font-bold shadow-xs transition-all active:scale-[0.97] flex items-center justify-center gap-2 cursor-pointer"
               >
-                <Compass className="w-4 h-4 text-emerald-400 dark:text-emerald-600" />
-                <span>Clock In & Sync KPI (+10 pts)</span>
+                <Sparkles className="w-4 h-4" />
+                <span>Clock In & Sync +10 KPI Points</span>
               </button>
             ) : !isClockedOut ? (
               <button
                 onClick={() => setIsClockOutModalOpen(true)}
-                className="w-full py-3 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-2xl font-bold shadow-xs text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.97]"
+                className="w-full py-3 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-2xl text-xs font-bold shadow-xs transition-all active:scale-[0.97] flex items-center justify-center gap-2 cursor-pointer"
               >
-                <Clock className="w-4 h-4 text-amber-400" />
-                <span>Clock Out / Conclude Shift</span>
+                <Clock className="w-4 h-4" />
+                <span>Conclude Shift & Clock Out</span>
               </button>
             ) : (
-              <div className="p-3 bg-slate-100 dark:bg-white/5 rounded-2xl text-center text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center justify-center gap-1.5">
+              <div className="p-3 bg-black/[0.04] dark:bg-white/5 rounded-2xl text-center text-xs font-medium text-[#86868B] flex items-center justify-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                 <span>Shift Concluded at {todayAttendance?.clockOutTime} WAT</span>
               </div>
@@ -256,102 +463,119 @@ export default function AttendancePage() {
 
           {/* Shift Telemetry */}
           {todayAttendance && (
-            <div className="p-3.5 bg-slate-50 dark:bg-white/[0.03] rounded-2xl border border-black/[0.04] dark:border-white/[0.06] space-y-1.5 text-xs">
+            <div className="p-3.5 bg-black/[0.02] dark:bg-white/[0.03] rounded-2xl border border-black/[0.04] dark:border-white/[0.06] space-y-1.5 text-xs">
               <div className="flex justify-between text-[11px]">
-                <span className="text-slate-500 dark:text-slate-400">Clocked In:</span>
-                <b className="font-mono text-slate-800 dark:text-white tnum">{todayAttendance.clockInTime} WAT</b>
+                <span className="text-[#86868B]">Clocked In:</span>
+                <b className="font-mono text-[#1D1D1F] dark:text-[#F6F4F0] tnum">{todayAttendance.clockInTime} WAT</b>
               </div>
               <div className="flex justify-between text-[11px]">
-                <span className="text-slate-500 dark:text-slate-400">Station:</span>
-                <b className="text-slate-800 dark:text-white">{todayAttendance.locationTag}</b>
+                <span className="text-[#86868B]">Station:</span>
+                <b className="text-[#1D1D1F] dark:text-[#F6F4F0]">{todayAttendance.locationTag}</b>
               </div>
               <div className="flex justify-between text-[11px]">
-                <span className="text-slate-500 dark:text-slate-400">Punctuality KPI:</span>
+                <span className="text-[#86868B]">Punctuality KPI:</span>
                 <b className="text-emerald-600 dark:text-emerald-400 font-mono">+{todayAttendance.kpiAwarded} pts</b>
               </div>
             </div>
           )}
         </div>
 
-        {/* Attendance Live Radar / Scoped Roll Call */}
-        <div className="lg:col-span-2 bg-white dark:bg-[#0c0c0e] border border-black/[0.08] dark:border-white/[0.12] rounded-3xl p-6 space-y-4 shadow-xs">
+        {/* Right: Roll Call Table with Clock In / Out times across horizon */}
+        <div className="lg:col-span-2 bg-white dark:bg-[#0C0C0D] border border-black/[0.06] dark:border-white/[0.08] rounded-3xl p-6 space-y-4 shadow-xs">
           <div className="flex items-center justify-between pb-3 border-b border-black/[0.05] dark:border-white/[0.08]">
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-emerald-500" />
-              <h3 className="font-bold text-xs text-slate-900 dark:text-white">
-                {isEmployeeOnly ? 'My Attendance History & Shift Logs' : 'Active Duty Roll Call (Today)'}
+              <h3 className="font-semibold text-xs text-[#1D1D1F] dark:text-[#F6F4F0]">
+                {canSeeEveryone ? `Staff Attendance & Clock-In Ledger (${timeHorizon})` : 'Active Duty Roll Call'}
               </h3>
             </div>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono tnum">
-              {scopedRecords.length} Record{scopedRecords.length > 1 ? 's' : ''} in Scope
+            <span className="text-[10px] text-[#86868B] font-mono tnum">
+              {filteredRecords.length} Record{filteredRecords.length === 1 ? '' : 's'} in Scope
             </span>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider border-b border-black/[0.04] dark:border-white/[0.06]">
+              <thead className="text-[10px] uppercase font-semibold text-[#86868B] tracking-wider border-b border-black/[0.04] dark:border-white/[0.06]">
                 <tr>
+                  <th className="pb-2.5">Date</th>
                   <th className="pb-2.5">Staff Member</th>
                   <th className="pb-2.5">Station Base</th>
                   <th className="pb-2.5">Clock In</th>
                   <th className="pb-2.5">Clock Out</th>
-                  <th className="pb-2.5">Status</th>
+                  <th className="pb-2.5">Punctuality</th>
                   <th className="pb-2.5 text-right">KPI Point</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-black/[0.04] dark:divide-white/[0.06] font-medium">
-                {scopedRecords.map((rec) => {
-                  const isLate = rec.status === 'LATE';
-                  const isMe = rec.userId === currentUser.id;
-                  return (
-                    <tr key={rec.id} className={`hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors ${isMe ? 'bg-emerald-50/40 dark:bg-emerald-950/20' : ''}`}>
-                      <td className="py-3 flex items-center gap-2.5">
-                        <img
-                          src={rec.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
-                          alt={rec.userName}
-                          className="w-7 h-7 rounded-lg object-cover ring-1 ring-black/[0.06] dark:ring-white/10"
-                        />
-                        <div>
-                          <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5 flex-wrap">
-                            <span className="whitespace-nowrap shrink-0">{rec.userName}</span>
-                            {isMe && (
-                              <span className="text-[9px] bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-1.5 py-0.2 rounded font-bold whitespace-nowrap shrink-0">YOU</span>
+              <tbody className="divide-y divide-black/[0.04] dark:divide-white/[0.06] font-normal">
+                {filteredRecords.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-[#86868B]">
+                      No attendance records found for this time horizon and filter.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredRecords.map((rec) => {
+                    const isLate = rec.status === 'LATE';
+                    const isMe = rec.userId === currentUser.id;
+                    return (
+                      <tr key={rec.id} className={`hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors ${isMe ? 'bg-emerald-500/5' : ''}`}>
+                        <td className="py-3 font-mono text-[11px] text-[#86868B] whitespace-nowrap shrink-0">
+                          {rec.date}
+                        </td>
+
+                        <td className="py-3 flex items-center gap-2.5">
+                          <img
+                            src={rec.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
+                            alt={rec.userName}
+                            className="w-7 h-7 rounded-lg object-cover ring-1 ring-black/[0.06] dark:ring-white/10"
+                          />
+                          <div>
+                            <div className="font-semibold text-[#1D1D1F] dark:text-[#F6F4F0] flex items-center gap-1.5 flex-wrap">
+                              <span className="whitespace-nowrap shrink-0">{rec.userName}</span>
+                              {isMe && (
+                                <span className="text-[9px] bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] px-1.5 py-0.2 rounded font-bold whitespace-nowrap shrink-0">YOU</span>
+                              )}
+                            </div>
+                            {rec.notes && (
+                              <div className="text-[10px] text-[#86868B] italic truncate max-w-xs">{rec.notes}</div>
                             )}
                           </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      <td className="py-3 text-slate-600 dark:text-slate-300 text-[11px]">
-                        <div className="flex items-center gap-1 whitespace-nowrap shrink-0">
-                          <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                          <span>{rec.locationTag}</span>
-                        </div>
-                      </td>
+                        <td className="py-3 text-[#1D1D1F] dark:text-[#F6F4F0] text-[11px]">
+                          <div className="flex items-center gap-1 whitespace-nowrap shrink-0">
+                            <MapPin className="w-3 h-3 text-[#86868B] shrink-0" />
+                            <span>{rec.locationTag}</span>
+                          </div>
+                        </td>
 
-                      <td className="py-3 font-mono text-slate-700 dark:text-slate-300 text-[11px] tnum whitespace-nowrap shrink-0">
-                        {rec.clockInTime}
-                      </td>
+                        <td className="py-3 font-mono font-medium text-[#1D1D1F] dark:text-[#F6F4F0] text-[11px] tnum whitespace-nowrap shrink-0">
+                          {rec.clockInTime}
+                        </td>
 
-                      <td className="py-3 font-mono text-slate-700 dark:text-slate-300 text-[11px] tnum whitespace-nowrap shrink-0">
-                        {rec.clockOutTime || '—'}
-                      </td>
+                        <td className="py-3 font-mono text-[#86868B] text-[11px] tnum whitespace-nowrap shrink-0">
+                          {rec.clockOutTime || 'Active on Duty'}
+                        </td>
 
-                      <td className="py-3">
-                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold whitespace-nowrap shrink-0 ${
-                          isLate 
-                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20' 
-                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                        }`}>
-                          {rec.status}
-                        </span>
-                      </td>
+                        <td className="py-3">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap shrink-0 inline-flex items-center gap-1 ${
+                            isLate 
+                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' 
+                              : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${isLate ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                            {rec.status}
+                          </span>
+                        </td>
 
-                      <td className="py-3 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400 tnum whitespace-nowrap shrink-0">
-                        +{rec.kpiAwarded} pts
-                      </td>
-                    </tr>
-                  );
-                })}
+                        <td className="py-3 text-right font-mono font-semibold text-emerald-600 dark:text-emerald-400 tnum whitespace-nowrap shrink-0">
+                          +{rec.kpiAwarded} pts
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -363,15 +587,15 @@ export default function AttendancePage() {
         {isClockOutModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsClockOutModalOpen(false)} className="fixed inset-0 bg-black/50 backdrop-blur-md" />
-            <motion.div initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} className="relative bg-white dark:bg-[#0c0c0e] rounded-3xl shadow-2xl max-w-sm w-full border border-black/[0.08] dark:border-white/[0.12] p-6 space-y-4 z-10 text-xs">
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} className="relative bg-white dark:bg-[#0C0C0D] rounded-3xl shadow-2xl max-w-sm w-full border border-black/[0.08] dark:border-white/[0.12] p-6 space-y-4 z-10 text-xs">
               <div className="flex items-center justify-between border-b border-black/[0.05] dark:border-white/[0.08] pb-2">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Conclude Daily Shift</h3>
-                <button onClick={() => setIsClockOutModalOpen(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-white">&times;</button>
+                <h3 className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F6F4F0]">Conclude Daily Shift</h3>
+                <button onClick={() => setIsClockOutModalOpen(false)} className="text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white">&times;</button>
               </div>
 
               <form onSubmit={handleClockOut} className="space-y-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-[11px] font-medium text-[#86868B] mb-1">
                     Shift Handover Notes / Accomplishments
                   </label>
                   <textarea
@@ -379,13 +603,13 @@ export default function AttendancePage() {
                     value={clockOutNotes}
                     onChange={(e) => setClockOutNotes(e.target.value)}
                     placeholder="e.g. Completed 4x nearshore water sample tests, handed over to lab team."
-                    className="w-full p-2.5 bg-slate-50 dark:bg-white/5 border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs resize-none text-slate-900 dark:text-white"
+                    className="w-full p-2.5 bg-black/[0.02] dark:bg-white/5 border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs resize-none text-[#1D1D1F] dark:text-[#F6F4F0]"
                   />
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2 border-t border-black/[0.05] dark:border-white/[0.08]">
-                  <button type="button" onClick={() => setIsClockOutModalOpen(false)} className="px-3 py-1.5 text-slate-500 font-semibold">Cancel</button>
-                  <button type="submit" className="px-4 py-1.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold shadow-xs active:scale-[0.96]">Confirm Clock Out</button>
+                  <button type="button" onClick={() => setIsClockOutModalOpen(false)} className="px-3 py-1.5 text-[#86868B] font-medium">Cancel</button>
+                  <button type="submit" className="px-4 py-1.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-semibold shadow-xs active:scale-[0.96]">Confirm Clock Out</button>
                 </div>
               </form>
             </motion.div>

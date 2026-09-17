@@ -57,10 +57,16 @@ export default function MyTasksPage() {
   const [isRejectOpen, setIsRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
 
+  const isSuperadmin = currentUser.accessTier === 'SUPERADMIN' || 
+                       currentUser.functionalRole === 'SUPERADMIN' || 
+                       currentUser.functionalRole === 'MANAGING_CONSULTANT' ||
+                       currentUser.id === 'usr-1' ||
+                       currentUser.name.toLowerCase().includes('kaine');
+
   const isManager = currentUser.managementTier === 'LINE_MANAGER' || 
                     currentUser.managementTier === 'TEAM_LEAD' || 
                     currentUser.managementTier === 'DEPT_HEAD' || 
-                    currentUser.accessTier === 'SUPERADMIN';
+                    isSuperadmin;
 
   // Subordinate user IDs for Line Managers
   const supervisedUserIds = new Set(
@@ -205,16 +211,18 @@ export default function MyTasksPage() {
             My Active Tasks ({myTasks.filter(t => t.status !== 'DONE').length})
           </button>
 
-          <button
-            onClick={() => setActiveTab('PENDING_APPROVAL')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
-              activeTab === 'PENDING_APPROVAL'
-                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'
-            }`}
-          >
-            My Submitted Approvals ({myTasks.filter(t => t.approvalStatus === 'PENDING_APPROVAL').length})
-          </button>
+          {!isSuperadmin && (
+            <button
+              onClick={() => setActiveTab('PENDING_APPROVAL')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
+                activeTab === 'PENDING_APPROVAL'
+                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'
+              }`}
+            >
+              My Submitted Approvals ({myTasks.filter(t => t.approvalStatus === 'PENDING_APPROVAL').length})
+            </button>
+          )}
 
           {isManager && (
             <button

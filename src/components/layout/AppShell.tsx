@@ -15,7 +15,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   if (isAuthPage) {
     return (
-      <div className="min-h-screen w-full bg-[#F5F5F7] dark:bg-[#141416] text-[#1D1D1F] dark:text-[#F5F5F7] flex flex-col justify-center items-center transition-colors">
+      <div className="min-h-screen w-full bg-[#F5F5F7] dark:bg-[#000000] text-[#1D1D1F] dark:text-[#F6F4F0] flex flex-col justify-center items-center transition-colors">
         <Suspense fallback={null}>
           <RouteProgressBar />
         </Suspense>
@@ -30,7 +30,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#F5F5F7] dark:bg-[#141416] text-[#1D1D1F] dark:text-[#F5F5F7] transition-colors">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#F5F5F7] dark:bg-[#000000] text-[#1D1D1F] dark:text-[#F6F4F0] transition-colors">
       <Suspense fallback={null}>
         <RouteProgressBar />
       </Suspense>
@@ -56,7 +56,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header onOpenMobileSidebar={() => setIsMobileSidebarOpen(true)} />
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 bg-[#F5F5F7] dark:bg-[#141416] transition-colors">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 bg-[#F5F5F7] dark:bg-[#000000] transition-colors">
           <PageTransition>
             {children}
           </PageTransition>

@@ -213,6 +213,8 @@ export interface OpportunityItem {
   currency: 'NGN' | 'USD' | 'EUR' | 'GBP';
   stage: OpportunityStage;
   source: string;
+  referredByStaffId?: string;
+  referredByStaffName?: string;
   submissionDeadline: string;
   decisionDate?: string;
   bdOwnerId: string;
@@ -725,6 +727,12 @@ export interface StaffQuery {
 }
 
 // Module 9 & 10: Payroll, Bonuses & Benefits
+export interface CustomBenefit {
+  id: string;
+  name: string;
+  amountNgn: number;
+}
+
 export interface PayrollRecord {
   id: string;
   staffId: string;
@@ -735,6 +743,7 @@ export interface PayrollRecord {
   hazardAllowanceNgn: number;
   fieldPerDiemNgn: number;
   performanceBonusNgn: number;
+  customBenefits?: CustomBenefit[];
   pensionDeductionNgn: number;
   taxPayeNgn: number;
   netPayNgn: number;

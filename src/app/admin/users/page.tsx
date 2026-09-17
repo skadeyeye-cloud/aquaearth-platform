@@ -12,12 +12,15 @@ import {
 } from 'lucide-react';
 import { UserProfile } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
+import { NewEmployeeModal } from '@/components/hr/NewEmployeeModal';
+import { haptics } from '@/lib/haptics';
 
 export default function UserManagementPage() {
   const { currentUser, allUsers, updateUserStatus, updateUserRole } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDept, setSelectedDept] = useState<string>('ALL');
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+  const [isNewEmployeeOpen, setIsNewEmployeeOpen] = useState(false);
 
   const isSuperadmin = currentUser.accessTier === 'SUPERADMIN';
   const isManager = currentUser.managementTier !== 'NONE';
@@ -58,14 +61,21 @@ export default function UserManagementPage() {
           <div className="text-[11px] font-semibold text-slate-500 tracking-tight">
             Module 14 • Access Control & Permissions
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight mt-0.5">User Access & Roles</h1>
-          <p className="text-xs text-slate-500">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mt-0.5">User Access & Roles</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             Configure functional roles, two-tier access permissions, and Management Tiers.
           </p>
         </div>
 
         {isSuperadmin && (
-          <button className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-2xs transition-all active:scale-[0.96]">
+          <button 
+            type="button"
+            onClick={() => {
+              haptics.selection();
+              setIsNewEmployeeOpen(true);
+            }}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-2xs transition-all active:scale-[0.96] cursor-pointer"
+          >
             <UserPlus className="w-3.5 h-3.5" />
             <span>Provision Staff</span>
           </button>
@@ -269,6 +279,12 @@ export default function UserManagementPage() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Provision Staff Modal */}
+      <NewEmployeeModal
+        isOpen={isNewEmployeeOpen}
+        onClose={() => setIsNewEmployeeOpen(false)}
+      />
     </div>
   );
 }
