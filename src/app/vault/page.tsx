@@ -201,24 +201,9 @@ export default function VaultPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400 tracking-tight">
-            <span>Module 15 • Sovereign Data Vault</span>
-            <span className={`text-[10px] font-bold px-2 py-0.2 rounded-md ${
-              canViewStorageBreakdown 
-                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' 
-                : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
-            }`}>
-              {canViewStorageBreakdown ? 'IT & Superadmin Infrastructure Access' : 'Scoped Personal & Project Vault'}
-            </span>
-          </div>
-          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight mt-0.5">
+          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             {canViewStorageBreakdown ? 'AquaEarth Vault & Storage Tiering' : 'My Project Vault & Raw Datasets'}
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            {canViewStorageBreakdown
-              ? 'Dedicated sovereign storage partitioning, cold archive zstd compression, and automated lifecycle governance.'
-              : 'Securely upload, view, and download raw field logs, lab assays, point clouds, and deliverable archives.'}
-          </p>
         </div>
 
         <div className="flex items-center gap-2.5">

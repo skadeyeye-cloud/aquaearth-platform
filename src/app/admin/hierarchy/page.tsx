@@ -14,24 +14,18 @@ export default function OrgHierarchyPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <div className="text-[11px] font-semibold text-slate-500 tracking-tight">
-          Module 14 & 9 • Organizational Architecture
-        </div>
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight mt-0.5">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
           Organizational Hierarchy & Reporting Lines
         </h1>
-        <p className="text-xs text-slate-500">
-          Defines Line Manager KPI visibility, task delegation scopes, and approval trees.
-        </p>
       </div>
 
       {/* Visual Org Canvas */}
-      <div className="apple-glass-card p-8 rounded-3xl flex flex-col items-center space-y-8 overflow-x-auto">
+      <div className="apple-glass-card p-8 rounded-3xl flex flex-col items-center space-y-8 overflow-x-auto border border-black/[0.06] dark:border-white/10">
         {/* Top Node */}
         <div className="flex flex-col items-center">
           <motion.div 
             whileHover={{ y: -3 }}
-            className="p-5 bg-slate-900 text-white rounded-3xl shadow-xl w-72 text-center space-y-2 relative border border-white/10"
+            className="p-5 bg-slate-900 dark:bg-white/[0.06] text-white rounded-3xl shadow-xl w-72 text-center space-y-2 relative border border-white/10"
           >
             <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-500 text-slate-950 font-extrabold text-[9px] uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-xs whitespace-nowrap shrink-0">
               Superadmin & Dept Head
@@ -48,8 +42,8 @@ export default function OrgHierarchyPage() {
             </div>
           </motion.div>
 
-          <div className="h-6 w-px bg-slate-300 my-1" />
-          <div className="w-full max-w-4xl h-px bg-slate-300" />
+          <div className="h-6 w-px bg-slate-300 dark:bg-white/20 my-1" />
+          <div className="w-full max-w-4xl h-px bg-slate-300 dark:bg-white/20" />
         </div>
 
         {/* Level 2 Nodes */}
@@ -58,42 +52,42 @@ export default function OrgHierarchyPage() {
             const subordinates = allUsers.filter(u => u.managerId === mgr.id);
             return (
               <div key={mgr.id} className="flex flex-col items-center space-y-3">
-                <div className="h-6 w-px bg-slate-300 -mt-8" />
+                <div className="h-6 w-px bg-slate-300 dark:bg-white/20 -mt-8" />
                 
                 {/* Manager Card */}
                 <motion.div 
                   whileHover={{ y: -2 }}
-                  className="p-4 bg-white/90 rounded-2xl border border-black/[0.08] text-center w-full shadow-xs space-y-1.5"
+                  className="p-4 bg-white/90 dark:bg-white/[0.04] rounded-2xl border border-black/[0.08] dark:border-white/10 text-center w-full shadow-xs space-y-1.5"
                 >
-                  <span className="text-[9px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.2 rounded-full uppercase whitespace-nowrap shrink-0">
+                  <span className="text-[9px] font-bold bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40 px-2 py-0.2 rounded-full uppercase whitespace-nowrap shrink-0">
                     {mgr.managementTier.replace('_', ' ')}
                   </span>
                   <img
                     src={mgr.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'}
                     alt={mgr.name}
-                    className="w-9 h-9 rounded-xl object-cover mx-auto ring-1 ring-black/[0.06]"
+                    className="w-9 h-9 rounded-xl object-cover mx-auto ring-1 ring-black/[0.06] dark:ring-white/10"
                   />
                   <div>
-                    <div className="font-bold text-xs text-slate-900">{mgr.name}</div>
+                    <div className="font-bold text-xs text-slate-900 dark:text-white">{mgr.name}</div>
                     <div className="text-[10px] text-slate-400 font-medium">{mgr.jobTitle}</div>
                   </div>
-                  <div className="text-[10px] text-emerald-700 font-semibold pt-1 border-t border-black/[0.04] tnum">
+                  <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold pt-1 border-t border-black/[0.04] dark:border-white/[0.06] tnum">
                     {subordinates.length} Direct Report{subordinates.length === 1 ? '' : 's'}
                   </div>
                 </motion.div>
 
                 {/* Subordinates */}
                 {subordinates.length > 0 && (
-                  <div className="w-full space-y-1.5 pl-3 border-l-2 border-dashed border-slate-200">
+                  <div className="w-full space-y-1.5 pl-3 border-l-2 border-dashed border-slate-200 dark:border-white/15">
                     {subordinates.map((sub) => (
-                      <div key={sub.id} className="p-2 bg-slate-50/80 rounded-xl border border-black/[0.04] text-left text-xs flex items-center gap-2">
+                      <div key={sub.id} className="p-2 bg-slate-50/80 dark:bg-white/[0.03] rounded-xl border border-black/[0.04] dark:border-white/[0.06] text-left text-xs flex items-center gap-2">
                         <img
                           src={sub.avatar || 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150'}
                           alt={sub.name}
                           className="w-6 h-6 rounded-lg object-cover shrink-0"
                         />
                         <div className="truncate">
-                          <div className="font-semibold text-xs text-slate-800 truncate">{sub.name}</div>
+                          <div className="font-semibold text-xs text-slate-800 dark:text-slate-200 truncate">{sub.name}</div>
                           <div className="text-[10px] text-slate-400 truncate">{sub.jobTitle}</div>
                         </div>
                       </div>

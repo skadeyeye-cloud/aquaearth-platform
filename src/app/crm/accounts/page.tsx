@@ -123,15 +123,9 @@ export default function CrmAccountsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="text-[11px] font-semibold text-[#86868B] tracking-tight">
-            Module 3 • Client & Stakeholder Relationship Management
-          </div>
-          <h1 className="text-2xl font-semibold text-[#1D1D1F] dark:text-[#F6F4F0] tracking-tight mt-0.5">
+          <h1 className="text-2xl font-semibold text-[#1D1D1F] dark:text-[#F6F4F0] tracking-tight">
             Client & Regulator CRM
           </h1>
-          <p className="text-xs text-[#86868B]">
-            Unified directory for client organizations, statutory regulators (FMEnv, NESREA, NUPRC), and institutional communication logs.
-          </p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">

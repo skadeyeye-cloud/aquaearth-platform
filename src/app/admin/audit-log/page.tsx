@@ -12,26 +12,20 @@ export default function AuditLogPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-[11px] font-semibold text-slate-500 tracking-tight">
-            Module 14 • Security & Audit
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight mt-0.5">Platform Audit Trail</h1>
-          <p className="text-xs text-slate-500">
-            Cryptographic, tamper-evident log of account actions, permission changes, and QA sign-offs.
-          </p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Platform Audit Trail</h1>
         </div>
 
-        <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-black/[0.08] hover:bg-slate-50 text-slate-700 font-semibold rounded-xl text-xs shadow-2xs transition-all active:scale-[0.96]">
+        <button className="flex items-center gap-1.5 px-3.5 py-1.5 bg-white dark:bg-white/10 border border-black/[0.08] dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 font-semibold rounded-2xl text-xs shadow-2xs transition-all active:scale-[0.96]">
           <Download className="w-3.5 h-3.5" />
           <span>Export CSV</span>
         </button>
       </div>
 
       {/* Table */}
-      <div className="apple-glass-card rounded-3xl overflow-hidden">
+      <div className="apple-glass-card rounded-3xl overflow-hidden border border-black/[0.06] dark:border-white/10">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50/60 border-b border-black/[0.05] text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+            <thead className="bg-slate-50/60 dark:bg-white/[0.03] border-b border-black/[0.05] dark:border-white/[0.06] text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
               <tr>
                 <th className="px-5 py-3">Timestamp (UTC+1)</th>
                 <th className="px-5 py-3">Actor</th>
@@ -40,24 +34,24 @@ export default function AuditLogPage() {
                 <th className="px-5 py-3">Details</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-black/[0.04] font-medium">
+            <tbody className="divide-y divide-black/[0.04] dark:divide-white/[0.06] font-medium">
               {auditLogs.map((log) => (
-                <tr key={log.id} className="hover:bg-black/[0.02] transition-colors">
-                  <td className="px-5 py-3 text-slate-400 font-mono text-[11px] tnum">
+                <tr key={log.id} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors">
+                  <td className="px-5 py-3 text-slate-400 dark:text-slate-500 font-mono text-[11px] tnum">
                     {log.timestamp}
                   </td>
-                  <td className="px-5 py-3 font-semibold text-slate-900">
+                  <td className="px-5 py-3 font-semibold text-slate-900 dark:text-white">
                     {log.actorName}
                   </td>
                   <td className="px-5 py-3">
-                    <span className="px-2 py-0.2 rounded font-mono text-[10px] font-semibold bg-slate-100 text-slate-700 border border-black/[0.06]">
+                    <span className="px-2 py-0.5 rounded-lg font-mono text-[10px] font-semibold bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 border border-black/[0.06] dark:border-white/10">
                       {log.action}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-slate-600 font-semibold">
+                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300 font-semibold">
                     {log.targetType} {log.targetId && `(#${log.targetId})`}
                   </td>
-                  <td className="px-5 py-3 text-slate-600">
+                  <td className="px-5 py-3 text-slate-600 dark:text-slate-400">
                     {log.details}
                   </td>
                 </tr>

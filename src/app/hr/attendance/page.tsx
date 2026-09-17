@@ -179,22 +179,9 @@ export default function AttendancePage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-[11px] font-semibold text-[#86868B] tracking-tight flex-wrap">
-            <span>HR & Human Capital • Module 9</span>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-black/[0.05] dark:bg-white/[0.08] text-[#1D1D1F] dark:text-[#F6F4F0] whitespace-nowrap shrink-0">
-              {canSeeEveryone ? "Company-Wide Attendance Oversight" : isManagerOrLead ? 'Department Supervisory Scope' : 'Personal Timesheet Record'}
-            </span>
-          </div>
-          <h1 className="text-2xl font-semibold text-[#1D1D1F] dark:text-[#F6F4F0] tracking-tight mt-0.5">
+          <h1 className="text-2xl font-semibold text-[#1D1D1F] dark:text-[#F6F4F0] tracking-tight">
             {isEmployeeOnly ? 'My Daily Station Attendance' : "Attendance & Clock-In Oversight"}
           </h1>
-          <p className="text-xs text-[#86868B]">
-            {canSeeEveryone
-              ? "Comprehensive multi-horizon view of all staff clock-in timestamps, station locations, and punctuality records."
-              : isEmployeeOnly
-              ? 'Biometric digital clock-in, station logging, and automatic +10 on-time KPI point sync.'
-              : 'Station verification, daily roll calls, and shift supervision across operating bases.'}
-          </p>
         </div>
 
         {/* Live Digital Clock Badge */}

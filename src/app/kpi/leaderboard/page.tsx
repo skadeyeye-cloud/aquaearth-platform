@@ -90,20 +90,9 @@ export default function KpiLeaderboardPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400 tracking-tight">
-            <span>Module 13 • Monthly Performance Engine</span>
-            <span className="text-[10px] font-bold px-2 py-0.2 rounded-md bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300">
-              {isSuperadmin ? 'Superadmin Company-Wide' : isHr ? 'HR Governance View' : isManagerOrLead ? 'Department Supervisory Scope' : 'Personal Employee Record'}
-            </span>
-          </div>
-          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight mt-0.5">
+          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             {isEmployeeOnly ? 'My KPI & Appraisal Score' : 'Performance KPI Leaderboard'}
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            {isEmployeeOnly 
-              ? 'Confidential metrics calculated from your punctual clock-ins, completed tasks, and field submissions. Click any score for full period audit breakdown.'
-              : 'Appraisal scores and delivery metrics for staff under your governance. Click any personnel to inspect their score breakdown and deliverables.'}
-          </p>
         </div>
 
         {/* Controls */}

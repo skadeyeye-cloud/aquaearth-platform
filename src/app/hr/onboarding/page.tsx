@@ -176,15 +176,9 @@ export default function OnboardingPipelinePage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="text-[11px] font-semibold text-slate-500 tracking-tight">
-            Module 9B • Recruitment Funnel & Candidate Dossiers
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mt-0.5">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
             Recruitment & Onboarding Pipeline
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            End-to-end recruitment funnel: Multi-stage interviews, notes carry-forward, candidate Vault dossier auto-binding, and 1-click active staff conversion.
-          </p>
         </div>
 
         <button

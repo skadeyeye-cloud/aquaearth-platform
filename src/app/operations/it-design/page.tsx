@@ -181,15 +181,9 @@ export default function ItDesignOperationsPage() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="text-[11px] font-semibold text-slate-500 tracking-tight">
-            Module 12 • Digital Infrastructure, Hardware Custody & Access Control
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight mt-0.5">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
             IT Operations & Design Studio
           </h1>
-          <p className="text-xs text-slate-500">
-            Hardware lifecycle register, RBAC access governance, cryptographic password resets, immutable audit logs, and GIS queues.
-          </p>
         </div>
 
         {/* Tab Controls */}

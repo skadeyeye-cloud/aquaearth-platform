@@ -230,20 +230,9 @@ export default function FinancePage() {
       {/* Header with Active Persona Badge */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-medium text-[#86868B] dark:text-[#A1A1A6] tracking-tight">
-              Module 10 • Financial Governance & Invoicing
-            </span>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
-              Official SOP Enforced
-            </span>
-          </div>
-          <h1 className="text-2xl font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight mt-1">
+          <h1 className="text-2xl font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
             Budget, Invoice & Finance Governance
           </h1>
-          <p className="text-xs text-[#86868B] dark:text-[#A1A1A6] mt-0.5">
-            Multi-stage collation, CFO vetting, Dr. K / Bibi executive authorization, and dual ₦300,000 imprest funds.
-          </p>
         </div>
 
         {/* Action Buttons & Persona Stamping */}

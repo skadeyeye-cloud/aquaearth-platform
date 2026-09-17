@@ -103,18 +103,7 @@ export default function HRStaffPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-semibold text-slate-500 tracking-tight">
-              Module 9 • Human Resources & Competency
-            </span>
-            <span className="text-[10px] font-bold px-2 py-0.2 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 whitespace-nowrap shrink-0">
-              Enterprise HR
-            </span>
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mt-0.5">Human Capital & Staff Operations</h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Employee provisioning, disciplinary queries, shared payroll ledger, and professional competency credentials.
-          </p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Human Capital & Staff Operations</h1>
         </div>
 
         {/* Tab Controls & Primary Actions */}

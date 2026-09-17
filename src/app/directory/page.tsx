@@ -97,20 +97,9 @@ export default function DirectoryPage() {
       {/* Header & Main Actions */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-semibold text-slate-500 tracking-tight">
-              Module 1 • Staff Directory & Hierarchy
-            </span>
-            <span className="text-[10px] font-bold px-2 py-0.2 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 whitespace-nowrap shrink-0">
-              PRD Req 11 & 14
-            </span>
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mt-0.5">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
             Staff Directory & Org Chart
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Staff profiles, reporting lines, competencies, and automated CSV roster synchronization.
-          </p>
         </div>
 
         {/* Top Controls: View Switcher & Action Buttons */}

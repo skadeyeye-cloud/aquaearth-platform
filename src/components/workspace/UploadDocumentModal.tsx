@@ -150,21 +150,9 @@ export default function UploadDocumentModal({ isOpen, onClose, onSuccess }: Uplo
         {/* Modal Header */}
         <div className="flex items-start justify-between gap-3 border-b border-black/[0.05] dark:border-white/[0.08] pb-4">
           <div>
-            <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 whitespace-nowrap shrink-0">
-                Module 6 • Direct Intake
-              </span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 whitespace-nowrap shrink-0 inline-flex items-center gap-1">
-                <HardDrive className="w-2.5 h-2.5" />
-                Active Vault Staging
-              </span>
-            </div>
             <h2 className="text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
               Upload Document to Workspace
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Upload technical deliverables, Word/PDF reports, or CAD/GIS maps directly into the sovereign archive.
-            </p>
           </div>
           <button
             type="button"
@@ -307,7 +295,7 @@ export default function UploadDocumentModal({ isOpen, onClose, onSuccess }: Uplo
             <div className="space-y-0.5 text-[11px] leading-relaxed">
               <span className="font-bold">Automated ISO/FMEnv Watermarking:</span>
               <p className="text-amber-800/80 dark:text-amber-300/80">
-                Deliverables in draft stage will automatically carry the cryptographic <b>"DRAFT - FOR INTERNAL REVIEW ONLY"</b> watermark until 4-stage review is completed in Module 7.
+                Deliverables in draft stage will automatically carry the cryptographic <b>"DRAFT - FOR INTERNAL REVIEW ONLY"</b> watermark until 4-stage review is completed in QA review.
               </p>
             </div>
           </div>

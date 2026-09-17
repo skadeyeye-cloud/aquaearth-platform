@@ -215,6 +215,8 @@ interface AuthContextType {
   assignHardwareAsset: (assetId: string, staffId: string, notes?: string) => void;
   retrieveHardwareAsset: (assetId: string, reason: string) => void;
   resetUserPassword: (userId: string) => { tempToken: string; message: string };
+  updateUserProfile: (userId: string, data: Partial<UserProfile>) => { success: boolean; message: string };
+  requestPasswordChange: (userId: string, details: { currentPassword?: string; newPassword?: string; requestType: 'DIRECT' | 'ADMIN_RESET' }) => { success: boolean; message: string };
   createOpportunity: (opp: Omit<OpportunityItem, 'id' | 'createdAt'>) => void;
   updateOpportunityStage: (oppId: string, newStage: OpportunityStage, reason?: string, competitor?: string) => { success: boolean; requiresApproval?: boolean };
   approveHighValueBid: (oppId: string) => void;
@@ -3210,6 +3212,79 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   };
 
+  const updateUserProfile = (userId: string, data: Partial<UserProfile>): { success: boolean; message: string } => {
+    setAllUsers(prev => prev.map(u => {
+      if (u.id === userId) {
+        return { ...u, ...data };
+      }
+      return u;
+    }));
+
+    if (currentUser.id === userId) {
+      setCurrentUser(prev => ({ ...prev, ...data }));
+    }
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'USER_PROFILE_UPDATED',
+      targetType: 'User Profile',
+      targetId: userId,
+      details: `Profile fields updated: ${Object.keys(data).join(', ')}`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+
+    return {
+      success: true,
+      message: 'Profile information updated and synced.'
+    };
+  };
+
+  const requestPasswordChange = (
+    userId: string, 
+    details: { currentPassword?: string; newPassword?: string; requestType: 'DIRECT' | 'ADMIN_RESET' }
+  ): { success: boolean; message: string } => {
+    const targetUser = allUsers.find(u => u.id === userId) || currentUser;
+    const isDirect = details.requestType === 'DIRECT';
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: isDirect ? 'PASSWORD_CHANGE_DIRECT' : 'PASSWORD_RESET_REQUESTED',
+      targetType: 'Security Credentials',
+      targetId: userId,
+      details: isDirect
+        ? `Direct password update confirmed for ${targetUser.name} (${targetUser.email})`
+        : `Formal password reset dispatch link requested by ${currentUser.name} for ${targetUser.email}`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      category: 'SYSTEM',
+      title: isDirect ? 'Password Changed Successfully' : 'Password Reset Link Dispatched',
+      message: isDirect
+        ? 'Your account password has been updated securely and all active sessions re-validated.'
+        : `An official password reset authorization email was dispatched to ${targetUser.email}.`,
+      isRead: false,
+      priority: 'HIGH',
+      timestamp: 'Just now',
+      actionUrl: '/settings'
+    };
+    setNotifications(prev => [notif, ...prev]);
+
+    return {
+      success: true,
+      message: isDirect
+        ? 'Password successfully changed and secured.'
+        : `A password reset token has been dispatched to ${targetUser.email}. Please check your corporate inbox.`
+    };
+  };
+
   return (
     <AuthContext.Provider value={{
       theme,
@@ -3222,6 +3297,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       kpiConfig,
       updateKpiConfig,
       resetKpiConfigToDefault,
+      updateUserProfile,
+      requestPasswordChange,
       tasks,
       tickets,
       leaveRequests,

@@ -26,7 +26,8 @@ import {
   Layers, 
   BarChart3,
   CalendarCheck,
-  Shield
+  Shield,
+  Settings
 } from 'lucide-react';
 
 interface NavItem {
@@ -84,6 +85,7 @@ export default function Sidebar({ onMobileItemClick }: { onMobileItemClick?: () 
         { name: 'My Tasks', href: '/tasks', icon: CheckCircle2 },
         { name: 'Daily Attendance', href: '/hr/attendance', icon: CalendarCheck },
         { name: 'Staff Directory', href: '/directory', icon: Compass },
+        { name: 'Account Settings', href: '/settings', icon: Settings },
       ]
     },
     {
@@ -205,25 +207,37 @@ export default function Sidebar({ onMobileItemClick }: { onMobileItemClick?: () 
       </div>
 
       {/* User Scoping Pill */}
-      <div className="p-3.5 border-t border-black/[0.06] dark:border-white/[0.08] bg-black/[0.01] dark:bg-white/[0.02] text-xs">
-        <div className="flex items-center gap-2.5">
+      <div className="p-3 border-t border-black/[0.06] dark:border-white/[0.08] bg-black/[0.01] dark:bg-white/[0.02] text-xs">
+        <Link
+          href="/settings"
+          prefetch={true}
+          onClick={() => {
+            haptics.selection();
+            if (onMobileItemClick) onMobileItemClick();
+          }}
+          className="group flex items-center gap-2.5 p-1.5 -m-1.5 rounded-2xl hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
+          title="Open Account Settings"
+        >
           <img
             src={currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
             alt={currentUser.name}
-            className="w-7 h-7 rounded-xl object-cover ring-1 ring-black/[0.06] dark:ring-white/[0.08] shrink-0"
+            className="w-7 h-7 rounded-xl object-cover ring-1 ring-black/[0.06] dark:ring-white/[0.08] shrink-0 group-hover:ring-emerald-500 transition-all"
           />
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-1">
-              <span className="font-semibold text-xs text-[#1D1D1F] dark:text-[#F5F5F7] truncate">{currentUser.name}</span>
-              <span className="font-medium text-[9.5px] bg-black/[0.05] dark:bg-white/[0.1] text-[#1D1D1F] dark:text-[#F5F5F7] px-1.5 py-0.2 rounded-md whitespace-nowrap shrink-0">
+              <span className="font-semibold text-xs text-[#1D1D1F] dark:text-[#F5F5F7] group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors truncate">
+                {currentUser.name}
+              </span>
+              <span className="font-medium text-[9px] bg-black/[0.05] dark:bg-white/[0.1] text-[#1D1D1F] dark:text-[#F5F5F7] px-1.5 py-0.2 rounded-md whitespace-nowrap shrink-0">
                 {role.replace(/_/g, ' ')}
               </span>
             </div>
-            <div className="text-[10.5px] text-[#86868B] dark:text-[#A1A1A6] truncate">
+            <div className="text-[10px] text-[#86868B] dark:text-[#A1A1A6] truncate">
               {currentUser.departmentName || 'General Operations'}
             </div>
           </div>
-        </div>
+          <Settings className="w-3.5 h-3.5 text-[#86868B] dark:text-[#8E8E93] group-hover:text-[#1D1D1F] dark:group-hover:text-white transition-colors shrink-0" />
+        </Link>
       </div>
     </aside>
   );

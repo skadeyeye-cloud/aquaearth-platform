@@ -43,15 +43,9 @@ export default function CompliancePage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="text-[11px] font-semibold text-slate-500 tracking-tight">
-            Module 8 • Nigerian Statutory Regulatory & Permitting Governance
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight mt-0.5">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
             Statutory Compliance Tracker
           </h1>
-          <p className="text-xs text-slate-500">
-            Multi-agency regulatory checklists across FMEnv, NESREA, NUPRC (EGASPIN), and State Ministries with automated renewal cycles.
-          </p>
         </div>
 
         <div className="flex items-center gap-2">

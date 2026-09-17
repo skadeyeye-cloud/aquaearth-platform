@@ -39,7 +39,7 @@ export default function QaReviewPage() {
         <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto">
           <Lock className="w-6 h-6" />
         </div>
-        <h2 className="text-base font-bold text-slate-900 dark:text-white">Module Access Restricted (HR Scoping Barrier)</h2>
+        <h2 className="text-base font-bold text-slate-900 dark:text-white">Access Restricted (HR Scoping Barrier)</h2>
         <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
           In accordance with AquaEarth enterprise governance rules, Human Resources personnel are barred from viewing technical deliverables, QA peer reviews, and laboratory validation dockets.
         </p>
@@ -78,15 +78,9 @@ export default function QaReviewPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="text-[11px] font-semibold text-slate-500 tracking-tight">
-            Module 7 • Technical QA/QC Review & Hard Release Gate
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight mt-0.5">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
             QA Review Pipeline
           </h1>
-          <p className="text-xs text-slate-500">
-            Rigorous 4-stage scientific sign-off chains, 48h SLA turnaround tracking, and tamper-evident release certificates.
-          </p>
         </div>
 
         <div className="flex items-center gap-2">

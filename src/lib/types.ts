@@ -37,6 +37,8 @@ export interface UserProfile {
   createdAt: string;
   phone?: string;
   location?: string;
+  bio?: string;
+  preferredTheme?: 'light' | 'dark' | 'system';
   skills?: string[];
   certificationsList?: string[];
   emergencyContact?: {

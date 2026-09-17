@@ -53,15 +53,9 @@ export default function LeaveManagementPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="text-[11px] font-semibold text-slate-500 tracking-tight">
-            Module 9 • Time-Off & Capacity Governance
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mt-0.5">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
             Staff Leave Approvals
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Dual approval workflow: HR and Line Managers can approve leave for direct reports, auto-stamping records with approver verification metadata.
-          </p>
         </div>
 
         {/* View Mode Toggle */}

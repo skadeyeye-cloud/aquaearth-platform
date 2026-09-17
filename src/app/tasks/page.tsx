@@ -139,18 +139,9 @@ export default function MyTasksPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400 tracking-tight">
-            <span>Workflow Engine • Task & Approval Center</span>
-            <span className="text-[10px] font-bold px-2 py-0.2 rounded-md bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-slate-200">
-              {currentUser.jobTitle}
-            </span>
-          </div>
-          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight mt-0.5">
+          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             My Tasks & Approvals
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Create tasks for Line Manager sign-off, update completion milestones, and collaborate via timestamped comment feeds.
-          </p>
         </div>
 
         <div className="flex items-center gap-2.5">

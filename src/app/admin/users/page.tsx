@@ -58,13 +58,7 @@ export default function UserManagementPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="text-[11px] font-semibold text-slate-500 tracking-tight">
-            Module 14 • Access Control & Permissions
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mt-0.5">User Access & Roles</h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Configure functional roles, two-tier access permissions, and Management Tiers.
-          </p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">User Access & Roles</h1>
         </div>
 
         {isSuperadmin && (

@@ -11,6 +11,7 @@ import {
   Search, 
   Bell, 
   ChevronDown, 
+  ChevronRight,
   LogOut, 
   Sun, 
   Moon, 
@@ -32,7 +33,8 @@ import {
   Layers,
   Receipt,
   Shield,
-  Lock
+  Lock,
+  Settings
 } from 'lucide-react';
 import NotificationCenter from './NotificationCenter';
 import BiometricAuthModal from '@/components/auth/BiometricAuthModal';
@@ -83,6 +85,7 @@ export default function Header({ onOpenMobileSidebar }: HeaderProps) {
     if (path.startsWith('/operations/it-design')) return { section: 'Operational Support', title: 'IT & Design Studio', icon: Layers };
     if (path.startsWith('/finance')) return { section: 'Operational Support', title: 'Milestone Finance', icon: Receipt };
     if (path.startsWith('/admin')) return { section: 'Administration', title: 'User Access & Roles', icon: Lock };
+    if (path.startsWith('/settings')) return { section: 'Preferences', title: 'Account Settings', icon: Settings };
     return { section: 'Operations', title: 'Platform Hub', icon: LayoutGrid };
   };
 
@@ -364,8 +367,26 @@ export default function Header({ onOpenMobileSidebar }: HeaderProps) {
                     ))}
                   </div>
 
-                  {/* Biometric Quick Re-auth */}
+                  {/* Profile & Settings Navigation */}
                   <div className="pt-1.5 border-t border-black/[0.05] dark:border-white/[0.08]">
+                    <Link
+                      href="/settings"
+                      onClick={() => {
+                        haptics.selection();
+                        setIsDropdownOpen(false);
+                      }}
+                      className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-slate-800 dark:text-slate-200 font-semibold transition-all text-xs active:scale-[0.97] cursor-pointer mb-1 whitespace-nowrap shrink-0"
+                    >
+                      <div className="flex items-center gap-2 whitespace-nowrap">
+                        <Settings className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                        <span>Account Settings & Profile</span>
+                      </div>
+                      <ChevronRight className="w-3 h-3 text-slate-400" />
+                    </Link>
+                  </div>
+
+                  {/* Biometric Quick Re-auth */}
+                  <div className="pt-1 border-t border-black/[0.05] dark:border-white/[0.08]">
                     <button
                       type="button"
                       onClick={() => {

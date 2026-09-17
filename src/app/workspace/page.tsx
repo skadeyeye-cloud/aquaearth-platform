@@ -144,15 +144,7 @@ export default function MyWorkspacePage() {
       {/* Apple Header Canvas */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 tracking-tight flex items-center gap-2">
-            <span>AquaEarth Workspace • {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
-            {isAdminOrLeadership && (
-              <span className="text-[10px] font-bold px-2 py-0.2 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                Executive Governance Mode
-              </span>
-            )}
-          </div>
-          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight mt-0.5">
+          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Good day, {currentUser.name.split(' ')[0]}
           </h1>
         </div>
@@ -630,9 +622,6 @@ export default function MyWorkspacePage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-black/[0.05] dark:border-white/[0.08]">
           <div>
             <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 whitespace-nowrap shrink-0">
-                Module 6 • Personal Vault Hub
-              </span>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 whitespace-nowrap shrink-0 inline-flex items-center gap-1">
                 <HardDrive className="w-2.5 h-2.5" />
                 Active Vault Staging

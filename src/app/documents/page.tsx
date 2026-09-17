@@ -92,15 +92,9 @@ export default function DocumentsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="text-[11px] font-semibold text-slate-500 tracking-tight">
-            Module 6 • Engineering & Scientific Document Repository
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight mt-0.5">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
             Documents & Knowledge Base
           </h1>
-          <p className="text-xs text-slate-500">
-            Version-controlled repository for technical reports, bathymetric charts, lab certificates, and FMEnv regulatory filings.
-          </p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -289,12 +283,11 @@ export default function DocumentsPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsQaSubmitOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-md" />
             <motion.div initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} className="relative bg-white rounded-3xl shadow-2xl max-w-md w-full border border-black/[0.08] p-6 space-y-4 z-10 text-xs">
-              <div className="flex items-center justify-between border-b border-black/[0.05] pb-2">
+              <div className="flex items-center justify-between border-b border-black/[0.05] dark:border-white/10 pb-2">
                 <div>
-                  <span className="text-[10px] font-bold text-purple-600 uppercase">PRD Module 7 Gate</span>
-                  <h3 className="text-sm font-bold text-slate-900">Initiate QA Review Chain</h3>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Initiate QA Review Chain</h3>
                 </div>
-                <button onClick={() => setIsQaSubmitOpen(false)} className="text-slate-400 hover:text-slate-700">&times;</button>
+                <button onClick={() => setIsQaSubmitOpen(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-white">&times;</button>
               </div>
 
               <div className="p-3 bg-purple-50 rounded-2xl border border-purple-200 text-purple-900 text-[11px] space-y-1">

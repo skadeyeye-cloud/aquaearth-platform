@@ -98,7 +98,7 @@ export default function ProjectsPage() {
         <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto">
           <Lock className="w-6 h-6" />
         </div>
-        <h2 className="text-base font-bold text-slate-900 dark:text-white">Module Access Restricted (HR Scoping Barrier)</h2>
+        <h2 className="text-base font-bold text-slate-900 dark:text-white">Access Restricted (HR Scoping Barrier)</h2>
         <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
           In accordance with AquaEarth enterprise data isolation policy, Human Resources personnel are restricted from viewing running client projects, engineering milestones, and commercial project telemetry.
         </p>
@@ -254,15 +254,9 @@ export default function ProjectsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="text-[11px] font-semibold text-[#86868B] tracking-tight">
-            Module 4 • Multi-Disciplinary Project Delivery
-          </div>
-          <h1 className="text-2xl font-semibold text-[#1D1D1F] dark:text-[#F6F4F0] tracking-tight mt-0.5">
+          <h1 className="text-2xl font-semibold text-[#1D1D1F] dark:text-[#F6F4F0] tracking-tight">
             Projects & Milestones
           </h1>
-          <p className="text-xs text-[#86868B]">
-            Multi-workstream execution (ESIA, Geotech, Metocean, GIS), automated health scoring, and task allocation.
-          </p>
         </div>
 
         {/* Action Buttons */}
@@ -318,7 +312,7 @@ export default function ProjectsPage() {
           <div className="text-xl font-semibold text-cyan-600 dark:text-cyan-400 font-mono tnum">
             {projects.filter(p => p.vaultStorageTier === 'COLD_ARCHIVE').length} Archived
           </div>
-          <div className="text-[10px] text-[#86868B] font-medium">Data compressed in Module 15</div>
+          <div className="text-[10px] text-[#86868B] font-medium">Data compressed in Sovereign Vault</div>
         </div>
       </div>
 

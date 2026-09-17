@@ -36,7 +36,7 @@ export default function FieldCapturePage() {
         <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto">
           <Lock className="w-6 h-6" />
         </div>
-        <h2 className="text-base font-bold text-slate-900 dark:text-white">Module Access Restricted (HR Scoping Barrier)</h2>
+        <h2 className="text-base font-bold text-slate-900 dark:text-white">Access Restricted (HR Scoping Barrier)</h2>
         <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
           Human Resources personnel are barred from accessing raw geotechnical and environmental field capture records.
         </p>
@@ -125,15 +125,9 @@ export default function FieldCapturePage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="text-[11px] font-semibold text-slate-500 tracking-tight">
-            Module 5 • Offline-First Mobile Data Capture Engine
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight mt-0.5">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
             Field Data & In-Situ Sampling
           </h1>
-          <p className="text-xs text-slate-500">
-            Offline borehole logs, water quality probing, automated differential GPS watermarking, and QA immutability.
-          </p>
         </div>
 
         {/* Action Controls & Offline Toggle */}
@@ -204,7 +198,7 @@ export default function FieldCapturePage() {
       <div className="apple-glass-card rounded-3xl overflow-hidden">
         <div className="px-6 py-3.5 border-b border-black/[0.05] flex items-center justify-between">
           <h2 className="text-xs font-bold text-slate-900">Live Field Transmission Stream</h2>
-          <span className="text-[11px] text-slate-400 font-mono tnum">Module 5 $\rightarrow$ Module 6 Integration</span>
+          <span className="text-[11px] text-slate-400 dark:text-[#A39E93] font-mono tnum">Live Repository Sync</span>
         </div>
 
         <div className="divide-y divide-black/[0.04]">
