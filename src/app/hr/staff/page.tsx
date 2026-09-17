@@ -162,12 +162,12 @@ export default function HRStaffPage() {
       </div>
 
       {/* Apple-Style Navigation Tabs */}
-      <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-semibold overflow-x-auto">
+      <div className="flex items-center gap-1 p-1 bg-black/[0.04] dark:bg-[#121214] border border-black/[0.04] dark:border-white/[0.08] rounded-2xl text-xs font-semibold overflow-x-auto select-none">
         <button
           type="button"
           onClick={() => { haptics.selection(); setActiveTab('STAFF'); }}
-          className={`px-3 py-1.5 rounded-lg transition-all whitespace-nowrap ${
-            activeTab === 'STAFF' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+          className={`px-3.5 py-1.5 rounded-xl transition-all whitespace-nowrap cursor-pointer ${
+            activeTab === 'STAFF' ? 'bg-white dark:bg-[#1C1C1E] text-slate-900 dark:text-white shadow-xs font-bold' : 'text-slate-600 dark:text-[#D1CDC7] hover:text-slate-900 dark:hover:text-white hover:bg-black/[0.02] dark:hover:bg-white/[0.04]'
           }`}
         >
           Staff Roster ({allUsers.length})
@@ -176,8 +176,8 @@ export default function HRStaffPage() {
         <button
           type="button"
           onClick={() => { haptics.selection(); setActiveTab('QUERIES'); }}
-          className={`px-3 py-1.5 rounded-lg transition-all whitespace-nowrap flex items-center gap-1.5 ${
-            activeTab === 'QUERIES' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+          className={`px-3.5 py-1.5 rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+            activeTab === 'QUERIES' ? 'bg-white dark:bg-[#1C1C1E] text-slate-900 dark:text-white shadow-xs font-bold' : 'text-slate-600 dark:text-[#D1CDC7] hover:text-slate-900 dark:hover:text-white hover:bg-black/[0.02] dark:hover:bg-white/[0.04]'
           }`}
         >
           <span>Disciplinary Queries ({staffQueries.length})</span>
@@ -189,8 +189,8 @@ export default function HRStaffPage() {
         <button
           type="button"
           onClick={() => { haptics.selection(); setActiveTab('PAYROLL'); }}
-          className={`px-3 py-1.5 rounded-lg transition-all whitespace-nowrap ${
-            activeTab === 'PAYROLL' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+          className={`px-3.5 py-1.5 rounded-xl transition-all whitespace-nowrap cursor-pointer ${
+            activeTab === 'PAYROLL' ? 'bg-white dark:bg-[#1C1C1E] text-slate-900 dark:text-white shadow-xs font-bold' : 'text-slate-600 dark:text-[#D1CDC7] hover:text-slate-900 dark:hover:text-white hover:bg-black/[0.02] dark:hover:bg-white/[0.04]'
           }`}
         >
           Payroll & Benefits ({payrollRecords.length})
@@ -199,8 +199,8 @@ export default function HRStaffPage() {
         <button
           type="button"
           onClick={() => { haptics.selection(); setActiveTab('CERTS'); }}
-          className={`px-3 py-1.5 rounded-lg transition-all whitespace-nowrap ${
-            activeTab === 'CERTS' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+          className={`px-3.5 py-1.5 rounded-xl transition-all whitespace-nowrap cursor-pointer ${
+            activeTab === 'CERTS' ? 'bg-white dark:bg-[#1C1C1E] text-slate-900 dark:text-white shadow-xs font-bold' : 'text-slate-600 dark:text-[#D1CDC7] hover:text-slate-900 dark:hover:text-white hover:bg-black/[0.02] dark:hover:bg-white/[0.04]'
           }`}
         >
           Certifications ({certifications.length})
@@ -209,8 +209,8 @@ export default function HRStaffPage() {
         <button
           type="button"
           onClick={() => { haptics.selection(); setActiveTab('QUARTERLY_REPORT'); }}
-          className={`px-3 py-1.5 rounded-lg transition-all whitespace-nowrap ${
-            activeTab === 'QUARTERLY_REPORT' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+          className={`px-3.5 py-1.5 rounded-xl transition-all whitespace-nowrap cursor-pointer ${
+            activeTab === 'QUARTERLY_REPORT' ? 'bg-white dark:bg-[#1C1C1E] text-slate-900 dark:text-white shadow-xs font-bold' : 'text-slate-600 dark:text-[#D1CDC7] hover:text-slate-900 dark:hover:text-white hover:bg-black/[0.02] dark:hover:bg-white/[0.04]'
           }`}
         >
           Auto HR Report
@@ -221,23 +221,23 @@ export default function HRStaffPage() {
       {activeTab === 'STAFF' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <div className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+            <div className="text-xs font-semibold text-slate-700 dark:text-[#F6F4F0]">
               Active Workforce Directory ({allUsers.length} staff members)
             </div>
             <button
               type="button"
               onClick={handleExportRoster}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold border border-slate-200 dark:border-slate-700 shadow-2xs transition-all active:scale-[0.98] cursor-pointer whitespace-nowrap shrink-0"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white dark:bg-[#141416] hover:bg-slate-100 dark:hover:bg-[#1C1C1F] text-slate-700 dark:text-[#F6F4F0] text-xs font-semibold border border-slate-200 dark:border-white/[0.08] shadow-2xs transition-all active:scale-[0.98] cursor-pointer whitespace-nowrap shrink-0"
             >
-              <Download className="w-3 h-3 text-slate-400" />
+              <Download className="w-3 h-3 text-slate-400 dark:text-[#A39E93]" />
               <span>Export CSV</span>
             </button>
           </div>
 
-          <div className="apple-glass-card rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+          <div className="apple-glass-card rounded-3xl overflow-hidden bg-white dark:bg-[#0C0C0D] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50/60 dark:bg-slate-800/60 border-b border-black/[0.05] dark:border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+                <thead className="bg-slate-50/60 dark:bg-white/[0.03] border-b border-black/[0.05] dark:border-white/[0.08] text-slate-500 dark:text-[#A39E93] font-semibold uppercase tracking-wider text-[10px]">
                   <tr>
                     <th className="px-5 py-3">Employee</th>
                     <th className="px-5 py-3">Department</th>
@@ -247,14 +247,14 @@ export default function HRStaffPage() {
                     <th className="px-5 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-black/[0.04] dark:divide-slate-800 font-medium">
+                <tbody className="divide-y divide-black/[0.04] dark:divide-white/[0.06] font-medium">
                   {allUsers.map((user) => {
                     const isSuspended = (user.status as string) === 'SUSPENDED' || (user.status as string) === 'DEACTIVATED';
 
                     return (
                       <tr 
                         key={user.id}
-                        className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
+                        className="hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition-colors"
                       >
                         <td className="px-5 py-3">
                           <div 
@@ -267,15 +267,15 @@ export default function HRStaffPage() {
                               className="w-8 h-8 rounded-xl object-cover ring-1 ring-black/[0.06] dark:ring-white/[0.1]"
                             />
                             <div>
-                              <div className="font-semibold text-xs text-slate-900 dark:text-white group-hover:text-emerald-600 transition-colors">
+                              <div className="font-semibold text-xs text-slate-900 dark:text-[#F6F4F0] group-hover:text-emerald-600 transition-colors">
                                 {user.name}
                               </div>
-                              <div className="text-[10px] text-slate-400">{user.jobTitle}</div>
+                              <div className="text-[10px] text-slate-400 dark:text-[#A39E93]">{user.jobTitle}</div>
                             </div>
                           </div>
                         </td>
-                        <td className="px-5 py-3 text-slate-600 dark:text-slate-300 text-[11px]">{user.departmentName || 'Operations'}</td>
-                        <td className="px-5 py-3 text-slate-600 dark:text-slate-300 text-[11px]">
+                        <td className="px-5 py-3 text-slate-600 dark:text-[#D1CDC7] text-[11px]">{user.departmentName || 'Operations'}</td>
+                        <td className="px-5 py-3 text-slate-600 dark:text-[#D1CDC7] text-[11px]">
                           {user.managerName ? `Reports to ${user.managerName}` : 'Executive Leadership'}
                         </td>
                         <td className="px-5 py-3">
@@ -354,7 +354,7 @@ export default function HRStaffPage() {
               const hasResponse = !!query.staffResponse;
 
               return (
-                <div key={query.id} className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs space-y-3">
+                <div key={query.id} className="p-5 rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-white dark:bg-[#0C0C0D] shadow-xs space-y-3">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5">
                       <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900/60">
@@ -365,7 +365,7 @@ export default function HRStaffPage() {
                     <div className="flex items-center gap-2">
                       <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                         isResolved 
-                          ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' 
+                          ? 'bg-slate-100 text-slate-700 dark:bg-white/[0.08] dark:text-[#D1CDC7]' 
                           : hasResponse 
                           ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
                           : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
@@ -386,9 +386,9 @@ export default function HRStaffPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl">
-                    <div>Staff Member: <strong className="text-slate-800 dark:text-slate-200">{query.staffName}</strong> ({query.staffDepartment})</div>
-                    <div>Issued By: <strong className="text-slate-800 dark:text-slate-200">{query.issuedByName}</strong> on {query.issuedDate}</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-slate-500 dark:text-[#A39E93] bg-slate-50 dark:bg-white/[0.03] p-3 rounded-xl border border-black/[0.03] dark:border-white/[0.05]">
+                    <div>Staff Member: <strong className="text-slate-800 dark:text-white">{query.staffName}</strong> ({query.staffDepartment})</div>
+                    <div>Issued By: <strong className="text-slate-800 dark:text-white">{query.issuedByName}</strong> on {query.issuedDate}</div>
                     <div>Response Deadline: <strong className="text-rose-600 dark:text-rose-400">{query.responseDeadline}</strong></div>
                   </div>
 
@@ -515,9 +515,9 @@ export default function HRStaffPage() {
         return (
           <div className="space-y-4">
             {/* Monthly Horizon Switcher & Controls */}
-            <div className="apple-glass-card p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="apple-glass-card p-3 rounded-2xl bg-white dark:bg-[#0C0C0D] border border-black/[0.06] dark:border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1 shrink-0 px-1">
+                <span className="text-[11px] font-bold text-slate-500 dark:text-[#A39E93] uppercase tracking-wider flex items-center gap-1 shrink-0 px-1">
                   <Calendar className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                   Cycle:
                 </span>
@@ -535,14 +535,14 @@ export default function HRStaffPage() {
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                         isSelected
                           ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs'
-                          : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+                          : 'bg-slate-100 hover:bg-slate-200 dark:bg-[#141416] dark:hover:bg-[#1C1C1F] text-slate-700 dark:text-[#D1CDC7]'
                       }`}
                     >
                       {formatMonthLabel(m)}
                       <span className={`ml-1.5 text-[10px] px-1.5 py-0.2 rounded-full ${
                         isSelected 
                           ? 'bg-white/20 dark:bg-black/20 text-white dark:text-slate-900' 
-                          : 'bg-black/[0.05] dark:bg-white/[0.08] text-slate-500'
+                          : 'bg-black/[0.05] dark:bg-white/[0.08] text-slate-500 dark:text-[#A39E93]'
                       }`}>
                         {countForMonth}
                       </span>
@@ -565,47 +565,47 @@ export default function HRStaffPage() {
 
             {/* Metric Overview Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-              <div className="apple-glass-card p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
-                <div className="text-[10px] uppercase font-bold text-slate-400">Total Net Payroll ({formatMonthLabel(selectedPayrollMonth)})</div>
+              <div className="apple-glass-card p-4 rounded-2xl bg-white dark:bg-[#0C0C0D] border border-black/[0.06] dark:border-white/[0.08] space-y-1">
+                <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-[#A39E93]">Total Net Payroll ({formatMonthLabel(selectedPayrollMonth)})</div>
                 <div className="text-xl font-extrabold text-slate-900 dark:text-white tnum">
                   ₦{(totalNet / 1000000).toFixed(2)}M
                 </div>
-                <div className="text-[10px] text-slate-500">{currentMonthRecords.length} staff records</div>
+                <div className="text-[10px] text-slate-500 dark:text-[#A39E93]">{currentMonthRecords.length} staff records</div>
               </div>
 
-              <div className="apple-glass-card p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
-                <div className="text-[10px] uppercase font-bold text-slate-400">Hazard & Field Per Diem</div>
+              <div className="apple-glass-card p-4 rounded-2xl bg-white dark:bg-[#0C0C0D] border border-black/[0.06] dark:border-white/[0.08] space-y-1">
+                <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-[#A39E93]">Hazard & Field Per Diem</div>
                 <div className="text-xl font-extrabold text-amber-600 dark:text-amber-400 tnum">
                   ₦{(totalAllowances / 1000).toFixed(0)}k
                 </div>
-                <div className="text-[10px] text-slate-500">Offshore & field allowances</div>
+                <div className="text-[10px] text-slate-500 dark:text-[#A39E93]">Offshore & field allowances</div>
               </div>
 
-              <div className="apple-glass-card p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
-                <div className="text-[10px] uppercase font-bold text-slate-400">Bonuses & Custom Benefits</div>
+              <div className="apple-glass-card p-4 rounded-2xl bg-white dark:bg-[#0C0C0D] border border-black/[0.06] dark:border-white/[0.08] space-y-1">
+                <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-[#A39E93]">Bonuses & Custom Benefits</div>
                 <div className="text-xl font-extrabold text-purple-600 dark:text-purple-400 tnum">
                   ₦{((totalBonuses + totalCustomBenefits) / 1000).toFixed(0)}k
                 </div>
-                <div className="text-[10px] text-slate-500">
+                <div className="text-[10px] text-slate-500 dark:text-[#A39E93]">
                   ₦{(totalBonuses / 1000).toFixed(0)}k bonus + ₦{(totalCustomBenefits / 1000).toFixed(0)}k benefits
                 </div>
               </div>
 
-              <div className="apple-glass-card p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
-                <div className="text-[10px] uppercase font-bold text-slate-400">PAYE Tax & Pension</div>
+              <div className="apple-glass-card p-4 rounded-2xl bg-white dark:bg-[#0C0C0D] border border-black/[0.06] dark:border-white/[0.08] space-y-1">
+                <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-[#A39E93]">PAYE Tax & Pension</div>
                 <div className="text-xl font-extrabold text-blue-600 dark:text-blue-400 tnum">
                   ₦{(totalDeductions / 1000).toFixed(0)}k
                 </div>
-                <div className="text-[10px] text-slate-500">Remitted to FIRS & PFA</div>
+                <div className="text-[10px] text-slate-500 dark:text-[#A39E93]">Remitted to FIRS & PFA</div>
               </div>
             </div>
 
             {/* Payroll Ledger Table */}
             {currentMonthRecords.length > 0 ? (
-              <div className="apple-glass-card rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+              <div className="apple-glass-card rounded-3xl overflow-hidden bg-white dark:bg-[#0C0C0D] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-50/60 dark:bg-slate-800/60 border-b border-black/[0.05] dark:border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+                    <thead className="bg-slate-50/60 dark:bg-white/[0.03] border-b border-black/[0.05] dark:border-white/[0.08] text-slate-500 dark:text-[#A39E93] font-semibold uppercase tracking-wider text-[10px]">
                       <tr>
                         <th className="px-5 py-3">Staff Member</th>
                         <th className="px-5 py-3">Job Title & Dept</th>
@@ -619,7 +619,7 @@ export default function HRStaffPage() {
                         <th className="px-5 py-3 text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-black/[0.04] dark:divide-slate-800 font-medium">
+                    <tbody className="divide-y divide-black/[0.04] dark:divide-white/[0.06] font-medium">
                       {currentMonthRecords.map((p) => {
                         const isDisbursed = p.paymentStatus === 'DISBURSED';
                         const isApproved = p.paymentStatus === 'APPROVED';
@@ -627,15 +627,15 @@ export default function HRStaffPage() {
                         const staffBenefitsTotal = staffBenefits.reduce((sum, b) => sum + (Number(b.amountNgn) || 0), 0);
 
                         return (
-                          <tr key={p.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                          <tr key={p.id} className="hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition-colors">
                             <td className="px-5 py-3 font-bold text-slate-900 dark:text-white">
                               {p.staffName}
                             </td>
-                            <td className="px-5 py-3 text-[11px] text-slate-500 dark:text-slate-400">
-                              <div>{p.jobTitle}</div>
-                              <div className="text-[10px] text-slate-400">{p.department}</div>
+                            <td className="px-5 py-3 text-[11px] text-slate-500 dark:text-[#D1CDC7]">
+                              <div className="font-medium text-slate-800 dark:text-white">{p.jobTitle}</div>
+                              <div className="text-[10px] text-slate-400 dark:text-[#A39E93]">{p.department}</div>
                             </td>
-                            <td className="px-5 py-3 text-right font-mono font-semibold text-slate-800 dark:text-slate-200 tnum">
+                            <td className="px-5 py-3 text-right font-mono font-semibold text-slate-800 dark:text-[#F6F4F0] tnum">
                               ₦{p.baseSalaryNgn.toLocaleString()}
                             </td>
                             <td className="px-5 py-3 text-right font-mono text-amber-700 dark:text-amber-400 tnum">
@@ -749,7 +749,7 @@ export default function HRStaffPage() {
               <motion.div 
                 whileHover={{ y: -2 }}
                 key={cert.id} 
-                className="apple-glass-card p-5 rounded-3xl space-y-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs"
+                className="apple-glass-card p-5 rounded-3xl space-y-3 bg-white dark:bg-[#0C0C0D] border border-black/[0.06] dark:border-white/[0.08] shadow-xs"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="p-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl text-emerald-700 dark:text-emerald-400">
@@ -764,12 +764,12 @@ export default function HRStaffPage() {
 
                 <div>
                   <h3 className="font-bold text-xs text-slate-900 dark:text-white line-clamp-2">{cert.name}</h3>
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Holder: <b>{cert.userName}</b></div>
-                  <div className="text-[10px] text-slate-400">{cert.issuingBody} • {cert.certNumber || 'Active'}</div>
+                  <div className="text-[11px] text-slate-500 dark:text-[#D1CDC7] mt-0.5">Holder: <b className="text-slate-800 dark:text-white">{cert.userName}</b></div>
+                  <div className="text-[10px] text-slate-400 dark:text-[#A39E93]">{cert.issuingBody} • {cert.certNumber || 'Active'}</div>
                 </div>
 
-                <div className="pt-2 border-t border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between text-[10px] text-slate-400">
-                  <span>Expiry: <b className="text-slate-600 dark:text-slate-300 tnum">{cert.expiryDate}</b></span>
+                <div className="pt-2 border-t border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between text-[10px] text-slate-400 dark:text-[#A39E93]">
+                  <span>Expiry: <b className="text-slate-600 dark:text-white tnum">{cert.expiryDate}</b></span>
                   <span className="text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3" />
                     Verified
@@ -783,7 +783,7 @@ export default function HRStaffPage() {
 
       {/* Tab 5: Report */}
       {activeTab === 'QUARTERLY_REPORT' && (
-        <div className="apple-glass-card p-8 rounded-3xl space-y-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="apple-glass-card p-8 rounded-3xl space-y-6 bg-white dark:bg-[#0C0C0D] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
           <div className="flex items-center justify-between pb-3 border-b border-black/[0.05] dark:border-white/[0.06]">
             <div>
               <span className="text-[10px] font-bold text-emerald-600 uppercase">FR 98 Automated Assembly</span>

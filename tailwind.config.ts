@@ -12,6 +12,21 @@ export default {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        // Pure neutral OLED black & dark tones replacing Tailwind's default cool-blue slate
+        slate: {
+          50: "#f8fafc",
+          100: "#f1f5f9",
+          200: "#e2e8f0",
+          300: "#cbd5e1",
+          400: "#94a3b8",
+          500: "#64748b",
+          600: "#475569",
+          700: "#27272a", // neutral dark border/input (replaces navy #334155)
+          800: "#141416", // neutral dark surface (replaces midnight navy #1e293b)
+          850: "#0e0e10", // deep neutral dark
+          900: "#0a0a0b", // pure pitch black OLED card surface (replaces midnight blue #0f172a)
+          950: "#000000", // pure pitch black OLED (replaces deep navy #020617)
+        },
         brand: {
           50: "#f0fdf4",
           100: "#dcfce7",
