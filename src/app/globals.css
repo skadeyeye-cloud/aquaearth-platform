@@ -3,22 +3,26 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #09090b;
-  --card-bg: #ffffff;
-  --card-border: rgba(0, 0, 0, 0.08);
-  --nav-bg: #ffffff;
-  --sidebar-bg: #ffffff;
+  --background: #F5F5F7;
+  --foreground: #1D1D1F;
+  --card-bg: #FFFFFF;
+  --card-border: rgba(0, 0, 0, 0.06);
+  --nav-bg: rgba(245, 245, 247, 0.82);
+  --sidebar-bg: #FBFBFD;
+  --text-muted: #86868B;
+  --text-subtle: #AEAEB2;
   --ease-emil: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 .dark {
-  --background: #000000;
-  --foreground: #ffffff;
-  --card-bg: #09090b;
-  --card-border: rgba(255, 255, 255, 0.12);
-  --nav-bg: #000000;
-  --sidebar-bg: #000000;
+  --background: #141416;
+  --foreground: #F5F5F7;
+  --card-bg: #1C1C1E;
+  --card-border: rgba(255, 255, 255, 0.08);
+  --nav-bg: rgba(20, 20, 22, 0.82);
+  --sidebar-bg: #18181A;
+  --text-muted: #A1A1A6;
+  --text-subtle: #636366;
 }
 
 html, body {
@@ -57,28 +61,26 @@ button:active:not(:disabled), [role="button"]:active:not(:disabled) {
 /* Apple Materials & Glassmorphism */
 .apple-glass-nav {
   background-color: var(--nav-bg);
-  backdrop-filter: blur(25px) saturate(200%);
-  -webkit-backdrop-filter: blur(25px) saturate(200%);
-  border-color: var(--card-border);
+  backdrop-filter: blur(25px) saturate(180%);
+  -webkit-backdrop-filter: blur(25px) saturate(180%);
+  border-bottom: 1px solid var(--card-border);
 }
 
 .apple-glass-sidebar {
   background-color: var(--sidebar-bg);
-  backdrop-filter: blur(30px) saturate(200%);
-  -webkit-backdrop-filter: blur(30px) saturate(200%);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
   border-right: 1px solid var(--card-border);
 }
 
 .apple-glass-card {
   background-color: var(--card-bg);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid var(--card-border);
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 4px 16px -2px rgba(0, 0, 0, 0.03);
 }
 
 .dark .apple-glass-card {
-  box-shadow: 0 8px 32px -4px rgba(0, 0, 0, 0.9);
+  box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.6);
 }
 
 /* Custom Scrollbars */

@@ -231,17 +231,17 @@ export default function FinancePage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-semibold text-slate-500 tracking-tight">
+            <span className="text-[11px] font-medium text-[#86868B] dark:text-[#A1A1A6] tracking-tight">
               Module 10 • Financial Governance & Invoicing
             </span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
               Official SOP Enforced
             </span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mt-0.5">
+          <h1 className="text-2xl font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight mt-1">
             Budget, Invoice & Finance Governance
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-[#86868B] dark:text-[#A1A1A6] mt-0.5">
             Multi-stage collation, CFO vetting, Dr. K / Bibi executive authorization, and dual ₦300,000 imprest funds.
           </p>
         </div>
@@ -254,7 +254,7 @@ export default function FinancePage() {
               setIsNewBudgetOpen(true);
               haptics.selection();
             }}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-2xs transition-all active:scale-[0.96]"
+            className="flex items-center gap-1.5 px-4 py-2 bg-[#1D1D1F] hover:bg-[#333336] dark:bg-white dark:hover:bg-[#E5E5E7] text-white dark:text-[#1D1D1F] rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-[0.97]"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Submit Budget Request</span>
@@ -268,7 +268,7 @@ export default function FinancePage() {
                   setIsPettyExpenseOpen(true);
                   haptics.selection();
                 }}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-2xs transition-all active:scale-[0.96]"
+                className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-[0.97]"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Log Petty Cash Expense</span>
@@ -279,7 +279,7 @@ export default function FinancePage() {
           {canSeeAllFinance && activeMainTab === 'INVOICES' && (
             <button
               onClick={() => setIsNewInvoiceOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 text-white rounded-xl text-xs font-semibold shadow-2xs transition-all active:scale-[0.96]"
+              className="flex items-center gap-1.5 px-4 py-2 bg-[#1D1D1F] hover:bg-[#333336] dark:bg-white dark:hover:bg-[#E5E5E7] dark:text-[#1D1D1F] text-white rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-[0.97]"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Prepare Milestone Invoice</span>
@@ -289,34 +289,34 @@ export default function FinancePage() {
       </div>
 
       {/* SOP Persona Authority Banner */}
-      <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/60 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+      <div className="p-4 rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-white dark:bg-[#1C1C1E] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-slate-900 dark:bg-white/10 text-white flex items-center justify-center font-bold text-xs shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-black/[0.04] dark:bg-white/[0.08] text-[#1D1D1F] dark:text-[#F5F5F7] flex items-center justify-center font-semibold text-xs shrink-0">
             {currentUser.name.charAt(0)}
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-bold text-slate-900 dark:text-white">{currentUser.name}</span>
-              <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+              <span className="font-semibold text-xs text-[#1D1D1F] dark:text-[#F5F5F7]">{currentUser.name}</span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-black/[0.04] dark:bg-white/[0.08] text-[#86868B] dark:text-[#A1A1A6]">
                 {currentUser.jobTitle}
               </span>
               {isSuperadmin && (
-                <span className="px-2 py-0.2 rounded-full text-[10px] font-extrabold bg-purple-100 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-300 dark:border-purple-800">
-                  SUPERADMIN
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">
+                  Superadmin
                 </span>
               )}
               {!isSuperadmin && isFinanceOfficer && (
-                <span className="px-2 py-0.2 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-300 dark:border-blue-800">
-                  FINANCE OFFICER
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20">
+                  Finance Officer
                 </span>
               )}
               {!canSeeAllFinance && isLineManagerOrAdmin && (
-                <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
-                  LINE MANAGER (SCOPED)
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                  Line Manager
                 </span>
               )}
             </div>
-            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+            <div className="text-[11px] text-[#86868B] dark:text-[#A1A1A6] mt-0.5">
               {isDrK && "Founder & Managing Consultant (MD) • Primary Sign-off for All Budgets, Invoices & Petty Cash Allocations"}
               {isBibi && "Executive Director (2nd in Command) • Authorized to approve budgets on Dr. K's behalf to prevent delays"}
               {isErica && "Chief Financial Officer (CFO) • Vets, projects, and consolidates budgets. Reviews monthly petty cash"}
@@ -334,28 +334,28 @@ export default function FinancePage() {
 
         {/* SLA Status Pill */}
         <div className="flex items-center gap-2 shrink-0 self-start md:self-auto">
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 text-[11px] font-semibold">
-            <Clock className="w-3.5 h-3.5 animate-spin" />
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.05] dark:border-white/[0.08] text-[#86868B] dark:text-[#A1A1A6] text-[11px] font-medium">
+            <Clock className="w-3.5 h-3.5 text-[#86868B]" />
             <span>SOP Target: 24h Approval Gate</span>
           </div>
         </div>
       </div>
 
-      {/* Main Navigation Tabs */}
+      {/* Main Navigation Segmented Control */}
       {canSeeAllFinance ? (
-        <div className="flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-2 overflow-x-auto text-xs">
+        <div className="inline-flex p-1 bg-black/[0.05] dark:bg-white/[0.08] rounded-2xl gap-1 max-w-full overflow-x-auto select-none">
           <button
             onClick={() => { setActiveMainTab('BUDGETS'); haptics.selection(); }}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap shrink-0 ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap shrink-0 ${
               activeMainTab === 'BUDGETS'
-                ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                ? 'bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs font-semibold'
+                : 'text-[#86868B] dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-white'
             }`}
           >
             <DollarSign className="w-3.5 h-3.5" />
-            <span>1. Budget Approval Workflow</span>
+            <span>1. Budget Workflow</span>
             {mdPendingBudgetCount > 0 && (
-              <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] font-extrabold flex items-center justify-center animate-pulse">
+              <span className="px-1.5 py-0.2 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 text-[10px] font-semibold tnum">
                 {mdPendingBudgetCount}
               </span>
             )}
@@ -363,52 +363,52 @@ export default function FinancePage() {
 
           <button
             onClick={() => { setActiveMainTab('PETTY_CASH'); haptics.selection(); }}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap shrink-0 ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap shrink-0 ${
               activeMainTab === 'PETTY_CASH'
-                ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                ? 'bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs font-semibold'
+                : 'text-[#86868B] dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-white'
             }`}
           >
             <Wallet className="w-3.5 h-3.5" />
-            <span>2. Petty Cash & Imprest (Gift & Marvelous)</span>
+            <span>2. Petty Cash & Imprest</span>
           </button>
 
           <button
             onClick={() => { setActiveMainTab('INVOICES'); haptics.selection(); }}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap shrink-0 ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap shrink-0 ${
               activeMainTab === 'INVOICES'
-                ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                ? 'bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs font-semibold'
+                : 'text-[#86868B] dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-white'
             }`}
           >
             <Receipt className="w-3.5 h-3.5" />
-            <span>3. Milestone Invoicing & Dr. K Confirmation</span>
+            <span>3. Milestone Invoicing</span>
           </button>
 
           <button
             onClick={() => { setActiveMainTab('EXPENSES'); haptics.selection(); }}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap shrink-0 ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap shrink-0 ${
               activeMainTab === 'EXPENSES'
-                ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                ? 'bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs font-semibold'
+                : 'text-[#86868B] dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-white'
             }`}
           >
             <TrendingUp className="w-3.5 h-3.5" />
-            <span>4. Fund Retirement & Cost Tracking</span>
+            <span>4. Fund Retirement</span>
           </button>
         </div>
       ) : (
-        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2 text-xs">
+        <div className="flex items-center justify-between p-2 rounded-2xl bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs text-xs">
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-bold shadow-2xs">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/[0.05] dark:bg-white/[0.1] text-[#1D1D1F] dark:text-white font-semibold">
               <DollarSign className="w-3.5 h-3.5" />
               <span>My Departmental Budget Status</span>
             </div>
-            <span className="text-[11px] text-slate-500 font-medium hidden sm:inline">
-              Personal & Line Manager Submissions Only
+            <span className="text-[11px] text-[#86868B] dark:text-[#A1A1A6] font-normal hidden sm:inline">
+              Personal & Departmental Submissions Only
             </span>
           </div>
-          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
             Line Manager Scoped
           </span>
         </div>
@@ -416,88 +416,88 @@ export default function FinancePage() {
 
       {/* TAB 1: BUDGET APPROVAL WORKFLOW */}
       {(canSeeAllFinance ? activeMainTab === 'BUDGETS' : true) && (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {/* Telemetry Cards */}
           {canSeeAllFinance ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-                <div className="text-[10px] uppercase font-bold text-slate-400">Total Capex Requested</div>
-                <div className="text-xl font-extrabold text-slate-900 dark:text-white tnum">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="rounded-2xl p-5 space-y-1.5 bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
+                <div className="text-xs font-medium text-[#86868B] dark:text-[#A1A1A6]">Total Capex Requested</div>
+                <div className="text-2xl font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] tnum">
                   ₦{(totalBudgetRequested / 1000000).toFixed(2)}M
                 </div>
-                <div className="text-[10px] text-slate-500 font-medium">{budgetRequests.length} Total Submissions</div>
+                <div className="text-xs text-[#86868B] dark:text-[#A1A1A6]">{budgetRequests.length} Total Submissions</div>
               </div>
 
-              <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-                <div className="text-[10px] uppercase font-bold text-rose-500 flex items-center justify-between">
+              <div className="rounded-2xl p-5 space-y-1.5 bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
+                <div className="text-xs font-medium text-amber-600 dark:text-amber-400 flex items-center justify-between">
                   <span>Waiting MD Approval</span>
-                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                 </div>
-                <div className="text-xl font-extrabold text-rose-600 dark:text-rose-400 tnum">
+                <div className="text-2xl font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] tnum">
                   {mdPendingBudgetCount} Requests
                 </div>
-                <div className="text-[10px] text-slate-500 font-medium">Ball-in-court: Dr. Kaine / Bibi</div>
+                <div className="text-xs text-[#86868B] dark:text-[#A1A1A6]">Ball-in-court: Dr. Kaine / Bibi</div>
               </div>
 
-              <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-                <div className="text-[10px] uppercase font-bold text-purple-500">With Erica (CFO Review)</div>
-                <div className="text-xl font-extrabold text-purple-600 dark:text-purple-400 tnum">
+              <div className="rounded-2xl p-5 space-y-1.5 bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
+                <div className="text-xs font-medium text-indigo-600 dark:text-indigo-400">With Erica (CFO Review)</div>
+                <div className="text-2xl font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] tnum">
                   {cfoReviewCount} Requests
                 </div>
-                <div className="text-[10px] text-slate-500 font-medium">Executive financial vetting</div>
+                <div className="text-xs text-[#86868B] dark:text-[#A1A1A6]">Executive financial vetting</div>
               </div>
 
-              <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-                <div className="text-[10px] uppercase font-bold text-emerald-500">Approved Disbursements</div>
-                <div className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 tnum">
+              <div className="rounded-2xl p-5 space-y-1.5 bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
+                <div className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Approved Disbursements</div>
+                <div className="text-2xl font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] tnum">
                   ₦{(approvedBudgetAmount / 1000000).toFixed(2)}M
                 </div>
-                <div className="text-[10px] text-slate-500 font-medium">Ready for wire release</div>
+                <div className="text-xs text-[#86868B] dark:text-[#A1A1A6]">Ready for wire release</div>
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-                <div className="text-[10px] uppercase font-bold text-slate-400">My Submitted Budgets</div>
-                <div className="text-xl font-extrabold text-slate-900 dark:text-white tnum">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="rounded-2xl p-5 space-y-1.5 bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
+                <div className="text-xs font-medium text-[#86868B] dark:text-[#A1A1A6]">My Submitted Budgets</div>
+                <div className="text-2xl font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] tnum">
                   {accessibleBudgets.length} Requests
                 </div>
-                <div className="text-[10px] text-slate-500 font-medium">
+                <div className="text-xs text-[#86868B] dark:text-[#A1A1A6]">
                   {accessibleBudgets.filter(b => b.budgetType === 'DEPARTMENTAL').length} Dept • {accessibleBudgets.filter(b => b.budgetType === 'CLIENT_FACING').length} Project
                 </div>
               </div>
 
-              <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-                <div className="text-[10px] uppercase font-bold text-blue-500">Total Requested Capex</div>
-                <div className="text-xl font-extrabold text-blue-600 dark:text-blue-400 tnum">
+              <div className="rounded-2xl p-5 space-y-1.5 bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
+                <div className="text-xs font-medium text-[#86868B] dark:text-[#A1A1A6]">Total Requested Capex</div>
+                <div className="text-2xl font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] tnum">
                   ₦{(totalBudgetRequested / 1000000).toFixed(2)}M
                 </div>
-                <div className="text-[10px] text-slate-500 font-medium">Submitted for review</div>
+                <div className="text-xs text-[#86868B] dark:text-[#A1A1A6]">Submitted for review</div>
               </div>
 
-              <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-                <div className="text-[10px] uppercase font-bold text-amber-500">In Review Pipeline</div>
-                <div className="text-xl font-extrabold text-amber-600 dark:text-amber-400 tnum">
+              <div className="rounded-2xl p-5 space-y-1.5 bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
+                <div className="text-xs font-medium text-amber-600 dark:text-amber-400">In Review Pipeline</div>
+                <div className="text-2xl font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] tnum">
                   {accessibleBudgets.filter(b => b.status === 'PENDING_APPROVAL').length} Requests
                 </div>
-                <div className="text-[10px] text-slate-500 font-medium">With Collation, CFO, or MD</div>
+                <div className="text-xs text-[#86868B] dark:text-[#A1A1A6]">With Collation, CFO, or MD</div>
               </div>
 
-              <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-                <div className="text-[10px] uppercase font-bold text-emerald-500">My Approved Funding</div>
-                <div className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 tnum">
+              <div className="rounded-2xl p-5 space-y-1.5 bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
+                <div className="text-xs font-medium text-emerald-600 dark:text-emerald-400">My Approved Funding</div>
+                <div className="text-2xl font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] tnum">
                   ₦{(approvedBudgetAmount / 1000000).toFixed(2)}M
                 </div>
-                <div className="text-[10px] text-slate-500 font-medium">{approvedBudgetCount} Approved & Capex Ready</div>
+                <div className="text-xs text-[#86868B] dark:text-[#A1A1A6]">{approvedBudgetCount} Approved & Capex Ready</div>
               </div>
             </div>
           )}
 
           {/* Stage Filter Buttons */}
-          <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 dark:bg-slate-800/80 rounded-xl text-xs font-semibold overflow-x-auto">
+          <div className="inline-flex p-1 bg-black/[0.04] dark:bg-white/[0.06] rounded-xl text-xs font-medium overflow-x-auto gap-1">
             {[
               { id: 'ALL', label: canSeeAllFinance ? 'All Budgets' : `All My Submissions (${accessibleBudgets.length})` },
-              { id: 'MD_PENDING', label: `Pending MD / Bibi (${mdPendingBudgetCount})`, alert: mdPendingBudgetCount > 0 },
+              { id: 'MD_PENDING', label: `Pending MD / Bibi (${mdPendingBudgetCount})` },
               { id: 'CFO_REVIEW', label: `With Erica (CFO) (${cfoReviewCount})` },
               { id: 'WITH_OZIOMA', label: `With Miss Ozioma (${withOziomaCount})` },
               { id: 'IN_COLLATION', label: `In Collation (${inCollationCount})` },
@@ -507,10 +507,10 @@ export default function FinancePage() {
               <button
                 key={tab.id}
                 onClick={() => { setBudgetStageFilter(tab.id as any); haptics.selection(); }}
-                className={`px-3 py-1 rounded-lg transition-all whitespace-nowrap shrink-0 ${
+                className={`px-3 py-1.5 rounded-lg transition-all whitespace-nowrap shrink-0 ${
                   budgetStageFilter === tab.id
-                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs font-bold'
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs font-semibold'
+                    : 'text-[#86868B] dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-white'
                 }`}
               >
                 <span>{tab.label}</span>
@@ -519,20 +519,20 @@ export default function FinancePage() {
           </div>
 
           {/* Budgets Table with Live SLA and Action Buttons */}
-          <div className="apple-glass-card rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+          <div className="rounded-3xl overflow-hidden bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50/60 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+                <thead className="bg-black/[0.02] dark:bg-white/[0.02] border-b border-black/[0.06] dark:border-white/[0.08] text-[#86868B] dark:text-[#A1A1A6] font-medium text-[11px]">
                   <tr>
-                    <th className="px-5 py-3">Budget Request</th>
-                    <th className="px-5 py-3">Type & Frequency</th>
-                    <th className="px-5 py-3 text-right">Amount (₦ NGN)</th>
-                    <th className="px-5 py-3">Stage & Ball-in-Court</th>
-                    <th className="px-5 py-3">Vetting & Review History</th>
-                    <th className="px-5 py-3 text-right">{canSeeAllFinance ? 'SOP Actions' : 'Status & Actions'}</th>
+                    <th className="px-6 py-3.5">Budget Request</th>
+                    <th className="px-6 py-3.5">Type & Frequency</th>
+                    <th className="px-6 py-3.5 text-right">Amount (₦ NGN)</th>
+                    <th className="px-6 py-3.5">Stage & Ball-in-Court</th>
+                    <th className="px-6 py-3.5">Vetting & Review History</th>
+                    <th className="px-6 py-3.5 text-right">{canSeeAllFinance ? 'SOP Actions' : 'Status'}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
+                <tbody className="divide-y divide-black/[0.04] dark:divide-white/[0.06] font-normal">
                   {filteredBudgets.map((req) => {
                     const isPendingMD = req.approvalStage === 'MD_PENDING';
                     const isWithCFO = req.approvalStage === 'CFO_REVIEW';
@@ -542,140 +542,142 @@ export default function FinancePage() {
                     const isDeclined = req.status === 'DECLINED';
 
                     return (
-                      <tr key={req.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                      <tr key={req.id} className="hover:bg-black/[0.015] dark:hover:bg-white/[0.02] transition-colors">
                         {/* Request Title & Department */}
-                        <td className="px-5 py-3.5">
+                        <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
-                            <span className="font-mono text-xs font-bold text-slate-900 dark:text-white">{req.requestNumber}</span>
+                            <span className="font-mono text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{req.requestNumber}</span>
                             {req.budgetType === 'CLIENT_FACING' ? (
-                              <span className="px-2 py-0.2 rounded-full text-[9px] font-extrabold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-                                CLIENT PROJECT
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-500/20">
+                                Client Project
                               </span>
                             ) : (
-                              <span className="px-2 py-0.2 rounded-full text-[9px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                                DEPARTMENTAL
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-black/[0.04] dark:bg-white/[0.08] text-[#86868B] dark:text-[#A1A1A6]">
+                                Departmental
                               </span>
                             )}
                           </div>
-                          <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 mt-0.5">{req.title}</div>
-                          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                            Dept: <strong className="text-slate-700 dark:text-slate-300">{req.department}</strong> • By: {req.requestedByName}
+                          <div className="text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mt-1">{req.title}</div>
+                          <div className="text-[11px] text-[#86868B] dark:text-[#A1A1A6] mt-0.5">
+                            {req.department} • By: {req.requestedByName}
                           </div>
                         </td>
 
                         {/* Frequency & Category */}
-                        <td className="px-5 py-3 text-xs">
-                          <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px] font-medium">
+                        <td className="px-6 py-4 text-xs">
+                          <span className="px-2 py-0.5 rounded-md bg-black/[0.04] dark:bg-white/[0.06] text-[#1D1D1F] dark:text-[#F5F5F7] text-[11px] font-medium">
                             {req.category.replace(/_/g, ' ')}
                           </span>
-                          <div className="text-[10px] text-slate-400 mt-1">
-                            Frequency: {req.frequency || 'PERIODIC'}
+                          <div className="text-[11px] text-[#86868B] dark:text-[#A1A1A6] mt-1">
+                            {req.frequency || 'PERIODIC'}
                           </div>
                         </td>
 
                         {/* Amount & Misc */}
-                        <td className="px-5 py-3 text-right">
-                          <div className="font-mono font-bold text-slate-900 dark:text-white text-xs tnum">
+                        <td className="px-6 py-4 text-right">
+                          <div className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] text-xs tnum">
                             ₦{req.amountNgn.toLocaleString()}
                           </div>
                           {req.miscellaneousAmountNgn ? (
-                            <div className="text-[10px] text-amber-600 dark:text-amber-400 font-mono mt-0.5">
+                            <div className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5 tnum">
                               +₦{req.miscellaneousAmountNgn.toLocaleString()} Misc
                             </div>
                           ) : null}
                         </td>
 
                         {/* Stage & Ball-in-Court */}
-                        <td className="px-5 py-3">
+                        <td className="px-6 py-4">
                           {isPendingMD && (
-                            <div className="space-y-1">
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
-                                <Clock className="w-3 h-3 animate-pulse" />
-                                <span>Waiting on MD / Bibi</span>
-                              </span>
-                              <div className="text-[10px] text-slate-500 dark:text-slate-400">
-                                Ball: <strong>Dr. Kaine Edike</strong> / <strong>Bibi</strong>
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                                <span className="text-xs font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Awaiting MD Review</span>
+                              </div>
+                              <div className="text-[11px] text-[#86868B] dark:text-[#A1A1A6] pl-4">
+                                Dr. Kaine / Bibi
                               </div>
                             </div>
                           )}
 
                           {isWithCFO && (
-                            <div className="space-y-1">
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-                                <ShieldCheck className="w-3 h-3" />
-                                <span>CFO Review & Vetting</span>
-                              </span>
-                              <div className="text-[10px] text-slate-500 dark:text-slate-400">
-                                Ball: <strong>Erica (CFO)</strong>
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
+                                <span className="text-xs font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Under CFO Vetting</span>
+                              </div>
+                              <div className="text-[11px] text-[#86868B] dark:text-[#A1A1A6] pl-4">
+                                Erica (CFO)
                               </div>
                             </div>
                           )}
 
                           {isCollation && (
-                            <div className="space-y-1">
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                                <Users className="w-3 h-3" />
-                                <span>Collation with Officers</span>
-                              </span>
-                              <div className="text-[10px] text-slate-500 dark:text-slate-400">
-                                Assigned: <strong>{req.collatedByName || 'Gift / Marvelous'}</strong>
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                                <span className="text-xs font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">In Officer Collation</span>
+                              </div>
+                              <div className="text-[11px] text-[#86868B] dark:text-[#A1A1A6] pl-4">
+                                {req.collatedByName || 'Gift / Marvelous'}
                               </div>
                             </div>
                           )}
 
                           {isWithOzioma && (
-                            <div className="space-y-1">
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                                <Briefcase className="w-3 h-3" />
-                                <span>Commercial Collation</span>
-                              </span>
-                              <div className="text-[10px] text-slate-500 dark:text-slate-400">
-                                Ball: <strong>Miss Ozioma</strong>
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                                <span className="text-xs font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Commercial Collation</span>
+                              </div>
+                              <div className="text-[11px] text-[#86868B] dark:text-[#A1A1A6] pl-4">
+                                Miss Ozioma
                               </div>
                             </div>
                           )}
 
                           {isApproved && (
-                            <div className="space-y-1">
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                                <CheckCircle2 className="w-3 h-3" />
-                                <span>Disbursement Approved</span>
-                              </span>
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                                <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">Approved & Ready</span>
+                              </div>
                               {req.approvedOnBehalfOfDrK && (
-                                <div className="text-[9px] text-purple-600 dark:text-purple-400 font-semibold">
-                                  Approved by Bibi (2nd-in-Command)
+                                <div className="text-[10px] text-purple-600 dark:text-purple-400 font-medium pl-4">
+                                  Via Bibi (2nd in Command)
                                 </div>
                               )}
                             </div>
                           )}
 
                           {isDeclined && (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
-                              <XCircle className="w-3 h-3" />
-                              <span>{req.declineOutcome === 'REVISE_RESUBMIT' ? 'Returned for Revision' : 'Declined & Dropped'}</span>
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
+                              <span className="text-xs font-medium text-rose-700 dark:text-rose-400">
+                                {req.declineOutcome === 'REVISE_RESUBMIT' ? 'Returned for Revision' : 'Declined'}
+                              </span>
+                            </div>
                           )}
                         </td>
 
                         {/* Vetting & Review Notes */}
-                        <td className="px-5 py-3 text-[11px] text-slate-600 dark:text-slate-300 max-w-xs">
+                        <td className="px-6 py-4 text-[11px] text-[#86868B] dark:text-[#A1A1A6] max-w-xs">
                           {req.cfoReviewNotes && (
-                            <div className="text-purple-700 dark:text-purple-300 mb-1">
+                            <div className="text-indigo-600 dark:text-indigo-400 mb-1">
                               <strong>CFO Note:</strong> {req.cfoReviewNotes}
                             </div>
                           )}
                           {req.reviewComments && (
-                            <div className="text-emerald-700 dark:text-emerald-300">
+                            <div className="text-emerald-700 dark:text-emerald-400">
                               <strong>MD Note:</strong> {req.reviewComments}
                             </div>
                           )}
                           {!req.cfoReviewNotes && !req.reviewComments && (
-                            <span className="text-slate-400 italic">No vetting comments logged</span>
+                            <span className="text-[#86868B]/60 italic">No notes logged</span>
                           )}
                         </td>
 
                         {/* Action Buttons based on logged in persona */}
-                        <td className="px-5 py-3 text-right">
+                        <td className="px-6 py-4 text-right">
                           {canSeeAllFinance ? (
                             <div className="flex items-center justify-end gap-1.5">
                               {/* MD Approval Gate for Dr. K */}
@@ -686,7 +688,7 @@ export default function FinancePage() {
                                       approveBudgetAsMD(req.id, false, 'Approved by Dr. Kaine Edike (MD).');
                                       haptics.success();
                                     }}
-                                    className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold shadow-2xs active:scale-95 transition-all"
+                                    className="px-3 py-1.5 bg-[#1D1D1F] hover:bg-[#333336] dark:bg-white dark:hover:bg-[#E5E5E7] text-white dark:text-[#1D1D1F] rounded-xl text-xs font-semibold shadow-xs active:scale-[0.97] transition-all"
                                   >
                                     Approve (Dr. K)
                                   </button>
@@ -696,7 +698,7 @@ export default function FinancePage() {
                                       declineBudgetAsMD(req.id, false, reason);
                                       haptics.impact();
                                     }}
-                                    className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-[10px] font-bold border border-rose-200 transition-all"
+                                    className="px-2.5 py-1.5 bg-black/[0.04] dark:bg-white/[0.08] hover:bg-black/[0.08] text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white rounded-xl text-xs font-medium transition-all"
                                   >
                                     Decline
                                   </button>
@@ -712,9 +714,9 @@ export default function FinancePage() {
                                       haptics.success();
                                     }}
                                     title="Approve on Dr. K's behalf to avoid project bottleneck (SOP Section 1)"
-                                    className="px-2.5 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-[10px] font-bold shadow-2xs active:scale-95 transition-all"
+                                    className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-semibold shadow-xs active:scale-[0.97] transition-all"
                                   >
-                                    Approve on Dr. K Behalf
+                                    Approve for Dr. K
                                   </button>
                                   <button
                                     onClick={() => {
@@ -722,7 +724,7 @@ export default function FinancePage() {
                                       declineBudgetAsMD(req.id, true, reason);
                                       haptics.impact();
                                     }}
-                                    className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-[10px] font-bold border border-rose-200 transition-all"
+                                    className="px-2.5 py-1.5 bg-black/[0.04] dark:bg-white/[0.08] hover:bg-black/[0.08] text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white rounded-xl text-xs font-medium transition-all"
                                   >
                                     Decline
                                   </button>
@@ -733,9 +735,9 @@ export default function FinancePage() {
                               {isWithCFO && (isErica || isSuperadmin) && (
                                 <button
                                   onClick={() => setVettingBudget(req)}
-                                  className="px-2.5 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-[10px] font-bold shadow-2xs active:scale-95 transition-all flex items-center gap-1"
+                                  className="px-3 py-1.5 bg-[#1D1D1F] hover:bg-[#333336] dark:bg-white dark:hover:bg-[#E5E5E7] dark:text-[#1D1D1F] text-white rounded-xl text-xs font-semibold shadow-xs active:scale-[0.97] transition-all flex items-center gap-1.5"
                                 >
-                                  <ShieldCheck className="w-3 h-3" />
+                                  <ShieldCheck className="w-3.5 h-3.5" />
                                   <span>CFO Vet</span>
                                 </button>
                               )}
@@ -744,9 +746,9 @@ export default function FinancePage() {
                               {isCollation && (isGift || isMarvelous || isSuperadmin) && (
                                 <button
                                   onClick={() => setCollatingBudget(req)}
-                                  className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold shadow-2xs active:scale-95 transition-all flex items-center gap-1"
+                                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-xs active:scale-[0.97] transition-all flex items-center gap-1.5"
                                 >
-                                  <Send className="w-3 h-3" />
+                                  <Send className="w-3.5 h-3.5" />
                                   <span>Collate & Forward</span>
                                 </button>
                               )}
@@ -758,49 +760,49 @@ export default function FinancePage() {
                                     cfoReviewBudget(req.id, 'PROJECT_TO_DR_K', 'Miss Ozioma reviewed client project budget against contract scope. Projected to Dr. Kaine Edike.');
                                     haptics.success();
                                   }}
-                                  className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[10px] font-bold shadow-2xs active:scale-95 transition-all flex items-center gap-1"
+                                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-xs active:scale-[0.97] transition-all flex items-center gap-1.5"
                                 >
-                                  <Crown className="w-3 h-3" />
+                                  <Crown className="w-3.5 h-3.5" />
                                   <span>Present to Dr. K</span>
                                 </button>
                               )}
 
                               {isApproved && (
-                                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
-                                  Ready for Wire
+                                <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium">
+                                  Wire Ready
                                 </span>
                               )}
                             </div>
                           ) : (
                             <div className="flex items-center justify-end gap-1.5">
                               {isPendingMD && (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium bg-amber-500/10 text-amber-700 dark:text-amber-300">
                                   <Clock className="w-3 h-3" />
                                   <span>Awaiting MD Sign-Off</span>
                                 </span>
                               )}
                               {isWithCFO && (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-purple-50 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium bg-indigo-500/10 text-indigo-700 dark:text-indigo-300">
                                   <ShieldCheck className="w-3 h-3" />
                                   <span>Under CFO Vetting</span>
                                 </span>
                               )}
                               {isCollation && (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium bg-blue-500/10 text-blue-700 dark:text-blue-300">
                                   <Users className="w-3 h-3" />
                                   <span>In Collation</span>
                                 </span>
                               )}
                               {isWithOzioma && (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-indigo-50 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium bg-amber-500/10 text-amber-700 dark:text-amber-300">
                                   <Briefcase className="w-3 h-3" />
                                   <span>With Miss Ozioma</span>
                                 </span>
                               )}
                               {isApproved && (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
                                   <CheckCircle2 className="w-3 h-3" />
-                                  <span>Approved & Capex Ready</span>
+                                  <span>Approved & Ready</span>
                                 </span>
                               )}
                               {isDeclined && req.declineOutcome === 'REVISE_RESUBMIT' && (
@@ -809,14 +811,14 @@ export default function FinancePage() {
                                     setIsNewBudgetOpen(true);
                                     haptics.selection();
                                   }}
-                                  className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[10px] font-bold shadow-2xs active:scale-95 transition-all flex items-center gap-1"
+                                  className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-semibold shadow-xs active:scale-[0.97] transition-all flex items-center gap-1"
                                 >
-                                  <RotateCcw className="w-3 h-3" />
+                                  <RotateCcw className="w-3.5 h-3.5" />
                                   <span>Resubmit Revision</span>
                                 </button>
                               )}
                               {isDeclined && req.declineOutcome !== 'REVISE_RESUBMIT' && (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-200">
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium bg-rose-500/10 text-rose-700 dark:text-rose-400">
                                   <XCircle className="w-3 h-3" />
                                   <span>Dropped</span>
                                 </span>
@@ -831,14 +833,14 @@ export default function FinancePage() {
               </table>
 
               {filteredBudgets.length === 0 && (
-                <div className="p-10 text-center space-y-3">
-                  <div className="w-12 h-12 mx-auto rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+                <div className="p-12 text-center space-y-3">
+                  <div className="w-12 h-12 mx-auto rounded-2xl bg-black/[0.04] dark:bg-white/[0.06] flex items-center justify-center text-[#86868B]">
                     <FileSpreadsheet className="w-6 h-6" />
                   </div>
-                  <div className="font-bold text-sm text-slate-800 dark:text-slate-200">
+                  <div className="font-semibold text-sm text-[#1D1D1F] dark:text-[#F5F5F7]">
                     No Budget Requests Found
                   </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+                  <p className="text-xs text-[#86868B] dark:text-[#A1A1A6] max-w-sm mx-auto">
                     {accessibleBudgets.length === 0
                       ? "You have not submitted any budget requests yet. Click '+ Submit Budget Request' above to create an operational or project delivery request."
                       : "No budget requests match the selected stage filter."}
@@ -846,7 +848,7 @@ export default function FinancePage() {
                   {accessibleBudgets.length === 0 && (
                     <button
                       onClick={() => { setIsNewBudgetOpen(true); haptics.selection(); }}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-2xs transition-all active:scale-95 mt-2"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#1D1D1F] hover:bg-[#333336] dark:bg-white dark:hover:bg-[#E5E5E7] text-white dark:text-[#1D1D1F] rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-[0.97] mt-2"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       <span>Submit Budget Request</span>
@@ -861,30 +863,30 @@ export default function FinancePage() {
 
       {/* TAB 2: PETTY CASH & IMPREST LEDGER */}
       {canSeeAllFinance && activeMainTab === 'PETTY_CASH' && (
-        <div className="space-y-5">
+        <div className="space-y-6">
           {/* Dual Imprest Fund Cards (Gift & Marvelous - SOP Section 4) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Gift's Fund Card */}
-            <div className="apple-glass-card rounded-3xl p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+            <div className="rounded-3xl p-6 bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-bold">
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-500/20 flex items-center justify-center text-emerald-700 dark:text-emerald-400 font-semibold text-sm">
                     G
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-sm text-slate-900 dark:text-white">Gift's Imprest Fund</h3>
-                      <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
+                      <h3 className="font-semibold text-sm text-[#1D1D1F] dark:text-[#F5F5F7]">Gift's Imprest Fund</h3>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
                         Primary Collation
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Office water dispensers, stationery & HQ repairs</p>
+                    <p className="text-xs text-[#86868B] dark:text-[#A1A1A6] mt-0.5">Office water dispensers, stationery & HQ repairs</p>
                   </div>
                 </div>
 
                 <div className="text-right">
-                  <div className="text-[10px] uppercase font-bold text-slate-400">Available Balance</div>
-                  <div className="text-xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
+                  <div className="text-xs font-medium text-[#86868B] dark:text-[#A1A1A6]">Available Balance</div>
+                  <div className="text-2xl font-semibold tracking-tight font-mono text-[#1D1D1F] dark:text-[#F5F5F7] tnum">
                     ₦{giftFund.currentBalanceNgn.toLocaleString()}
                   </div>
                 </div>
@@ -892,11 +894,11 @@ export default function FinancePage() {
 
               {/* Progress Bar of Fund Burn */}
               <div className="space-y-1.5">
-                <div className="flex justify-between text-[11px] text-slate-500">
+                <div className="flex justify-between text-[11px] text-[#86868B] dark:text-[#A1A1A6]">
                   <span>Spent: ₦{(giftFund.allocatedAmountNgn - giftFund.currentBalanceNgn).toLocaleString()}</span>
                   <span>Cap: ₦{giftFund.allocatedAmountNgn.toLocaleString()}</span>
                 </div>
-                <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                <div className="w-full h-1.5 bg-black/[0.05] dark:bg-white/[0.08] rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-emerald-500 rounded-full transition-all duration-300"
                     style={{ width: `${(giftFund.currentBalanceNgn / giftFund.allocatedAmountNgn) * 100}%` }}
@@ -904,15 +906,15 @@ export default function FinancePage() {
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
-                <span className="text-slate-400 text-[11px]">Allocated by: <strong>Dr. Kaine Edike</strong></span>
+              <div className="pt-3 border-t border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between text-xs">
+                <span className="text-[#86868B] dark:text-[#A1A1A6] text-[11px]">Allocated by: <strong className="text-[#1D1D1F] dark:text-[#F5F5F7]">Dr. Kaine Edike</strong></span>
                 <button
                   onClick={() => {
                     setActiveCustodianForExpense('GIFT');
                     setIsPettyExpenseOpen(true);
                     haptics.selection();
                   }}
-                  className="px-3 py-1 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 text-white rounded-lg text-xs font-semibold shadow-2xs active:scale-95 transition-all"
+                  className="px-3 py-1.5 bg-[#1D1D1F] hover:bg-[#333336] dark:bg-white dark:hover:bg-[#E5E5E7] text-white dark:text-[#1D1D1F] rounded-xl text-xs font-medium shadow-xs active:scale-[0.97] transition-all"
                 >
                   Log Voucher (Gift)
                 </button>
@@ -920,26 +922,26 @@ export default function FinancePage() {
             </div>
 
             {/* Marvelous's Fund Card */}
-            <div className="apple-glass-card rounded-3xl p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+            <div className="rounded-3xl p-6 bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-blue-500/10 dark:bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-500/10 dark:bg-blue-500/20 border border-blue-500/20 flex items-center justify-center text-blue-700 dark:text-blue-400 font-semibold text-sm">
                     M
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-sm text-slate-900 dark:text-white">Marvelous's Imprest Fund</h3>
-                      <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300">
+                      <h3 className="font-semibold text-sm text-[#1D1D1F] dark:text-[#F5F5F7]">Marvelous's Imprest Fund</h3>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-500/10 text-blue-700 dark:text-blue-300">
                         Invoicing & Logistics
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Uber courier, lab dispatches & field emergencies</p>
+                    <p className="text-xs text-[#86868B] dark:text-[#A1A1A6] mt-0.5">Uber courier, lab dispatches & field emergencies</p>
                   </div>
                 </div>
 
                 <div className="text-right">
-                  <div className="text-[10px] uppercase font-bold text-slate-400">Available Balance</div>
-                  <div className="text-xl font-extrabold font-mono text-blue-600 dark:text-blue-400">
+                  <div className="text-xs font-medium text-[#86868B] dark:text-[#A1A1A6]">Available Balance</div>
+                  <div className="text-2xl font-semibold tracking-tight font-mono text-[#1D1D1F] dark:text-[#F5F5F7] tnum">
                     ₦{marvelousFund.currentBalanceNgn.toLocaleString()}
                   </div>
                 </div>
@@ -947,11 +949,11 @@ export default function FinancePage() {
 
               {/* Progress Bar of Fund Burn */}
               <div className="space-y-1.5">
-                <div className="flex justify-between text-[11px] text-slate-500">
+                <div className="flex justify-between text-[11px] text-[#86868B] dark:text-[#A1A1A6]">
                   <span>Spent: ₦{(marvelousFund.allocatedAmountNgn - marvelousFund.currentBalanceNgn).toLocaleString()}</span>
                   <span>Cap: ₦{marvelousFund.allocatedAmountNgn.toLocaleString()}</span>
                 </div>
-                <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                <div className="w-full h-1.5 bg-black/[0.05] dark:bg-white/[0.08] rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-blue-500 rounded-full transition-all duration-300"
                     style={{ width: `${(marvelousFund.currentBalanceNgn / marvelousFund.allocatedAmountNgn) * 100}%` }}
@@ -959,15 +961,15 @@ export default function FinancePage() {
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
-                <span className="text-slate-400 text-[11px]">Allocated by: <strong>Dr. Kaine Edike</strong></span>
+              <div className="pt-3 border-t border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between text-xs">
+                <span className="text-[#86868B] dark:text-[#A1A1A6] text-[11px]">Allocated by: <strong className="text-[#1D1D1F] dark:text-[#F5F5F7]">Dr. Kaine Edike</strong></span>
                 <button
                   onClick={() => {
                     setActiveCustodianForExpense('MARVELOUS');
                     setIsPettyExpenseOpen(true);
                     haptics.selection();
                   }}
-                  className="px-3 py-1 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 text-white rounded-lg text-xs font-semibold shadow-2xs active:scale-95 transition-all"
+                  className="px-3 py-1.5 bg-[#1D1D1F] hover:bg-[#333336] dark:bg-white dark:hover:bg-[#E5E5E7] text-white dark:text-[#1D1D1F] rounded-xl text-xs font-medium shadow-xs active:scale-[0.97] transition-all"
                 >
                   Log Voucher (Marvelous)
                 </button>
@@ -976,13 +978,13 @@ export default function FinancePage() {
           </div>
 
           {/* Monthly Analysis & Replenishment Panel (SOP Section 4) */}
-          <div className="p-4 rounded-3xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs">
+          <div className="p-5 rounded-3xl bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <h4 className="font-bold text-slate-900 dark:text-white">Monthly Petty Cash Reconciliation Analysis</h4>
+                <h4 className="font-semibold text-slate-900 dark:text-white">Monthly Petty Cash Reconciliation Analysis</h4>
               </div>
-              <p className="text-slate-500 dark:text-slate-400 text-[11px]">
+              <p className="text-[#86868B] dark:text-[#A1A1A6] text-[11px]">
                 Per SOP Section 4, Gift is primarily responsible for monthly analysis (Marvelous is backup). Reconciles all physical vouchers and triggers MD replenishment back to ₦300,000.
               </p>
             </div>
@@ -994,7 +996,7 @@ export default function FinancePage() {
                   generatePettyCashMonthlyAnalysis(currentMonth);
                   haptics.success();
                 }}
-                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold shadow-2xs active:scale-95 transition-all"
+                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-xs active:scale-[0.97] transition-all"
               >
                 Compile Monthly Analysis
               </button>
@@ -1010,7 +1012,7 @@ export default function FinancePage() {
                       alert('Please compile monthly analysis first.');
                     }
                   }}
-                  className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 text-white rounded-xl font-bold shadow-2xs active:scale-95 transition-all flex items-center gap-1.5"
+                  className="px-3.5 py-2 bg-[#1D1D1F] hover:bg-[#333336] dark:bg-white dark:hover:bg-[#E5E5E7] text-white dark:text-[#1D1D1F] rounded-xl text-xs font-semibold shadow-xs active:scale-[0.97] transition-all flex items-center gap-1.5"
                 >
                   <DollarSign className="w-3.5 h-3.5" />
                   <span>Approve ₦600k Replenishment</span>
@@ -1020,65 +1022,65 @@ export default function FinancePage() {
           </div>
 
           {/* Imprest Transaction Vouchers Table */}
-          <div className="apple-glass-card rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-              <h3 className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider">
-                Imprest Expense Ledger & Supporting Receipts ({pettyCashTransactions.length})
+          <div className="rounded-3xl overflow-hidden bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
+            <div className="p-5 border-b border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between">
+              <h3 className="font-semibold text-xs text-[#1D1D1F] dark:text-[#F5F5F7]">
+                Imprest Expense Ledger ({pettyCashTransactions.length} Vouchers)
               </h3>
-              <span className="text-[11px] text-slate-400">Total Spent This Month: ₦{totalPettyCashSpent.toLocaleString()}</span>
+              <span className="text-[11px] text-[#86868B] dark:text-[#A1A1A6] font-medium tnum">Total Spent This Month: ₦{totalPettyCashSpent.toLocaleString()}</span>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50/60 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+                <thead className="bg-black/[0.02] dark:bg-white/[0.02] border-b border-black/[0.06] dark:border-white/[0.08] text-[#86868B] dark:text-[#A1A1A6] font-medium text-[11px]">
                   <tr>
-                    <th className="px-5 py-3">Date & Fund</th>
-                    <th className="px-5 py-3">Expense Category</th>
-                    <th className="px-5 py-3">Description / Purpose</th>
-                    <th className="px-5 py-3 text-right">Amount (₦ NGN)</th>
-                    <th className="px-5 py-3">Receipt / Voucher</th>
-                    <th className="px-5 py-3">Custodian Sign-off</th>
+                    <th className="px-6 py-3.5">Date & Fund</th>
+                    <th className="px-6 py-3.5">Expense Category</th>
+                    <th className="px-6 py-3.5">Description / Purpose</th>
+                    <th className="px-6 py-3.5 text-right">Amount (₦ NGN)</th>
+                    <th className="px-6 py-3.5">Receipt / Voucher</th>
+                    <th className="px-6 py-3.5">Custodian Sign-off</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
+                <tbody className="divide-y divide-black/[0.04] dark:divide-white/[0.06] font-normal">
                   {pettyCashTransactions.map((tx) => (
-                    <tr key={tx.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
-                      <td className="px-5 py-3.5">
-                        <div className="font-mono text-xs font-bold text-slate-900 dark:text-white">{tx.date}</div>
-                        <span className={`px-2 py-0.2 rounded-full text-[9px] font-bold ${
+                    <tr key={tx.id} className="hover:bg-black/[0.015] dark:hover:bg-white/[0.02] transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="font-mono text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{tx.date}</div>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
                           tx.fundCustodian === 'GIFT' 
-                            ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300' 
-                            : 'bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300'
+                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' 
+                            : 'bg-blue-500/10 text-blue-700 dark:text-blue-300'
                         }`}>
-                          {tx.fundCustodian}'S FUND
+                          {tx.fundCustodian}'s Fund
                         </span>
                       </td>
 
-                      <td className="px-5 py-3 text-xs">
-                        <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-[11px]">
+                      <td className="px-6 py-4 text-xs">
+                        <span className="px-2 py-0.5 rounded-md bg-black/[0.04] dark:bg-white/[0.06] text-[#1D1D1F] dark:text-[#F5F5F7] font-medium text-[11px]">
                           {tx.category.replace(/_/g, ' ')}
                         </span>
                       </td>
 
-                      <td className="px-5 py-3 text-xs text-slate-700 dark:text-slate-300 max-w-sm">
+                      <td className="px-6 py-4 text-xs text-[#1D1D1F] dark:text-[#F5F5F7] max-w-sm">
                         {tx.description}
                       </td>
 
-                      <td className="px-5 py-3 text-right font-mono font-bold text-xs text-slate-900 dark:text-white tnum">
+                      <td className="px-6 py-4 text-right font-mono font-semibold text-xs text-[#1D1D1F] dark:text-[#F5F5F7] tnum">
                         ₦{tx.amountNgn.toLocaleString()}
                       </td>
 
-                      <td className="px-5 py-3 text-xs">
+                      <td className="px-6 py-4 text-xs">
                         {tx.receiptUrl ? (
                           <span className="text-emerald-600 dark:text-emerald-400 font-mono text-[11px] underline cursor-pointer">
                             {tx.receiptUrl}
                           </span>
                         ) : (
-                          <span className="text-slate-400 italic">Voucher on file</span>
+                          <span className="text-[#86868B]/60 italic">Voucher on file</span>
                         )}
                       </td>
 
-                      <td className="px-5 py-3 text-xs text-slate-500">
+                      <td className="px-6 py-4 text-xs text-[#86868B] dark:text-[#A1A1A6]">
                         {tx.approvedByName}
                       </td>
                     </tr>
@@ -1092,133 +1094,133 @@ export default function FinancePage() {
 
       {/* TAB 3: MILESTONE INVOICING & DR. K CONFIRMATION */}
       {canSeeAllFinance && activeMainTab === 'INVOICES' && (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {/* Telemetry Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div className="text-[10px] uppercase font-bold text-slate-400">Total Billed Gross</div>
-              <div className="text-xl font-extrabold text-slate-900 dark:text-white tnum">₦{(totalBilledNgn / 1000000).toFixed(1)}M</div>
-              <div className="text-[10px] text-slate-500 font-medium">{invoices.length} Milestone Invoices</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="rounded-2xl p-5 space-y-1.5 bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
+              <div className="text-xs font-medium text-[#86868B] dark:text-[#A1A1A6]">Total Billed Gross</div>
+              <div className="text-2xl font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] tnum">₦{(totalBilledNgn / 1000000).toFixed(1)}M</div>
+              <div className="text-xs text-[#86868B] dark:text-[#A1A1A6]">{invoices.length} Milestone Invoices</div>
             </div>
 
-            <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div className="text-[10px] uppercase font-bold text-slate-400">Cash Collected (Net)</div>
-              <div className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 tnum">₦{(totalPaidNgn / 1000000).toFixed(1)}M</div>
-              <div className="text-[10px] text-slate-500 font-medium">Reconciled wire payments</div>
+            <div className="rounded-2xl p-5 space-y-1.5 bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
+              <div className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Cash Collected (Net)</div>
+              <div className="text-2xl font-semibold tracking-tight text-emerald-600 dark:text-emerald-400 tnum">₦{(totalPaidNgn / 1000000).toFixed(1)}M</div>
+              <div className="text-xs text-[#86868B] dark:text-[#A1A1A6]">Reconciled wire payments</div>
             </div>
 
-            <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div className="text-[10px] uppercase font-bold text-slate-400">7.5% VAT Tracked</div>
-              <div className="text-xl font-extrabold text-purple-600 dark:text-purple-400 tnum">₦{(totalVatTracked / 1000000).toFixed(2)}M</div>
-              <div className="text-[10px] text-slate-500 font-medium">FIRS Compliance Ledger</div>
+            <div className="rounded-2xl p-5 space-y-1.5 bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
+              <div className="text-xs font-medium text-indigo-600 dark:text-indigo-400">7.5% VAT Tracked</div>
+              <div className="text-2xl font-semibold tracking-tight text-indigo-600 dark:text-indigo-400 tnum">₦{(totalVatTracked / 1000000).toFixed(2)}M</div>
+              <div className="text-xs text-[#86868B] dark:text-[#A1A1A6]">FIRS Compliance Ledger</div>
             </div>
 
-            <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div className="text-[10px] uppercase font-bold text-slate-400">WHT Deductions (5%)</div>
-              <div className="text-xl font-extrabold text-amber-600 dark:text-amber-400 tnum">₦{(totalWhtDeductions / 1000000).toFixed(2)}M</div>
-              <div className="text-[10px] text-slate-500 font-medium">Credit note reconciliation</div>
+            <div className="rounded-2xl p-5 space-y-1.5 bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
+              <div className="text-xs font-medium text-amber-600 dark:text-amber-400">WHT Deductions (5%)</div>
+              <div className="text-2xl font-semibold tracking-tight text-amber-600 dark:text-amber-400 tnum">₦{(totalWhtDeductions / 1000000).toFixed(2)}M</div>
+              <div className="text-xs text-[#86868B] dark:text-[#A1A1A6]">Credit note reconciliation</div>
             </div>
           </div>
 
           {/* Filter & Preparer Notice */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div className="flex items-center gap-1 p-1 bg-slate-100/80 dark:bg-slate-800/80 rounded-xl text-xs font-semibold">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="inline-flex p-1 bg-black/[0.04] dark:bg-white/[0.06] rounded-xl text-xs font-medium gap-1">
               <button
                 onClick={() => setInvoiceStatusFilter('ALL')}
-                className={`px-3 py-1 rounded-lg transition-all ${
-                  invoiceStatusFilter === 'ALL' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs font-bold' : 'text-slate-500'
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  invoiceStatusFilter === 'ALL' ? 'bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs font-semibold' : 'text-[#86868B] dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-white'
                 }`}
               >
                 All Invoices ({invoices.length})
               </button>
               <button
                 onClick={() => setInvoiceStatusFilter('ISSUED')}
-                className={`px-3 py-1 rounded-lg transition-all ${
-                  invoiceStatusFilter === 'ISSUED' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs font-bold' : 'text-slate-500'
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  invoiceStatusFilter === 'ISSUED' ? 'bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs font-semibold' : 'text-[#86868B] dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-white'
                 }`}
               >
                 Awaiting Payment ({invoices.filter(i => i.status === 'ISSUED').length})
               </button>
               <button
                 onClick={() => setInvoiceStatusFilter('PAID')}
-                className={`px-3 py-1 rounded-lg transition-all ${
-                  invoiceStatusFilter === 'PAID' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs font-bold' : 'text-slate-500'
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  invoiceStatusFilter === 'PAID' ? 'bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs font-semibold' : 'text-[#86868B] dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-white'
                 }`}
               >
                 Settled ({invoices.filter(i => i.status === 'PAID').length})
               </button>
             </div>
 
-            <div className="text-[11px] text-slate-500 flex items-center gap-2">
-              <span className="font-semibold text-slate-700 dark:text-slate-300">SOP Rule:</span> Marvelous is primary preparer; confirmation required directly with Dr. Kaine Edike before clearance.
+            <div className="text-[11px] text-[#86868B] dark:text-[#A1A1A6] flex items-center gap-2">
+              <span className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">SOP Rule:</span> Marvelous prepares; confirmation required with Dr. Kaine Edike before clearance.
             </div>
           </div>
 
           {/* Invoices List Table */}
-          <div className="apple-glass-card rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+          <div className="rounded-3xl overflow-hidden bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50/60 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+                <thead className="bg-black/[0.02] dark:bg-white/[0.02] border-b border-black/[0.06] dark:border-white/[0.08] text-[#86868B] dark:text-[#A1A1A6] font-medium text-[11px]">
                   <tr>
-                    <th className="px-5 py-3">Invoice & Client</th>
-                    <th className="px-5 py-3">Milestone Description</th>
-                    <th className="px-5 py-3">Preparer (SOP)</th>
-                    <th className="px-5 py-3 text-right">Net Payable</th>
-                    <th className="px-5 py-3">Status</th>
-                    <th className="px-5 py-3">Dr. K Confirmation</th>
-                    <th className="px-5 py-3 text-right">Actions</th>
+                    <th className="px-6 py-3.5">Invoice & Client</th>
+                    <th className="px-6 py-3.5">Milestone Description</th>
+                    <th className="px-6 py-3.5">Preparer (SOP)</th>
+                    <th className="px-6 py-3.5 text-right">Net Payable</th>
+                    <th className="px-6 py-3.5">Status</th>
+                    <th className="px-6 py-3.5">Dr. K Confirmation</th>
+                    <th className="px-6 py-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
+                <tbody className="divide-y divide-black/[0.04] dark:divide-white/[0.06] font-normal">
                   {filteredInvoices.map((inv) => {
                     const isPaid = inv.status === 'PAID';
                     const isConfirmed = inv.confirmedWithDrK;
 
                     return (
-                      <tr key={inv.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
-                        <td className="px-5 py-3.5">
-                          <div className="font-mono text-xs font-bold text-slate-900 dark:text-white">{inv.invoiceNumber}</div>
-                          <div className="text-[11px] text-slate-500 dark:text-slate-400">{inv.clientName}</div>
+                      <tr key={inv.id} className="hover:bg-black/[0.015] dark:hover:bg-white/[0.02] transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="font-mono text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{inv.invoiceNumber}</div>
+                          <div className="text-[11px] text-[#86868B] dark:text-[#A1A1A6] mt-0.5">{inv.clientName}</div>
                         </td>
 
-                        <td className="px-5 py-3 text-[11px] text-slate-600 dark:text-slate-300 max-w-xs">
+                        <td className="px-6 py-4 text-[11px] text-[#86868B] dark:text-[#A1A1A6] max-w-xs">
                           {inv.milestoneDescription}
                         </td>
 
-                        <td className="px-5 py-3 text-xs">
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                            {inv.preparedByName || 'Marvelous (Lead)'}
+                        <td className="px-6 py-4 text-xs">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-black/[0.04] dark:bg-white/[0.08] text-[#86868B] dark:text-[#A1A1A6]">
+                            {inv.preparedByName || 'Marvelous'}
                           </span>
                         </td>
 
-                        <td className="px-5 py-3 text-right font-mono font-bold text-xs text-slate-900 dark:text-white tnum">
+                        <td className="px-6 py-4 text-right font-mono font-semibold text-xs text-[#1D1D1F] dark:text-[#F5F5F7] tnum">
                           ₦{inv.netPayableNgn.toLocaleString()}
                         </td>
 
-                        <td className="px-5 py-3">
-                          <span className={`px-2 py-0.2 rounded-full text-[10px] font-bold ${
+                        <td className="px-6 py-4">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-medium ${
                             isPaid 
-                              ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' 
-                              : 'bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                              ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' 
+                              : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
                           }`}>
-                            {inv.status}
+                            {isPaid ? 'Paid' : 'Issued'}
                           </span>
                         </td>
 
-                        <td className="px-5 py-3">
+                        <td className="px-6 py-4">
                           {isConfirmed ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
                               <CheckCircle2 className="w-3.5 h-3.5" />
-                              <span>Confirmed with Dr. K</span>
+                              <span>Confirmed</span>
                             </span>
                           ) : (
-                            <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">
-                              Pending MD Verification
+                            <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                              Pending Verification
                             </span>
                           )}
                         </td>
 
-                        <td className="px-5 py-3 text-right space-x-1.5">
+                        <td className="px-6 py-4 text-right space-x-1.5">
                           {!isConfirmed && (
                             <button
                               onClick={() => {
@@ -1226,7 +1228,7 @@ export default function FinancePage() {
                                 haptics.success();
                               }}
                               title="SOP Requirement: Confirm receipt directly with Dr. Kaine Edike"
-                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold shadow-2xs active:scale-[0.96]"
+                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-xs active:scale-[0.97] transition-all"
                             >
                               Confirm with Dr. K
                             </button>
@@ -1235,7 +1237,7 @@ export default function FinancePage() {
                           {!isPaid && (
                             <button
                               onClick={() => setSelectedInvoiceForPayment(inv)}
-                              className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 text-white rounded-lg text-[10px] font-bold shadow-2xs active:scale-[0.96]"
+                              className="px-3 py-1.5 bg-[#1D1D1F] hover:bg-[#333336] dark:bg-white dark:hover:bg-[#E5E5E7] dark:text-[#1D1D1F] text-white rounded-xl text-xs font-semibold shadow-xs active:scale-[0.97] transition-all"
                             >
                               Record Payment
                             </button>
@@ -1253,19 +1255,19 @@ export default function FinancePage() {
 
       {/* TAB 4: FUND RETIREMENT & EXPENSE TRACKING */}
       {canSeeAllFinance && activeMainTab === 'EXPENSES' && (
-        <div className="space-y-4">
-          <div className="p-5 rounded-3xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-2">
-            <h3 className="font-bold text-sm text-slate-900 dark:text-white">Fund Retirement & Project Expenditure Reconciliation</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-3xl">
+        <div className="space-y-6">
+          <div className="p-6 rounded-3xl bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs space-y-2">
+            <h3 className="font-semibold text-sm text-[#1D1D1F] dark:text-[#F5F5F7]">Fund Retirement & Project Expenditure Reconciliation</h3>
+            <p className="text-xs text-[#86868B] dark:text-[#A1A1A6] leading-relaxed max-w-3xl">
               Per AquaEarth Financial SOP Section 5: All advances granted for field campaigns, soil testing, and bathymetric surveys must be retired within 48 hours of mobilization completion. Unspent balances are refunded back to treasury accounts, backed by physical receipts and miscellaneous justification logs.
             </p>
           </div>
 
-          <div className="apple-glass-card rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs p-5">
-            <div className="text-center py-12 space-y-3">
-              <ShieldCheck className="w-10 h-10 text-emerald-500 mx-auto opacity-80" />
-              <h4 className="font-bold text-sm text-slate-900 dark:text-white">All Active Mobilizations Fully Collated</h4>
-              <p className="text-xs text-slate-500 max-w-md mx-auto">
+          <div className="rounded-3xl overflow-hidden bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs p-8">
+            <div className="text-center py-10 space-y-3">
+              <ShieldCheck className="w-10 h-10 text-emerald-600 dark:text-emerald-400 mx-auto opacity-90" />
+              <h4 className="font-semibold text-sm text-[#1D1D1F] dark:text-[#F5F5F7]">All Active Mobilizations Fully Collated</h4>
+              <p className="text-xs text-[#86868B] dark:text-[#A1A1A6] max-w-md mx-auto">
                 No outstanding unretired cash advances past the 48-hour window. Active projects are within authorized capex thresholds.
               </p>
             </div>

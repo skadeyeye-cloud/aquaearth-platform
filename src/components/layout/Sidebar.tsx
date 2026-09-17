@@ -80,82 +80,82 @@ export default function Sidebar({ onMobileItemClick }: { onMobileItemClick?: () 
     {
       title: 'Workspace',
       items: [
-        { name: 'My Workspace', href: '/workspace', icon: LayoutGrid, badge: 'All' },
-        { name: 'My Tasks', href: '/tasks', icon: CheckCircle2, highlight: 'Workflow' },
-        { name: 'Daily Attendance', href: '/hr/attendance', icon: CalendarCheck, highlight: '+10 KPI' },
+        { name: 'My Workspace', href: '/workspace', icon: LayoutGrid },
+        { name: 'My Tasks', href: '/tasks', icon: CheckCircle2 },
+        { name: 'Daily Attendance', href: '/hr/attendance', icon: CalendarCheck },
         { name: 'Staff Directory', href: '/directory', icon: Compass },
       ]
     },
     {
       title: 'Executive Intelligence',
       items: [
-        { name: 'Command & Analytics', href: '/analytics', icon: BarChart3, highlight: 'Live Digest', visible: canSeeAnalytics },
+        { name: 'Command & Analytics', href: '/analytics', icon: BarChart3, visible: canSeeAnalytics },
         { name: 'KPI Leaderboard', href: '/kpi/leaderboard', icon: Award, visible: true },
       ]
     },
     {
       title: 'Commercial Engine',
       items: [
-        { name: 'BD & Tendering', href: '/bd/pipeline', icon: Briefcase, highlight: 'Pipeline', visible: canSeeBD },
+        { name: 'BD & Tendering', href: '/bd/pipeline', icon: Briefcase, visible: canSeeBD },
         { name: 'Client & Stakeholder CRM', href: '/crm/accounts', icon: Users, visible: canSeeCRM },
       ]
     },
     {
       title: 'Project Delivery & Field',
       items: [
-        { name: 'Projects & Milestones', href: '/projects', icon: FolderKanban, highlight: 'AI Parser', visible: canSeeProjects },
-        { name: 'Field Data Capture', href: '/field/capture', icon: Smartphone, highlight: 'Offline', visible: canSeeField },
+        { name: 'Projects & Milestones', href: '/projects', icon: FolderKanban, visible: canSeeProjects },
+        { name: 'Field Data Capture', href: '/field/capture', icon: Smartphone, visible: canSeeField },
       ]
     },
     {
       title: 'Quality & Governance',
       items: [
-        { name: 'Documents & Repository', href: '/documents', icon: FileText, badge: 'Vault', visible: canSeeDocs },
-        { name: 'QA/QC Technical Review', href: '/qa', icon: CheckCircle2, highlight: 'Hard Gate', visible: canSeeQA },
-        { name: 'Regulatory & Compliance', href: '/compliance', icon: ShieldCheck, highlight: 'FMEnv/NESREA', visible: canSeeCompliance },
-        { name: 'AquaEarth Vault', href: '/vault', icon: HardDrive, highlight: 'Sovereign', visible: canSeeVault },
+        { name: 'Documents & Repository', href: '/documents', icon: FileText, visible: canSeeDocs },
+        { name: 'QA/QC Technical Review', href: '/qa', icon: CheckCircle2, visible: canSeeQA },
+        { name: 'Regulatory & Compliance', href: '/compliance', icon: ShieldCheck, visible: canSeeCompliance },
+        { name: 'AquaEarth Vault', href: '/vault', icon: HardDrive, visible: canSeeVault },
       ]
     },
     {
       title: 'Operational Support',
       items: [
-        { name: 'IT & Design Ops Studio', href: '/operations/it-design', icon: Layers, highlight: '24h Rush', visible: canSeeITDesign },
-        { name: 'Milestone Finance & Invoicing', href: '/finance', icon: Receipt, badge: 'WHT/VAT', visible: canSeeFinance },
+        { name: 'IT & Design Ops Studio', href: '/operations/it-design', icon: Layers, visible: canSeeITDesign },
+        { name: 'Milestone Finance & Invoicing', href: '/finance', icon: Receipt, visible: canSeeFinance },
         { name: 'HR & Human Capital', href: '/hr/staff', icon: UserCheck, visible: canSeeHR },
-        { name: 'Onboarding & Recruitment', href: '/hr/onboarding', icon: Users, highlight: 'Funnel', visible: canSeeHR },
-        { name: 'Admin Overview', href: '/admin', icon: Shield, highlight: 'Command', visible: canSeeAdmin },
-        { name: 'Superadmin Management', href: '/admin/users', icon: Lock, badge: 'Full Root', visible: canSeeAdmin },
+        { name: 'Onboarding & Recruitment', href: '/hr/onboarding', icon: Users, visible: canSeeHR },
+        { name: 'Admin Overview', href: '/admin', icon: Shield, visible: canSeeAdmin },
+        { name: 'Superadmin Management', href: '/admin/users', icon: Lock, visible: canSeeAdmin },
       ]
     }
   ];
 
   return (
-    <aside className="w-full md:w-64 bg-white dark:bg-[#000000] border-r border-black/[0.08] dark:border-white/[0.12] flex flex-col h-full select-none shrink-0 transition-colors">
+    <aside className="w-full md:w-64 bg-[#FBFBFD] dark:bg-[#18181A] border-r border-black/[0.06] dark:border-white/[0.08] flex flex-col h-full select-none shrink-0 transition-colors">
       {/* Brand Header */}
-      <div className="h-16 flex items-center gap-3 px-6 border-b border-black/[0.08] dark:border-white/[0.12]">
-        <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-sm font-black text-sm tracking-tight">
+      <div className="h-16 flex items-center gap-3 px-5 border-b border-black/[0.06] dark:border-white/[0.08]">
+        <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-xs font-bold text-xs tracking-tight">
           AE
         </div>
         <div>
-          <div className="font-bold text-xs text-slate-900 dark:text-white tracking-tight flex items-center gap-1.5">
+          <div className="font-semibold text-xs text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight flex items-center gap-1.5">
             AquaEarth
-            <span className="text-[9px] font-bold bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.2 rounded-md border border-emerald-200 dark:border-emerald-800">
-              Operations
+            <span className="text-[10px] font-medium bg-black/[0.04] dark:bg-white/[0.08] text-[#86868B] dark:text-[#A1A1A6] px-1.5 py-0.2 rounded-md">
+              Ops
             </span>
           </div>
-          <p className="text-[10px] text-slate-500 dark:text-slate-400">Advisory & Project Delivery</p>
+          <p className="text-[11px] text-[#86868B] dark:text-[#A1A1A6]">Advisory & Delivery</p>
         </div>
       </div>
 
       {/* Navigation Links */}
-      <div className="flex-1 overflow-y-auto p-2.5 space-y-4 text-xs">
+      <div className="flex-1 overflow-y-auto p-3 space-y-4 text-xs">
         {navSections.map((section, sIdx) => {
           const visibleItems = section.items.filter(item => item.visible === undefined || item.visible);
           if (visibleItems.length === 0) return null;
 
           return (
             <div key={sIdx} className="space-y-0.5">
-              <div className="px-2.5 py-1 text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">
+              <div className="px-3 py-1 text-[11px] font-semibold text-[#86868B] dark:text-[#8E8E93] tracking-normal">
                 {section.title}
               </div>
               {visibleItems.map((item, idx) => {
@@ -172,38 +172,30 @@ export default function Sidebar({ onMobileItemClick }: { onMobileItemClick?: () 
                         onMobileItemClick();
                       }
                     }}
-                    className={`group relative flex items-center justify-between px-2.5 py-2 rounded-xl font-medium active:scale-[0.98] transition-colors ${
+                    className={`group relative flex items-center justify-between px-3 py-2 rounded-xl text-[12.5px] transition-colors ${
                       isActive 
-                        ? 'text-white dark:text-slate-950 font-bold' 
-                        : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10'
+                        ? 'text-[#1D1D1F] dark:text-white font-semibold' 
+                        : 'text-[#6E6E73] dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06] font-normal'
                     }`}
                   >
                     {isActive && (
                       <motion.div
                         layoutId="sidebarActivePill"
-                        transition={{ type: 'spring', damping: 28, stiffness: 450 }}
-                        className="absolute inset-0 bg-slate-900 dark:bg-white rounded-xl shadow-xs"
+                        transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+                        className="absolute inset-0 bg-black/[0.06] dark:bg-white/[0.1] rounded-xl"
                       />
                     )}
 
                     <div className="relative z-10 flex items-center gap-2.5">
-                      <Icon className={`w-4 h-4 transition-colors ${isActive ? 'text-white dark:text-slate-950' : 'text-slate-500 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200'}`} />
-                      <span className="text-[12px]">{item.name}</span>
+                      <Icon className={`w-4 h-4 transition-colors ${isActive ? 'text-[#1D1D1F] dark:text-white' : 'text-[#86868B] dark:text-[#8E8E93] group-hover:text-[#1D1D1F] dark:group-hover:text-white'}`} />
+                      <span>{item.name}</span>
                     </div>
 
                     {item.badge && (
-                      <span className={`relative z-10 text-[9px] font-semibold px-1.5 py-0.2 rounded-md whitespace-nowrap shrink-0 ${
-                        isActive ? 'bg-white/20 dark:bg-black/20 text-white dark:text-slate-950' : 'bg-black/[0.05] dark:bg-white/[0.1] text-slate-500 dark:text-slate-400'
+                      <span className={`relative z-10 text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                        isActive ? 'bg-black/[0.08] dark:bg-white/[0.15] text-[#1D1D1F] dark:text-white' : 'bg-black/[0.04] dark:bg-white/[0.08] text-[#86868B] dark:text-[#A1A1A6]'
                       }`}>
                         {item.badge}
-                      </span>
-                    )}
-
-                    {item.highlight && (
-                      <span className={`relative z-10 text-[9px] font-bold px-1.5 py-0.2 rounded-md whitespace-nowrap shrink-0 ${
-                        isActive ? 'bg-white/20 dark:bg-black/20 text-white dark:text-slate-950' : 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
-                      }`}>
-                        {item.highlight}
                       </span>
                     )}
                   </Link>
@@ -215,15 +207,24 @@ export default function Sidebar({ onMobileItemClick }: { onMobileItemClick?: () 
       </div>
 
       {/* User Scoping Pill */}
-      <div className="p-3 border-t border-black/[0.08] dark:border-white/[0.1] bg-slate-50 dark:bg-[#050507] text-[11px]">
-        <div className="flex items-center justify-between">
-          <span className="text-slate-500 dark:text-slate-400 text-[10px] font-medium">Role:</span>
-          <span className="font-bold text-[10px] bg-slate-200 dark:bg-white/15 text-slate-800 dark:text-white px-1.5 py-0.5 rounded-md whitespace-nowrap shrink-0">
-            {role.replace('_', ' ')}
-          </span>
-        </div>
-        <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-1">
-          {currentUser.departmentName || 'General Operations'}
+      <div className="p-3.5 border-t border-black/[0.06] dark:border-white/[0.08] bg-black/[0.01] dark:bg-white/[0.02] text-xs">
+        <div className="flex items-center gap-2.5">
+          <img
+            src={currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
+            alt={currentUser.name}
+            className="w-7 h-7 rounded-xl object-cover ring-1 ring-black/[0.06] dark:ring-white/[0.08] shrink-0"
+          />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-1">
+              <span className="font-semibold text-xs text-[#1D1D1F] dark:text-[#F5F5F7] truncate">{currentUser.name}</span>
+              <span className="font-medium text-[9.5px] bg-black/[0.05] dark:bg-white/[0.1] text-[#1D1D1F] dark:text-[#F5F5F7] px-1.5 py-0.2 rounded-md whitespace-nowrap shrink-0">
+                {role.replace(/_/g, ' ')}
+              </span>
+            </div>
+            <div className="text-[10.5px] text-[#86868B] dark:text-[#A1A1A6] truncate">
+              {currentUser.departmentName || 'General Operations'}
+            </div>
+          </div>
         </div>
       </div>
     </aside>
