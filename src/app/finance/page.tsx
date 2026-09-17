@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { 
   Receipt, 
@@ -99,19 +100,64 @@ export default function FinancePage() {
   const isOzioma = currentUser.id === 'usr-12' || currentUser.functionalRole === 'SENIOR_CONSULTANT' || currentUser.name.toLowerCase().includes('ozioma');
   const isGift = currentUser.id === 'usr-13' || currentUser.name.toLowerCase().includes('gift');
   const isMarvelous = currentUser.id === 'usr-14' || currentUser.name.toLowerCase().includes('marvelous');
-  const isSuperadmin = currentUser.accessTier === 'SUPERADMIN';
+  const isSuperadmin = currentUser.accessTier === 'SUPERADMIN' || isDrK || isBibi || isErica || isOzioma;
 
-  // Calculations
-  const filteredBudgets = budgetRequests.filter(req => {
+  // Superadmins & Finance Officers have complete unrestricted access across all of finance
+  const isFinanceOfficer = currentUser.functionalRole === 'FINANCE_OFFICER' || currentUser.functionalRole === 'FINANCE_ADMIN' || currentUser.functionalRole === 'CFO' || currentUser.departmentName === 'Finance' || currentUser.departmentName === 'Finance & Accounts' || isGift || isMarvelous || isErica;
+  const canSeeAllFinance = isSuperadmin || isFinanceOfficer;
+
+  // Line Managers and Admins can only view their own budgets and submit budgets
+  const isLineManagerOrAdmin = currentUser.accessTier === 'ADMIN' || currentUser.managementTier !== 'NONE' || currentUser.functionalRole === 'PROJECT_MANAGER';
+
+  // Scoped budgets:
+  // Superadmins & Finance Officers see all budgets across the entire company.
+  // Line Managers and Admins can ONLY see the status of their own budgets.
+  const accessibleBudgets = canSeeAllFinance
+    ? budgetRequests
+    : budgetRequests.filter(req => 
+        req.requestedById === currentUser.id ||
+        req.requestedByName?.toLowerCase().trim() === currentUser.name?.toLowerCase().trim()
+      );
+
+  const filteredBudgets = accessibleBudgets.filter(req => {
     if (budgetStageFilter === 'ALL') return true;
     return req.approvalStage === budgetStageFilter;
   });
 
-  const totalBudgetRequested = budgetRequests.reduce((acc, curr) => acc + curr.amountNgn, 0);
-  const mdPendingBudgetCount = budgetRequests.filter(b => b.approvalStage === 'MD_PENDING').length;
-  const cfoReviewCount = budgetRequests.filter(b => b.approvalStage === 'CFO_REVIEW').length;
-  const inCollationCount = budgetRequests.filter(b => b.approvalStage === 'IN_COLLATION').length;
-  const approvedBudgetAmount = budgetRequests.filter(b => b.status === 'APPROVED').reduce((acc, curr) => acc + curr.amountNgn, 0);
+  const totalBudgetRequested = accessibleBudgets.reduce((acc, curr) => acc + curr.amountNgn, 0);
+  const mdPendingBudgetCount = accessibleBudgets.filter(b => b.approvalStage === 'MD_PENDING').length;
+  const cfoReviewCount = accessibleBudgets.filter(b => b.approvalStage === 'CFO_REVIEW').length;
+  const inCollationCount = accessibleBudgets.filter(b => b.approvalStage === 'IN_COLLATION').length;
+  const withOziomaCount = accessibleBudgets.filter(b => b.approvalStage === 'WITH_OZIOMA').length;
+  const approvedBudgetAmount = accessibleBudgets.filter(b => b.status === 'APPROVED').reduce((acc, curr) => acc + curr.amountNgn, 0);
+  const approvedBudgetCount = accessibleBudgets.filter(b => b.status === 'APPROVED').length;
+  const declinedBudgetCount = accessibleBudgets.filter(b => b.status === 'DECLINED').length;
+
+  // Access Guard: If user is neither Finance nor a Line Manager/Admin, restrict access
+  if (!canSeeAllFinance && !isLineManagerOrAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
+        <div className="w-16 h-16 rounded-2xl bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 mb-4 shadow-sm">
+          <ShieldAlert className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">
+          Restricted Finance Access
+        </h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mb-6 leading-relaxed">
+          The Financial Governance & Invoicing module is reserved for Department Line Managers, Finance Officers, and Executive Leadership. If you require budget allocation or project funds, please liaise directly with your Line Manager.
+        </p>
+        <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 mb-6">
+          Signed in as: <strong className="text-slate-900 dark:text-white">{currentUser.name}</strong> ({currentUser.jobTitle})
+        </div>
+        <Link
+          href="/workspace"
+          className="px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-semibold rounded-xl shadow-xs transition-all"
+        >
+          Return to My Workspace
+        </Link>
+      </div>
+    );
+  }
 
   // Petty Cash Funds
   const giftFund = pettyCashFunds.find(f => f.custodian === 'GIFT') || {
@@ -202,20 +248,19 @@ export default function FinancePage() {
 
         {/* Action Buttons & Persona Stamping */}
         <div className="flex items-center gap-2">
-          {activeMainTab === 'BUDGETS' && (
-            <button
-              onClick={() => {
-                setIsNewBudgetOpen(true);
-                haptics.selection();
-              }}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-2xs transition-all active:scale-[0.96]"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Submit Budget Request</span>
-            </button>
-          )}
+          {/* Submit Budget Request is accessible to Superadmins, Finance Officers, and Line Managers */}
+          <button
+            onClick={() => {
+              setIsNewBudgetOpen(true);
+              haptics.selection();
+            }}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-2xs transition-all active:scale-[0.96]"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Submit Budget Request</span>
+          </button>
 
-          {activeMainTab === 'PETTY_CASH' && (
+          {canSeeAllFinance && activeMainTab === 'PETTY_CASH' && (
             <div className="flex items-center gap-2">
               <button
                 onClick={() => {
@@ -231,7 +276,7 @@ export default function FinancePage() {
             </div>
           )}
 
-          {activeMainTab === 'INVOICES' && (
+          {canSeeAllFinance && activeMainTab === 'INVOICES' && (
             <button
               onClick={() => setIsNewInvoiceOpen(true)}
               className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 text-white rounded-xl text-xs font-semibold shadow-2xs transition-all active:scale-[0.96]"
@@ -260,6 +305,16 @@ export default function FinancePage() {
                   SUPERADMIN
                 </span>
               )}
+              {!isSuperadmin && isFinanceOfficer && (
+                <span className="px-2 py-0.2 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-300 dark:border-blue-800">
+                  FINANCE OFFICER
+                </span>
+              )}
+              {!canSeeAllFinance && isLineManagerOrAdmin && (
+                <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                  LINE MANAGER (SCOPED)
+                </span>
+              )}
             </div>
             <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
               {isDrK && "Founder & Managing Consultant (MD) • Primary Sign-off for All Budgets, Invoices & Petty Cash Allocations"}
@@ -268,7 +323,11 @@ export default function FinancePage() {
               {isOzioma && "Senior Consultant & Commercial Liaison • Receives PM client-facing budgets and presents to MD"}
               {isGift && "Finance Officer • Collation Lead & Primary Monthly Petty Cash Analyst (Custodian of ₦300k Fund)"}
               {isMarvelous && "Finance Officer • Primary Invoice Preparer & Petty Cash Custodian (₦300k Fund)"}
-              {!isDrK && !isBibi && !isErica && !isOzioma && !isGift && !isMarvelous && "Line Manager / Department Member • Can submit budget requests"}
+              {!isDrK && !isBibi && !isErica && !isOzioma && !isGift && !isMarvelous && (
+                isLineManagerOrAdmin
+                  ? "Line Manager Portal • Scoped strictly to your departmental budget submissions. Approvals & petty cash are managed by Finance & Executive Leadership."
+                  : "Standard Staff • View restricted."
+              )}
             </div>
           </div>
         </div>
@@ -282,113 +341,168 @@ export default function FinancePage() {
         </div>
       </div>
 
-      {/* Main 4 SOP Tabs */}
-      <div className="flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-2 overflow-x-auto text-xs">
-        <button
-          onClick={() => { setActiveMainTab('BUDGETS'); haptics.selection(); }}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap shrink-0 ${
-            activeMainTab === 'BUDGETS'
-              ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-          }`}
-        >
-          <DollarSign className="w-3.5 h-3.5" />
-          <span>1. Budget Approval Workflow</span>
-          {mdPendingBudgetCount > 0 && (
-            <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] font-extrabold flex items-center justify-center animate-pulse">
-              {mdPendingBudgetCount}
+      {/* Main Navigation Tabs */}
+      {canSeeAllFinance ? (
+        <div className="flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-2 overflow-x-auto text-xs">
+          <button
+            onClick={() => { setActiveMainTab('BUDGETS'); haptics.selection(); }}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap shrink-0 ${
+              activeMainTab === 'BUDGETS'
+                ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            <DollarSign className="w-3.5 h-3.5" />
+            <span>1. Budget Approval Workflow</span>
+            {mdPendingBudgetCount > 0 && (
+              <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] font-extrabold flex items-center justify-center animate-pulse">
+                {mdPendingBudgetCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => { setActiveMainTab('PETTY_CASH'); haptics.selection(); }}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap shrink-0 ${
+              activeMainTab === 'PETTY_CASH'
+                ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            <Wallet className="w-3.5 h-3.5" />
+            <span>2. Petty Cash & Imprest (Gift & Marvelous)</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveMainTab('INVOICES'); haptics.selection(); }}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap shrink-0 ${
+              activeMainTab === 'INVOICES'
+                ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            <Receipt className="w-3.5 h-3.5" />
+            <span>3. Milestone Invoicing & Dr. K Confirmation</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveMainTab('EXPENSES'); haptics.selection(); }}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap shrink-0 ${
+              activeMainTab === 'EXPENSES'
+                ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>4. Fund Retirement & Cost Tracking</span>
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2 text-xs">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-bold shadow-2xs">
+              <DollarSign className="w-3.5 h-3.5" />
+              <span>My Departmental Budget Status</span>
+            </div>
+            <span className="text-[11px] text-slate-500 font-medium hidden sm:inline">
+              Personal & Line Manager Submissions Only
             </span>
-          )}
-        </button>
-
-        <button
-          onClick={() => { setActiveMainTab('PETTY_CASH'); haptics.selection(); }}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap shrink-0 ${
-            activeMainTab === 'PETTY_CASH'
-              ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-          }`}
-        >
-          <Wallet className="w-3.5 h-3.5" />
-          <span>2. Petty Cash & Imprest (Gift & Marvelous)</span>
-        </button>
-
-        <button
-          onClick={() => { setActiveMainTab('INVOICES'); haptics.selection(); }}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap shrink-0 ${
-            activeMainTab === 'INVOICES'
-              ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-          }`}
-        >
-          <Receipt className="w-3.5 h-3.5" />
-          <span>3. Milestone Invoicing & Dr. K Confirmation</span>
-        </button>
-
-        <button
-          onClick={() => { setActiveMainTab('EXPENSES'); haptics.selection(); }}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap shrink-0 ${
-            activeMainTab === 'EXPENSES'
-              ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-          }`}
-        >
-          <TrendingUp className="w-3.5 h-3.5" />
-          <span>4. Fund Retirement & Cost Tracking</span>
-        </button>
-      </div>
+          </div>
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+            Line Manager Scoped
+          </span>
+        </div>
+      )}
 
       {/* TAB 1: BUDGET APPROVAL WORKFLOW */}
-      {activeMainTab === 'BUDGETS' && (
+      {(canSeeAllFinance ? activeMainTab === 'BUDGETS' : true) && (
         <div className="space-y-4">
           {/* Telemetry Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div className="text-[10px] uppercase font-bold text-slate-400">Total Capex Requested</div>
-              <div className="text-xl font-extrabold text-slate-900 dark:text-white tnum">
-                ₦{(totalBudgetRequested / 1000000).toFixed(2)}M
+          {canSeeAllFinance ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+                <div className="text-[10px] uppercase font-bold text-slate-400">Total Capex Requested</div>
+                <div className="text-xl font-extrabold text-slate-900 dark:text-white tnum">
+                  ₦{(totalBudgetRequested / 1000000).toFixed(2)}M
+                </div>
+                <div className="text-[10px] text-slate-500 font-medium">{budgetRequests.length} Total Submissions</div>
               </div>
-              <div className="text-[10px] text-slate-500 font-medium">{budgetRequests.length} Total Submissions</div>
-            </div>
 
-            <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div className="text-[10px] uppercase font-bold text-rose-500 flex items-center justify-between">
-                <span>Waiting MD Approval</span>
-                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+              <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+                <div className="text-[10px] uppercase font-bold text-rose-500 flex items-center justify-between">
+                  <span>Waiting MD Approval</span>
+                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+                </div>
+                <div className="text-xl font-extrabold text-rose-600 dark:text-rose-400 tnum">
+                  {mdPendingBudgetCount} Requests
+                </div>
+                <div className="text-[10px] text-slate-500 font-medium">Ball-in-court: Dr. Kaine / Bibi</div>
               </div>
-              <div className="text-xl font-extrabold text-rose-600 dark:text-rose-400 tnum">
-                {mdPendingBudgetCount} Requests
-              </div>
-              <div className="text-[10px] text-slate-500 font-medium">Ball-in-court: Dr. Kaine / Bibi</div>
-            </div>
 
-            <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div className="text-[10px] uppercase font-bold text-purple-500">With Erica (CFO Review)</div>
-              <div className="text-xl font-extrabold text-purple-600 dark:text-purple-400 tnum">
-                {cfoReviewCount} Requests
+              <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+                <div className="text-[10px] uppercase font-bold text-purple-500">With Erica (CFO Review)</div>
+                <div className="text-xl font-extrabold text-purple-600 dark:text-purple-400 tnum">
+                  {cfoReviewCount} Requests
+                </div>
+                <div className="text-[10px] text-slate-500 font-medium">Executive financial vetting</div>
               </div>
-              <div className="text-[10px] text-slate-500 font-medium">Executive financial vetting</div>
-            </div>
 
-            <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div className="text-[10px] uppercase font-bold text-emerald-500">Approved Disbursements</div>
-              <div className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 tnum">
-                ₦{(approvedBudgetAmount / 1000000).toFixed(2)}M
+              <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+                <div className="text-[10px] uppercase font-bold text-emerald-500">Approved Disbursements</div>
+                <div className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 tnum">
+                  ₦{(approvedBudgetAmount / 1000000).toFixed(2)}M
+                </div>
+                <div className="text-[10px] text-slate-500 font-medium">Ready for wire release</div>
               </div>
-              <div className="text-[10px] text-slate-500 font-medium">Ready for wire release</div>
             </div>
-          </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+                <div className="text-[10px] uppercase font-bold text-slate-400">My Submitted Budgets</div>
+                <div className="text-xl font-extrabold text-slate-900 dark:text-white tnum">
+                  {accessibleBudgets.length} Requests
+                </div>
+                <div className="text-[10px] text-slate-500 font-medium">
+                  {accessibleBudgets.filter(b => b.budgetType === 'DEPARTMENTAL').length} Dept • {accessibleBudgets.filter(b => b.budgetType === 'CLIENT_FACING').length} Project
+                </div>
+              </div>
+
+              <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+                <div className="text-[10px] uppercase font-bold text-blue-500">Total Requested Capex</div>
+                <div className="text-xl font-extrabold text-blue-600 dark:text-blue-400 tnum">
+                  ₦{(totalBudgetRequested / 1000000).toFixed(2)}M
+                </div>
+                <div className="text-[10px] text-slate-500 font-medium">Submitted for review</div>
+              </div>
+
+              <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+                <div className="text-[10px] uppercase font-bold text-amber-500">In Review Pipeline</div>
+                <div className="text-xl font-extrabold text-amber-600 dark:text-amber-400 tnum">
+                  {accessibleBudgets.filter(b => b.status === 'PENDING_APPROVAL').length} Requests
+                </div>
+                <div className="text-[10px] text-slate-500 font-medium">With Collation, CFO, or MD</div>
+              </div>
+
+              <div className="apple-glass-card rounded-2xl p-4 space-y-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+                <div className="text-[10px] uppercase font-bold text-emerald-500">My Approved Funding</div>
+                <div className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 tnum">
+                  ₦{(approvedBudgetAmount / 1000000).toFixed(2)}M
+                </div>
+                <div className="text-[10px] text-slate-500 font-medium">{approvedBudgetCount} Approved & Capex Ready</div>
+              </div>
+            </div>
+          )}
 
           {/* Stage Filter Buttons */}
           <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 dark:bg-slate-800/80 rounded-xl text-xs font-semibold overflow-x-auto">
             {[
-              { id: 'ALL', label: 'All Budgets' },
+              { id: 'ALL', label: canSeeAllFinance ? 'All Budgets' : `All My Submissions (${accessibleBudgets.length})` },
               { id: 'MD_PENDING', label: `Pending MD / Bibi (${mdPendingBudgetCount})`, alert: mdPendingBudgetCount > 0 },
               { id: 'CFO_REVIEW', label: `With Erica (CFO) (${cfoReviewCount})` },
-              { id: 'WITH_OZIOMA', label: 'With Miss Ozioma' },
+              { id: 'WITH_OZIOMA', label: `With Miss Ozioma (${withOziomaCount})` },
               { id: 'IN_COLLATION', label: `In Collation (${inCollationCount})` },
-              { id: 'APPROVED', label: 'Approved' },
-              { id: 'DECLINED', label: 'Declined' }
+              { id: 'APPROVED', label: `Approved (${approvedBudgetCount})` },
+              { id: 'DECLINED', label: `Declined (${declinedBudgetCount})` }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -415,7 +529,7 @@ export default function FinancePage() {
                     <th className="px-5 py-3 text-right">Amount (₦ NGN)</th>
                     <th className="px-5 py-3">Stage & Ball-in-Court</th>
                     <th className="px-5 py-3">Vetting & Review History</th>
-                    <th className="px-5 py-3 text-right">SOP Actions</th>
+                    <th className="px-5 py-3 text-right">{canSeeAllFinance ? 'SOP Actions' : 'Status & Actions'}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
@@ -562,113 +676,191 @@ export default function FinancePage() {
 
                         {/* Action Buttons based on logged in persona */}
                         <td className="px-5 py-3 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            {/* MD Approval Gate for Dr. K */}
-                            {isPendingMD && isDrK && (
-                              <>
+                          {canSeeAllFinance ? (
+                            <div className="flex items-center justify-end gap-1.5">
+                              {/* MD Approval Gate for Dr. K */}
+                              {isPendingMD && isDrK && (
+                                <>
+                                  <button
+                                    onClick={() => {
+                                      approveBudgetAsMD(req.id, false, 'Approved by Dr. Kaine Edike (MD).');
+                                      haptics.success();
+                                    }}
+                                    className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold shadow-2xs active:scale-95 transition-all"
+                                  >
+                                    Approve (Dr. K)
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      const reason = prompt('Reason for declining:') || 'Declined during MD review.';
+                                      declineBudgetAsMD(req.id, false, reason);
+                                      haptics.impact();
+                                    }}
+                                    className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-[10px] font-bold border border-rose-200 transition-all"
+                                  >
+                                    Decline
+                                  </button>
+                                </>
+                              )}
+
+                              {/* Alternative Approval Gate for Bibi (2nd in Command) */}
+                              {isPendingMD && isBibi && !isDrK && (
+                                <>
+                                  <button
+                                    onClick={() => {
+                                      approveBudgetAsMD(req.id, true, 'Approved by Bibi on behalf of Dr. Kaine Edike (2nd in Command SLA clause).');
+                                      haptics.success();
+                                    }}
+                                    title="Approve on Dr. K's behalf to avoid project bottleneck (SOP Section 1)"
+                                    className="px-2.5 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-[10px] font-bold shadow-2xs active:scale-95 transition-all"
+                                  >
+                                    Approve on Dr. K Behalf
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      const reason = prompt('Reason for declining:') || 'Declined during 2nd-in-command review.';
+                                      declineBudgetAsMD(req.id, true, reason);
+                                      haptics.impact();
+                                    }}
+                                    className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-[10px] font-bold border border-rose-200 transition-all"
+                                  >
+                                    Decline
+                                  </button>
+                                </>
+                              )}
+
+                              {/* CFO Review Action for Erica */}
+                              {isWithCFO && (isErica || isSuperadmin) && (
+                                <button
+                                  onClick={() => setVettingBudget(req)}
+                                  className="px-2.5 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-[10px] font-bold shadow-2xs active:scale-95 transition-all flex items-center gap-1"
+                                >
+                                  <ShieldCheck className="w-3 h-3" />
+                                  <span>CFO Vet</span>
+                                </button>
+                              )}
+
+                              {/* Collation Action for Gift & Marvelous */}
+                              {isCollation && (isGift || isMarvelous || isSuperadmin) && (
+                                <button
+                                  onClick={() => setCollatingBudget(req)}
+                                  className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold shadow-2xs active:scale-95 transition-all flex items-center gap-1"
+                                >
+                                  <Send className="w-3 h-3" />
+                                  <span>Collate & Forward</span>
+                                </button>
+                              )}
+
+                              {/* Ozioma Action for Client Project Budgets */}
+                              {isWithOzioma && (isOzioma || isSuperadmin) && (
                                 <button
                                   onClick={() => {
-                                    approveBudgetAsMD(req.id, false, 'Approved by Dr. Kaine Edike (MD).');
+                                    cfoReviewBudget(req.id, 'PROJECT_TO_DR_K', 'Miss Ozioma reviewed client project budget against contract scope. Projected to Dr. Kaine Edike.');
                                     haptics.success();
                                   }}
-                                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold shadow-2xs active:scale-95 transition-all"
+                                  className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[10px] font-bold shadow-2xs active:scale-95 transition-all flex items-center gap-1"
                                 >
-                                  Approve (Dr. K)
+                                  <Crown className="w-3 h-3" />
+                                  <span>Present to Dr. K</span>
                                 </button>
+                              )}
+
+                              {isApproved && (
+                                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                                  Ready for Wire
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-end gap-1.5">
+                              {isPendingMD && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                                  <Clock className="w-3 h-3" />
+                                  <span>Awaiting MD Sign-Off</span>
+                                </span>
+                              )}
+                              {isWithCFO && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-purple-50 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                                  <ShieldCheck className="w-3 h-3" />
+                                  <span>Under CFO Vetting</span>
+                                </span>
+                              )}
+                              {isCollation && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                                  <Users className="w-3 h-3" />
+                                  <span>In Collation</span>
+                                </span>
+                              )}
+                              {isWithOzioma && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-indigo-50 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                                  <Briefcase className="w-3 h-3" />
+                                  <span>With Miss Ozioma</span>
+                                </span>
+                              )}
+                              {isApproved && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  <span>Approved & Capex Ready</span>
+                                </span>
+                              )}
+                              {isDeclined && req.declineOutcome === 'REVISE_RESUBMIT' && (
                                 <button
                                   onClick={() => {
-                                    const reason = prompt('Reason for declining:') || 'Declined during MD review.';
-                                    declineBudgetAsMD(req.id, false, reason);
-                                    haptics.impact();
+                                    setIsNewBudgetOpen(true);
+                                    haptics.selection();
                                   }}
-                                  className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-[10px] font-bold border border-rose-200 transition-all"
+                                  className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[10px] font-bold shadow-2xs active:scale-95 transition-all flex items-center gap-1"
                                 >
-                                  Decline
+                                  <RotateCcw className="w-3 h-3" />
+                                  <span>Resubmit Revision</span>
                                 </button>
-                              </>
-                            )}
-
-                            {/* Alternative Approval Gate for Bibi (2nd in Command) */}
-                            {isPendingMD && isBibi && !isDrK && (
-                              <>
-                                <button
-                                  onClick={() => {
-                                    approveBudgetAsMD(req.id, true, 'Approved by Bibi on behalf of Dr. Kaine Edike (2nd in Command SLA clause).');
-                                    haptics.success();
-                                  }}
-                                  title="Approve on Dr. K's behalf to avoid project bottleneck (SOP Section 1)"
-                                  className="px-2.5 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-[10px] font-bold shadow-2xs active:scale-95 transition-all"
-                                >
-                                  Approve on Dr. K Behalf
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    const reason = prompt('Reason for declining:') || 'Declined during 2nd-in-command review.';
-                                    declineBudgetAsMD(req.id, true, reason);
-                                    haptics.impact();
-                                  }}
-                                  className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-[10px] font-bold border border-rose-200 transition-all"
-                                >
-                                  Decline
-                                </button>
-                              </>
-                            )}
-
-                            {/* CFO Review Action for Erica */}
-                            {isWithCFO && (isErica || isSuperadmin) && (
-                              <button
-                                onClick={() => setVettingBudget(req)}
-                                className="px-2.5 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-[10px] font-bold shadow-2xs active:scale-95 transition-all flex items-center gap-1"
-                              >
-                                <ShieldCheck className="w-3 h-3" />
-                                <span>CFO Vet</span>
-                              </button>
-                            )}
-
-                            {/* Collation Action for Gift & Marvelous */}
-                            {isCollation && (isGift || isMarvelous || isSuperadmin) && (
-                              <button
-                                onClick={() => setCollatingBudget(req)}
-                                className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold shadow-2xs active:scale-95 transition-all flex items-center gap-1"
-                              >
-                                <Send className="w-3 h-3" />
-                                <span>Collate & Forward</span>
-                              </button>
-                            )}
-
-                            {/* Ozioma Action for Client Project Budgets */}
-                            {isWithOzioma && (isOzioma || isSuperadmin) && (
-                              <button
-                                onClick={() => {
-                                  cfoReviewBudget(req.id, 'PROJECT_TO_DR_K', 'Miss Ozioma reviewed client project budget against contract scope. Projected to Dr. Kaine Edike.');
-                                  haptics.success();
-                                }}
-                                className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[10px] font-bold shadow-2xs active:scale-95 transition-all flex items-center gap-1"
-                              >
-                                <Crown className="w-3 h-3" />
-                                <span>Present to Dr. K</span>
-                              </button>
-                            )}
-
-                            {isApproved && (
-                              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
-                                Ready for Wire
-                              </span>
-                            )}
-                          </div>
+                              )}
+                              {isDeclined && req.declineOutcome !== 'REVISE_RESUBMIT' && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-200">
+                                  <XCircle className="w-3 h-3" />
+                                  <span>Dropped</span>
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
+
+              {filteredBudgets.length === 0 && (
+                <div className="p-10 text-center space-y-3">
+                  <div className="w-12 h-12 mx-auto rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+                    <FileSpreadsheet className="w-6 h-6" />
+                  </div>
+                  <div className="font-bold text-sm text-slate-800 dark:text-slate-200">
+                    No Budget Requests Found
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+                    {accessibleBudgets.length === 0
+                      ? "You have not submitted any budget requests yet. Click '+ Submit Budget Request' above to create an operational or project delivery request."
+                      : "No budget requests match the selected stage filter."}
+                  </p>
+                  {accessibleBudgets.length === 0 && (
+                    <button
+                      onClick={() => { setIsNewBudgetOpen(true); haptics.selection(); }}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-2xs transition-all active:scale-95 mt-2"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Submit Budget Request</span>
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
       )}
 
       {/* TAB 2: PETTY CASH & IMPREST LEDGER */}
-      {activeMainTab === 'PETTY_CASH' && (
+      {canSeeAllFinance && activeMainTab === 'PETTY_CASH' && (
         <div className="space-y-5">
           {/* Dual Imprest Fund Cards (Gift & Marvelous - SOP Section 4) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -899,7 +1091,7 @@ export default function FinancePage() {
       )}
 
       {/* TAB 3: MILESTONE INVOICING & DR. K CONFIRMATION */}
-      {activeMainTab === 'INVOICES' && (
+      {canSeeAllFinance && activeMainTab === 'INVOICES' && (
         <div className="space-y-4">
           {/* Telemetry Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -1060,7 +1252,7 @@ export default function FinancePage() {
       )}
 
       {/* TAB 4: FUND RETIREMENT & EXPENSE TRACKING */}
-      {activeMainTab === 'EXPENSES' && (
+      {canSeeAllFinance && activeMainTab === 'EXPENSES' && (
         <div className="space-y-4">
           <div className="p-5 rounded-3xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-2">
             <h3 className="font-bold text-sm text-slate-900 dark:text-white">Fund Retirement & Project Expenditure Reconciliation</h3>

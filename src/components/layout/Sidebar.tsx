@@ -49,13 +49,18 @@ export default function Sidebar({ onMobileItemClick }: { onMobileItemClick?: () 
   const { currentUser } = useAuth();
 
   const role = currentUser.functionalRole;
-  const isSuperadmin = currentUser.accessTier === 'SUPERADMIN' || role === 'SUPERADMIN' || role === 'MANAGING_CONSULTANT';
+  const isSuperadmin = currentUser.accessTier === 'SUPERADMIN' || role === 'SUPERADMIN' || role === 'MANAGING_CONSULTANT' || role === 'DEPUTY_MANAGING_CONSULTANT';
   const isDeptHead = currentUser.managementTier === 'DEPT_HEAD';
   const isManager = currentUser.managementTier !== 'NONE';
   const isHR = role === 'HR_ADMIN' || (currentUser.departmentName === 'Human Resources' && !isSuperadmin);
 
-  // Role Scoping Flags - Strict isolation barrier: HR cannot see running projects, project data, or QA/QC review
-  const canSeeAnalytics = isSuperadmin || isDeptHead || isManager || role === 'BD_LEAD' || role === 'FINANCE_ADMIN';
+  // Finance and Line Manager classification per SOP
+  const isFinance = isSuperadmin || role === 'CFO' || role === 'FINANCE_OFFICER' || role === 'FINANCE_ADMIN' || currentUser.departmentName === 'Finance' || currentUser.departmentName === 'Finance & Accounts' || currentUser.id === 'usr-13' || currentUser.id === 'usr-14';
+  const isLineManager = isManager || currentUser.accessTier === 'ADMIN' || role === 'PROJECT_MANAGER';
+
+  // Role Scoping Flags - Strict isolation barrier
+  // Command & Analytics board is for Line Managers and Finance only (plus Superadmins)
+  const canSeeAnalytics = isSuperadmin || isFinance || isLineManager;
   const canSeeBD = isSuperadmin || role === 'BD_LEAD' || isDeptHead;
   const canSeeCRM = isSuperadmin || role === 'BD_LEAD' || isDeptHead;
   const canSeeProjects = !isHR && (isSuperadmin || isManager || role === 'PROJECT_MANAGER' || role === 'FIELD_STAFF' || role === 'TECHNICAL_CONSULTANT');
@@ -65,7 +70,9 @@ export default function Sidebar({ onMobileItemClick }: { onMobileItemClick?: () 
   const canSeeCompliance = isSuperadmin || role === 'COMPLIANCE_OFFICER' || role === 'QA_LEAD';
   const canSeeVault = true; // Universal access to scoped project deliverables & personal uploads
   const canSeeITDesign = isSuperadmin || role === 'IT_LEAD' || role === 'DESIGN_LEAD' || role === 'IT_DESIGN_OFFICER';
-  const canSeeFinance = isSuperadmin || role === 'FINANCE_ADMIN' || isDeptHead;
+  
+  // Finance is visible to Superadmins, Finance Officers, and Line Managers/Admins (scoped to own budgets)
+  const canSeeFinance = isSuperadmin || isFinance || isLineManager;
   const canSeeHR = isSuperadmin || role === 'HR_ADMIN' || isManager;
   const canSeeAdmin = isSuperadmin;
 

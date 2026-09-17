@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { 
   BarChart3, 
@@ -17,12 +18,14 @@ import {
   Plus, 
   X,
   Clock,
-  Sparkles
+  Sparkles,
+  ShieldAlert
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AnalyticsDashboardPage() {
   const { 
+    currentUser,
     projects, 
     opportunities, 
     invoices, 
@@ -32,10 +35,42 @@ export default function AnalyticsDashboardPage() {
     updateDigestRecipients 
   } = useAuth();
 
+  // Access Control: Command and Analytics board is strictly for Line Managers, Finance, and Superadmins
+  const role = currentUser.functionalRole;
+  const isSuperadmin = currentUser.accessTier === 'SUPERADMIN' || role === 'SUPERADMIN' || role === 'MANAGING_CONSULTANT' || role === 'DEPUTY_MANAGING_CONSULTANT';
+  const isFinance = isSuperadmin || role === 'CFO' || role === 'FINANCE_OFFICER' || role === 'FINANCE_ADMIN' || currentUser.departmentName === 'Finance' || currentUser.departmentName === 'Finance & Accounts' || currentUser.id === 'usr-13' || currentUser.id === 'usr-14';
+  const isLineManager = currentUser.managementTier !== 'NONE' || currentUser.accessTier === 'ADMIN' || role === 'PROJECT_MANAGER';
+  const canAccessAnalytics = isSuperadmin || isFinance || isLineManager;
+
   const [selectedPeriod, setSelectedPeriod] = useState('2026-09');
   const [isDigestConfigOpen, setIsDigestConfigOpen] = useState(false);
   const [newEmail, setNewEmail] = useState('');
   const [recipientsList, setRecipientsList] = useState<string[]>(digestConfig.emailRecipients);
+
+  if (!canAccessAnalytics) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
+        <div className="w-16 h-16 rounded-2xl bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 mb-4 shadow-sm">
+          <ShieldAlert className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">
+          Restricted Command & Analytics Access
+        </h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mb-6 leading-relaxed">
+          The Executive Command & Analytics Dashboard is reserved exclusively for Department Line Managers, Team Leads, and Finance Personnel.
+        </p>
+        <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 mb-6">
+          Signed in as: <strong className="text-slate-900 dark:text-white">{currentUser.name}</strong> ({currentUser.jobTitle})
+        </div>
+        <Link
+          href="/workspace"
+          className="px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-semibold rounded-xl shadow-xs transition-all"
+        >
+          Return to My Workspace
+        </Link>
+      </div>
+    );
+  }
 
   // Macro Calculations
   const activeOpps = opportunities.filter(o => o.stage !== 'WON' && o.stage !== 'LOST');
@@ -64,8 +99,13 @@ export default function AnalyticsDashboardPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="text-[11px] font-semibold text-slate-500 tracking-tight">
-            Module 11 • Executive Intelligence & Analytics Command Center
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-semibold text-slate-500 tracking-tight">
+              Module 11 • Executive Intelligence & Analytics Command Center
+            </span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+              Line Managers & Finance Only
+            </span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight mt-0.5">
             Executive Analytics & Board Reporting
