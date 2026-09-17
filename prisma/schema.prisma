@@ -1,6 +1,7 @@
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 generator client {
@@ -8,20 +9,26 @@ generator client {
 }
 
 model User {
-  id              String         @id @default(uuid())
-  email           String         @unique
-  passwordHash    String         @default("hashed_demo_pw")
-  name            String
-  avatar          String?
-  jobTitle        String
-  functionalRole  String
-  accessTier      String         @default("STANDARD")
-  managementTier  String         @default("NONE")
-  departmentId    String?
-  managerId       String?
-  status          String         @default("ACTIVE")
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  id                    String         @id @default(uuid())
+  email                 String         @unique
+  passwordHash          String         @default("AquaEarth@2026!")
+  name                  String
+  avatar                String?
+  jobTitle              String
+  functionalRole        String
+  accessTier            String         @default("STANDARD")
+  managementTier        String         @default("NONE")
+  departmentId          String?
+  managerId             String?
+  status                String         @default("ACTIVE")
+  phone                 String?
+  location              String?
+  bio                   String?
+  skillsJson            String?
+  certificationsJson    String?
+  emergencyContactJson  String?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
 
   department      Department?    @relation(fields: [departmentId], references: [id])
   manager         User?          @relation("ManagementHierarchy", fields: [managerId], references: [id])
