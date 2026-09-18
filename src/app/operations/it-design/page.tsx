@@ -187,43 +187,43 @@ export default function ItDesignOperationsPage() {
         </div>
 
         {/* Tab Controls */}
-        <div className="flex items-center gap-1 p-1 bg-slate-100/80 rounded-xl text-xs font-semibold overflow-x-auto max-w-full">
+        <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-white/[0.06] rounded-xl text-xs font-semibold overflow-x-auto max-w-full border border-black/[0.04] dark:border-white/[0.08]">
           <button
             onClick={() => setActiveTab('HARDWARE')}
-            className={`px-3 py-1 rounded-lg transition-all whitespace-nowrap active:scale-[0.96] ${
-              activeTab === 'HARDWARE' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-900'
+            className={`px-3 py-1 rounded-lg transition-all whitespace-nowrap active:scale-[0.96] cursor-pointer ${
+              activeTab === 'HARDWARE' ? 'bg-white dark:bg-white/20 text-slate-900 dark:text-white shadow-2xs font-bold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Hardware ({hardwareAssets.length})
           </button>
           <button
             onClick={() => setActiveTab('USERS_RBAC')}
-            className={`px-3 py-1 rounded-lg transition-all whitespace-nowrap active:scale-[0.96] ${
-              activeTab === 'USERS_RBAC' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-900'
+            className={`px-3 py-1 rounded-lg transition-all whitespace-nowrap active:scale-[0.96] cursor-pointer ${
+              activeTab === 'USERS_RBAC' ? 'bg-white dark:bg-white/20 text-slate-900 dark:text-white shadow-2xs font-bold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             User Accounts & RBAC ({allUsers.length})
           </button>
           <button
             onClick={() => setActiveTab('AUDIT_LOGS')}
-            className={`px-3 py-1 rounded-lg transition-all whitespace-nowrap active:scale-[0.96] ${
-              activeTab === 'AUDIT_LOGS' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-900'
+            className={`px-3 py-1 rounded-lg transition-all whitespace-nowrap active:scale-[0.96] cursor-pointer ${
+              activeTab === 'AUDIT_LOGS' ? 'bg-white dark:bg-white/20 text-slate-900 dark:text-white shadow-2xs font-bold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             System Activity Log ({auditLogs.length})
           </button>
           <button
             onClick={() => setActiveTab('SUBSCRIPTIONS')}
-            className={`px-3 py-1 rounded-lg transition-all whitespace-nowrap active:scale-[0.96] ${
-              activeTab === 'SUBSCRIPTIONS' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-900'
+            className={`px-3 py-1 rounded-lg transition-all whitespace-nowrap active:scale-[0.96] cursor-pointer ${
+              activeTab === 'SUBSCRIPTIONS' ? 'bg-white dark:bg-white/20 text-slate-900 dark:text-white shadow-2xs font-bold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             SIM & Licenses ({subscriptions.length})
           </button>
           <button
             onClick={() => setActiveTab('DESIGN')}
-            className={`px-3 py-1 rounded-lg transition-all whitespace-nowrap active:scale-[0.96] ${
-              activeTab === 'DESIGN' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-900'
+            className={`px-3 py-1 rounded-lg transition-all whitespace-nowrap active:scale-[0.96] cursor-pointer ${
+              activeTab === 'DESIGN' ? 'bg-white dark:bg-white/20 text-slate-900 dark:text-white shadow-2xs font-bold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Design Queue ({designRequests.length})
@@ -768,32 +768,32 @@ export default function ItDesignOperationsPage() {
       <AnimatePresence>
         {isNewDesignOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsNewDesignOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-md" />
-            <motion.div initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} className="relative bg-white rounded-3xl shadow-2xl max-w-md w-full border border-black/[0.08] p-6 space-y-4 z-10 text-xs">
-              <div className="flex items-center justify-between border-b border-black/[0.05] pb-2">
-                <h3 className="text-sm font-bold text-slate-900">Request GIS / Graphic Deliverable</h3>
-                <button onClick={() => setIsNewDesignOpen(false)} className="text-slate-400 hover:text-slate-700">&times;</button>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsNewDesignOpen(false)} className="fixed inset-0 bg-black/60 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} className="relative bg-white dark:bg-[#121214] rounded-3xl shadow-2xl max-w-md w-full border border-black/[0.08] dark:border-white/[0.12] p-6 space-y-4 z-10 text-xs">
+              <div className="flex items-center justify-between border-b border-black/[0.05] dark:border-white/[0.08] pb-2">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Request GIS / Graphic Deliverable</h3>
+                <button onClick={() => setIsNewDesignOpen(false)} className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer">&times;</button>
               </div>
 
               <form onSubmit={handleCreateDesign} className="space-y-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Deliverable Title / Specification</label>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Deliverable Title / Specification</label>
                   <input
                     type="text"
                     required
                     value={designTitle}
                     onChange={(e) => setDesignTitle(e.target.value)}
                     placeholder="e.g. Escravos 3D Bathymetric Elevation Profile Chart"
-                    className="w-full p-2 bg-slate-50 border border-black/[0.08] rounded-xl text-xs"
+                    className="w-full p-2 bg-slate-50 dark:bg-black border border-black/[0.08] dark:border-white/15 rounded-xl text-xs text-slate-900 dark:text-white"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Associated Project</label>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Associated Project</label>
                   <select
                     value={designProjectId}
                     onChange={(e) => setDesignProjectId(e.target.value)}
-                    className="w-full p-2 bg-slate-50 border border-black/[0.08] rounded-xl text-xs truncate"
+                    className="w-full p-2 bg-slate-50 dark:bg-black border border-black/[0.08] dark:border-white/15 rounded-xl text-xs text-slate-900 dark:text-white truncate"
                   >
                     {projects.map(p => (
                       <option key={p.id} value={p.id}>{p.projectCode} - {p.title.substring(0, 25)}...</option>
@@ -801,25 +801,25 @@ export default function ItDesignOperationsPage() {
                   </select>
                 </div>
 
-                <div className="p-3 bg-slate-50 rounded-xl border flex items-center justify-between">
+                <div className="p-3 bg-slate-50 dark:bg-white/[0.04] rounded-xl border border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between">
                   <div>
-                    <div className="font-bold text-xs text-slate-900 flex items-center gap-1">
+                    <div className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1">
                       <Zap className="w-3.5 h-3.5 text-amber-500" />
                       24-Hour Urgent Rush Delivery
                     </div>
-                    <div className="text-[10px] text-slate-400">Prioritizes queue for imminent tender deadlines</div>
+                    <div className="text-[10px] text-slate-400 dark:text-slate-500">Prioritizes queue for imminent tender deadlines</div>
                   </div>
                   <input
                     type="checkbox"
                     checked={is24hRush}
                     onChange={(e) => setIs24hRush(e.target.checked)}
-                    className="w-4 h-4 rounded text-slate-900"
+                    className="w-4 h-4 rounded text-slate-900 cursor-pointer"
                   />
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2 border-t border-black/[0.05]">
-                  <button type="button" onClick={() => setIsNewDesignOpen(false)} className="px-3 py-1.5 text-slate-500 font-semibold">Cancel</button>
-                  <button type="submit" className="px-4 py-1.5 bg-slate-900 text-white rounded-xl font-bold shadow-xs active:scale-[0.96]">Submit to Studio</button>
+                <div className="flex justify-end gap-2 pt-2 border-t border-black/[0.05] dark:border-white/[0.08]">
+                  <button type="button" onClick={() => setIsNewDesignOpen(false)} className="px-3 py-1.5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white font-semibold cursor-pointer">Cancel</button>
+                  <button type="submit" className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-950 rounded-xl font-bold shadow-xs active:scale-[0.96] cursor-pointer">Submit to Studio</button>
                 </div>
               </form>
             </motion.div>

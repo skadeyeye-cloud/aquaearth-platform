@@ -251,7 +251,10 @@ export default function FieldCapturePage() {
                   QA Locked
                 </span>
 
-                <button className="px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-700 font-semibold text-xs active:scale-[0.96]">
+                <button
+                  onClick={() => setSelectedRecord(record)}
+                  className="px-3 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.08] dark:hover:bg-white/[0.12] rounded-xl text-slate-700 dark:text-slate-200 font-semibold text-xs active:scale-[0.96] cursor-pointer"
+                >
                   Inspect Entry
                 </button>
               </div>
@@ -264,19 +267,19 @@ export default function FieldCapturePage() {
       <AnimatePresence>
         {selectedRecord && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedRecord(null)} className="fixed inset-0 bg-black/40 backdrop-blur-md" />
-            <motion.div initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} className="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full border border-black/[0.08] p-6 space-y-4 z-10 text-xs">
-              <div className="flex items-start justify-between border-b border-black/[0.05] pb-2">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedRecord(null)} className="fixed inset-0 bg-black/60 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} className="relative bg-white dark:bg-[#121214] rounded-3xl shadow-2xl max-w-lg w-full border border-black/[0.08] dark:border-white/[0.12] p-6 space-y-4 z-10 text-xs">
+              <div className="flex items-start justify-between border-b border-black/[0.05] dark:border-white/[0.08] pb-2">
                 <div>
-                  <span className="text-[10px] font-bold text-emerald-600 uppercase">Field Log Inspector</span>
-                  <h3 className="text-sm font-bold text-slate-900">{selectedRecord.samplePointId}</h3>
-                  <div className="text-[11px] text-slate-400">{selectedRecord.projectName}</div>
+                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">Field Log Inspector</span>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">{selectedRecord.samplePointId}</h3>
+                  <div className="text-[11px] text-slate-400 dark:text-slate-500">{selectedRecord.projectName}</div>
                 </div>
-                <button onClick={() => setSelectedRecord(null)} className="text-slate-400 hover:text-slate-700">&times;</button>
+                <button onClick={() => setSelectedRecord(null)} className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer">&times;</button>
               </div>
 
               {/* Watermarked Photo Preview */}
-              <div className="relative rounded-2xl overflow-hidden border border-black/[0.1] bg-slate-900">
+              <div className="relative rounded-2xl overflow-hidden border border-black/[0.1] dark:border-white/10 bg-slate-900">
                 <img
                   src={selectedRecord.photoUrls[0]}
                   alt="Field Evidence"
@@ -290,13 +293,13 @@ export default function FieldCapturePage() {
               </div>
 
               {/* Data Payload Parameters */}
-              <div className="p-3 bg-slate-50 rounded-2xl border border-black/[0.05] space-y-1.5">
-                <div className="font-bold text-slate-900 text-xs">Recorded Parameters (Immutable)</div>
+              <div className="p-3 bg-slate-50 dark:bg-white/[0.04] rounded-2xl border border-black/[0.05] dark:border-white/[0.08] space-y-1.5">
+                <div className="font-bold text-slate-900 dark:text-white text-xs">Recorded Parameters (Immutable)</div>
                 <div className="grid grid-cols-2 gap-2 text-[11px]">
                   {Object.entries(selectedRecord.payload).map(([key, value]) => (
-                    <div key={key} className="p-1.5 bg-white rounded-lg border border-black/[0.04]">
-                      <div className="text-[9px] text-slate-400 uppercase font-mono">{key}</div>
-                      <div className="font-bold text-slate-800 truncate">{String(value)}</div>
+                    <div key={key} className="p-1.5 bg-white dark:bg-white/[0.06] rounded-lg border border-black/[0.04] dark:border-white/[0.08]">
+                      <div className="text-[9px] text-slate-400 dark:text-slate-400 uppercase font-mono">{key}</div>
+                      <div className="font-bold text-slate-800 dark:text-slate-100 truncate">{String(value)}</div>
                     </div>
                   ))}
                 </div>
@@ -305,7 +308,7 @@ export default function FieldCapturePage() {
               <div className="flex justify-end pt-1">
                 <button
                   onClick={() => setSelectedRecord(null)}
-                  className="px-4 py-1.5 bg-slate-900 text-white rounded-xl font-semibold active:scale-[0.96]"
+                  className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-950 rounded-xl font-semibold active:scale-[0.96] cursor-pointer"
                 >
                   Done
                 </button>
@@ -319,24 +322,24 @@ export default function FieldCapturePage() {
       <AnimatePresence>
         {isNewRecordOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsNewRecordOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-md" />
-            <motion.div initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} className="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full border border-black/[0.08] p-6 space-y-4 z-10 text-xs max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between border-b border-black/[0.05] pb-2">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsNewRecordOpen(false)} className="fixed inset-0 bg-black/60 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} className="relative bg-white dark:bg-[#121214] rounded-3xl shadow-2xl max-w-lg w-full border border-black/[0.08] dark:border-white/[0.12] p-6 space-y-4 z-10 text-xs max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between border-b border-black/[0.05] dark:border-white/[0.08] pb-2">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">New Field Data Observation</h3>
-                  <div className="text-[10px] text-slate-400">Offline-ready digital web log</div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">New Field Data Observation</h3>
+                  <div className="text-[10px] text-slate-400 dark:text-slate-500">Offline-ready digital web log</div>
                 </div>
-                <button onClick={() => setIsNewRecordOpen(false)} className="text-slate-400 hover:text-slate-700">&times;</button>
+                <button onClick={() => setIsNewRecordOpen(false)} className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer">&times;</button>
               </div>
 
               <form onSubmit={handleSubmitForm} className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">Form Template</label>
+                    <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">Form Template</label>
                     <select
                       value={formType}
                       onChange={(e) => setFormType(e.target.value as FieldFormType)}
-                      className="w-full p-2 bg-slate-50 border border-black/[0.08] rounded-xl text-xs font-semibold"
+                      className="w-full p-2 bg-slate-50 dark:bg-black border border-black/[0.08] dark:border-white/15 rounded-xl text-xs font-semibold text-slate-900 dark:text-white"
                     >
                       <option value="BOREHOLE_LOG">🏗️ Geotech Borehole Log</option>
                       <option value="WATER_SAMPLING">🧪 Water Quality Probing</option>
@@ -346,11 +349,11 @@ export default function FieldCapturePage() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">Target Project</label>
+                    <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">Target Project</label>
                     <select
                       value={projectId}
                       onChange={(e) => setProjectId(e.target.value)}
-                      className="w-full p-2 bg-slate-50 border border-black/[0.08] rounded-xl text-xs truncate"
+                      className="w-full p-2 bg-slate-50 dark:bg-black border border-black/[0.08] dark:border-white/15 rounded-xl text-xs text-slate-900 dark:text-white truncate"
                     >
                       {projects.map(p => (
                         <option key={p.id} value={p.id}>{p.projectCode} - {p.title.substring(0, 25)}...</option>
@@ -360,34 +363,34 @@ export default function FieldCapturePage() {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">Sample Point / Station ID</label>
+                  <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">Sample Point / Station ID</label>
                   <input
                     type="text"
                     required
                     value={samplePointId}
                     onChange={(e) => setSamplePointId(e.target.value)}
-                    className="w-full p-2 bg-slate-50 border border-black/[0.08] rounded-xl text-xs"
+                    className="w-full p-2 bg-slate-50 dark:bg-black border border-black/[0.08] dark:border-white/15 rounded-xl text-xs text-slate-900 dark:text-white"
                   />
                 </div>
 
                 {/* GPS Location Bar */}
-                <div className="p-3 bg-slate-50 rounded-2xl border border-black/[0.05] space-y-2">
+                <div className="p-3 bg-slate-50 dark:bg-white/[0.04] rounded-2xl border border-black/[0.05] dark:border-white/[0.08] space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-[10px] text-slate-700 uppercase tracking-wider flex items-center gap-1">
-                      <MapPin className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="font-bold text-[10px] text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                       Differential GPS Location
                     </span>
                     <button
                       type="button"
                       onClick={handleAcquireGps}
-                      className="px-2 py-0.5 bg-emerald-600 text-white rounded-lg text-[9px] font-bold flex items-center gap-1 active:scale-[0.96]"
+                      className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[9px] font-bold flex items-center gap-1 active:scale-[0.96] cursor-pointer"
                     >
                       <RefreshCw className="w-2.5 h-2.5" /> Acquire Fix
                     </button>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
-                    <div className="p-1.5 bg-white rounded-lg border">Lat: <b className="tnum">{lat.toFixed(5)}°N</b></div>
-                    <div className="p-1.5 bg-white rounded-lg border">Lng: <b className="tnum">{lng.toFixed(5)}°E</b></div>
+                    <div className="p-1.5 bg-white dark:bg-white/[0.06] rounded-lg border border-black/[0.06] dark:border-white/[0.08] text-slate-800 dark:text-slate-200">Lat: <b className="tnum font-bold text-slate-900 dark:text-white">{lat.toFixed(5)}°N</b></div>
+                    <div className="p-1.5 bg-white dark:bg-white/[0.06] rounded-lg border border-black/[0.06] dark:border-white/[0.08] text-slate-800 dark:text-slate-200">Lng: <b className="tnum font-bold text-slate-900 dark:text-white">{lng.toFixed(5)}°E</b></div>
                   </div>
                 </div>
 
@@ -395,23 +398,23 @@ export default function FieldCapturePage() {
                 {formType === 'BOREHOLE_LOG' ? (
                   <div className="space-y-2.5">
                     <div>
-                      <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">Strata Classification (ASTM D2487)</label>
+                      <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">Strata Classification (ASTM D2487)</label>
                       <textarea
                         required
                         rows={2}
                         value={strata}
                         onChange={(e) => setStrata(e.target.value)}
-                        className="w-full p-2 bg-slate-50 border border-black/[0.08] rounded-xl text-xs resize-none"
+                        className="w-full p-2 bg-slate-50 dark:bg-black border border-black/[0.08] dark:border-white/15 rounded-xl text-xs text-slate-900 dark:text-white resize-none"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">Drilling Depth</label>
-                        <input type="text" value={depth} onChange={(e) => setDepth(e.target.value)} className="w-full p-1.5 bg-slate-50 border rounded-xl text-xs font-mono" />
+                        <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">Drilling Depth</label>
+                        <input type="text" value={depth} onChange={(e) => setDepth(e.target.value)} className="w-full p-1.5 bg-slate-50 dark:bg-black border border-black/[0.08] dark:border-white/15 rounded-xl text-xs font-mono text-slate-900 dark:text-white" />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">SPT N-Value</label>
-                        <input type="text" value={sptN} onChange={(e) => setSptN(e.target.value)} className="w-full p-1.5 bg-slate-50 border rounded-xl text-xs font-mono" />
+                        <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">SPT N-Value</label>
+                        <input type="text" value={sptN} onChange={(e) => setSptN(e.target.value)} className="w-full p-1.5 bg-slate-50 dark:bg-black border border-black/[0.08] dark:border-white/15 rounded-xl text-xs font-mono text-slate-900 dark:text-white" />
                       </div>
                     </div>
                   </div>
@@ -419,28 +422,28 @@ export default function FieldCapturePage() {
                   <div className="space-y-2.5">
                     <div className="grid grid-cols-3 gap-2">
                       <div>
-                        <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">pH Value</label>
-                        <input type="number" step="0.01" value={ph} onChange={(e) => setPh(Number(e.target.value))} className="w-full p-1.5 bg-slate-50 border rounded-xl text-xs font-mono" />
+                        <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">pH Value</label>
+                        <input type="number" step="0.01" value={ph} onChange={(e) => setPh(Number(e.target.value))} className="w-full p-1.5 bg-slate-50 dark:bg-black border border-black/[0.08] dark:border-white/15 rounded-xl text-xs font-mono text-slate-900 dark:text-white" />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">Dissolved Oxygen</label>
-                        <input type="number" step="0.01" value={dissolvedOxygen} onChange={(e) => setDissolvedOxygen(Number(e.target.value))} className="w-full p-1.5 bg-slate-50 border rounded-xl text-xs font-mono" />
+                        <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">Dissolved Oxygen</label>
+                        <input type="number" step="0.01" value={dissolvedOxygen} onChange={(e) => setDissolvedOxygen(Number(e.target.value))} className="w-full p-1.5 bg-slate-50 dark:bg-black border border-black/[0.08] dark:border-white/15 rounded-xl text-xs font-mono text-slate-900 dark:text-white" />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">Temp (°C)</label>
-                        <input type="number" step="0.1" value={temp} onChange={(e) => setTemp(Number(e.target.value))} className="w-full p-1.5 bg-slate-50 border rounded-xl text-xs font-mono" />
+                        <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">Temp (°C)</label>
+                        <input type="number" step="0.1" value={temp} onChange={(e) => setTemp(Number(e.target.value))} className="w-full p-1.5 bg-slate-50 dark:bg-black border border-black/[0.08] dark:border-white/15 rounded-xl text-xs font-mono text-slate-900 dark:text-white" />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">FMEnv Chain of Custody Barcode</label>
-                      <input type="text" value={cocBarcode} onChange={(e) => setCocBarcode(e.target.value)} className="w-full p-1.5 bg-slate-50 border rounded-xl text-xs font-mono" />
+                      <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">FMEnv Chain of Custody Barcode</label>
+                      <input type="text" value={cocBarcode} onChange={(e) => setCocBarcode(e.target.value)} className="w-full p-1.5 bg-slate-50 dark:bg-black border border-black/[0.08] dark:border-white/15 rounded-xl text-xs font-mono text-slate-900 dark:text-white" />
                     </div>
                   </div>
                 )}
 
-                <div className="flex justify-end gap-2 pt-2 border-t border-black/[0.05]">
-                  <button type="button" onClick={() => setIsNewRecordOpen(false)} className="px-3 py-1.5 text-slate-500 font-semibold">Cancel</button>
-                  <button type="submit" className="px-4 py-1.5 bg-slate-900 text-white rounded-xl font-bold shadow-xs active:scale-[0.96] flex items-center gap-1.5">
+                <div className="flex justify-end gap-2 pt-2 border-t border-black/[0.05] dark:border-white/[0.08]">
+                  <button type="button" onClick={() => setIsNewRecordOpen(false)} className="px-3 py-1.5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white font-semibold cursor-pointer">Cancel</button>
+                  <button type="submit" className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-950 rounded-xl font-bold shadow-xs active:scale-[0.96] flex items-center gap-1.5 cursor-pointer">
                     <Send className="w-3 h-3" />
                     <span>Submit & Lock Entry</span>
                   </button>

@@ -57,8 +57,16 @@
   background-color: #1C1C1F !important;
 }
 
+.dark .bg-slate-50:not([class*="dark:bg-"]),
+.dark .bg-slate-50\/70:not([class*="dark:bg-"]),
+.dark .bg-slate-50\/80:not([class*="dark:bg-"]) {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
 .dark .bg-slate-100:not([class*="dark:bg-"]),
-.dark .bg-slate-200:not([class*="dark:bg-"]) {
+.dark .bg-slate-100\/80:not([class*="dark:bg-"]),
+.dark .bg-slate-200:not([class*="dark:bg-"]),
+.dark .bg-slate-200\/60:not([class*="dark:bg-"]) {
   background-color: rgba(255, 255, 255, 0.08) !important;
 }
 
@@ -76,6 +84,10 @@
 .dark .border-slate-700,
 .dark .dark\:border-slate-700 {
   border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+.dark [class*="border-black/"] {
+  border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
 .dark .divide-slate-800 > :not([hidden]) ~ :not([hidden]),
@@ -117,6 +129,97 @@
 .dark .text-slate-300:not([class*="dark:text-"]),
 .dark .dark\:text-slate-300 {
   color: #E5E2DC !important;
+}
+
+/* Tone Color Text Contrast Guarantees in Dark Mode */
+.dark .text-amber-950:not([class*="dark:text-"]),
+.dark .text-amber-900:not([class*="dark:text-"]) {
+  color: #FDE68A !important;
+}
+.dark .text-amber-800:not([class*="dark:text-"]) {
+  color: #FCD34D !important;
+}
+
+.dark .text-emerald-950:not([class*="dark:text-"]),
+.dark .text-emerald-900:not([class*="dark:text-"]) {
+  color: #A7F3D0 !important;
+}
+.dark .text-emerald-800:not([class*="dark:text-"]) {
+  color: #6EE7B7 !important;
+}
+
+.dark .text-indigo-950:not([class*="dark:text-"]),
+.dark .text-indigo-900:not([class*="dark:text-"]) {
+  color: #C7D2FE !important;
+}
+.dark .text-indigo-800:not([class*="dark:text-"]) {
+  color: #A5B4FC !important;
+}
+
+.dark .text-blue-950:not([class*="dark:text-"]),
+.dark .text-blue-900:not([class*="dark:text-"]) {
+  color: #BFDBFE !important;
+}
+.dark .text-blue-800:not([class*="dark:text-"]) {
+  color: #93C5FD !important;
+}
+
+.dark .text-purple-950:not([class*="dark:text-"]),
+.dark .text-purple-900:not([class*="dark:text-"]) {
+  color: #E9D5FF !important;
+}
+.dark .text-purple-800:not([class*="dark:text-"]) {
+  color: #D8B4FE !important;
+}
+
+.dark .text-rose-950:not([class*="dark:text-"]),
+.dark .text-rose-900:not([class*="dark:text-"]),
+.dark .text-red-950:not([class*="dark:text-"]),
+.dark .text-red-900:not([class*="dark:text-"]) {
+  color: #FECDD3 !important;
+}
+.dark .text-rose-800:not([class*="dark:text-"]),
+.dark .text-red-800:not([class*="dark:text-"]) {
+  color: #FDA4AF !important;
+}
+
+/* Badge background dark overrides when missing dark:bg- */
+.dark .bg-amber-50:not([class*="dark:bg-"]),
+.dark .bg-amber-100:not([class*="dark:bg-"]) {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+  border-color: rgba(245, 158, 11, 0.25) !important;
+}
+
+.dark .bg-emerald-50:not([class*="dark:bg-"]),
+.dark .bg-emerald-100:not([class*="dark:bg-"]) {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  border-color: rgba(16, 185, 129, 0.25) !important;
+}
+
+.dark .bg-indigo-50:not([class*="dark:bg-"]),
+.dark .bg-indigo-100:not([class*="dark:bg-"]) {
+  background-color: rgba(99, 102, 241, 0.15) !important;
+  border-color: rgba(99, 102, 241, 0.25) !important;
+}
+
+.dark .bg-blue-50:not([class*="dark:bg-"]),
+.dark .bg-blue-100:not([class*="dark:bg-"]) {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+  border-color: rgba(59, 130, 246, 0.25) !important;
+}
+
+.dark .bg-purple-50:not([class*="dark:bg-"]),
+.dark .bg-purple-100:not([class*="dark:bg-"]) {
+  background-color: rgba(168, 85, 247, 0.15) !important;
+  border-color: rgba(168, 85, 247, 0.25) !important;
+}
+
+.dark .bg-rose-50:not([class*="dark:bg-"]),
+.dark .bg-rose-100:not([class*="dark:bg-"]),
+.dark .bg-red-50:not([class*="dark:bg-"]),
+.dark .bg-red-100:not([class*="dark:bg-"]) {
+  background-color: rgba(244, 63, 94, 0.15) !important;
+  border-color: rgba(244, 63, 94, 0.25) !important;
 }
 
 /* Dark mode Form Controls (Inputs, Selects, Textareas) */

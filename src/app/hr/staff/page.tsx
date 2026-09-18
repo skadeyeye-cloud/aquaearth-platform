@@ -403,7 +403,7 @@ export default function HRStaffPage() {
                       <p className="text-slate-700 dark:text-slate-300 leading-relaxed italic">"{query.staffResponse}"</p>
                     </div>
                   ) : (
-                    <div className="flex items-center justify-between p-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/50 text-xs text-slate-500">
+                    <div className="flex items-center justify-between p-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-white/[0.03] text-xs text-slate-500 dark:text-slate-400">
                       <span>No staff formal reply submitted yet.</span>
                       <button
                         onClick={() => {
@@ -413,7 +413,7 @@ export default function HRStaffPage() {
                             haptics.success();
                           }
                         }}
-                        className="px-2.5 py-1 bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-bold rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-50 text-[11px]"
+                        className="px-2.5 py-1 bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-bold rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-[11px] cursor-pointer"
                       >
                         Submit Response
                       </button>

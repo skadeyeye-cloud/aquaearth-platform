@@ -226,7 +226,11 @@ export default function MyTasksPage() {
             >
               <span>Manager Inbox</span>
               {pendingMyApproval.length > 0 && (
-                <span className="px-1.5 py-0.2 text-[9px] rounded-full bg-white text-indigo-700 font-black whitespace-nowrap shrink-0">
+                <span className={`px-1.5 py-0.2 text-[9px] rounded-full font-black whitespace-nowrap shrink-0 ${
+                  activeTab === 'MANAGER_INBOX'
+                    ? 'bg-white text-indigo-700'
+                    : 'bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300'
+                }`}>
                   {pendingMyApproval.length}
                 </span>
               )}
