@@ -143,7 +143,7 @@ export default function KpiBreakdownModal({ isOpen, onClose, entry, tasks, user 
                   <h2 className="text-base font-extrabold text-slate-900 dark:text-white">
                     {entry.name}
                   </h2>
-                  <span className="text-[10px] font-bold px-2 py-0.2 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 tnum whitespace-nowrap shrink-0">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-900 dark:bg-white text-white dark:text-black tnum whitespace-nowrap shrink-0">
                     Rank #{entry.rankPosition}
                   </span>
                 </div>
@@ -302,7 +302,7 @@ export default function KpiBreakdownModal({ isOpen, onClose, entry, tasks, user 
               <button
                 type="button"
                 onClick={handleDownloadReport}
-                className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-bold shadow-xs active:scale-[0.96] whitespace-nowrap shrink-0"
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-black rounded-xl font-bold shadow-xs active:scale-[0.96] whitespace-nowrap shrink-0"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Download Appraisal Report (PDF)</span>

@@ -119,7 +119,7 @@ export default function KpiLeaderboardPage() {
 
           <button 
             onClick={() => setDrilldownEntry(myEntry)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-xl text-xs font-bold shadow-xs transition-all active:scale-[0.96]"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-black rounded-xl text-xs font-bold shadow-xs transition-all active:scale-[0.96]"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Export Appraisal PDF</span>

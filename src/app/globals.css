@@ -95,9 +95,25 @@
   border-color: rgba(255, 255, 255, 0.06) !important;
 }
 
-/* High Contrast Visible Typography in Dark Mode (Warm Apple Ivory & Clear Stone) */
-.dark .text-slate-900:not([class*="dark:text-"]),
-.dark .dark\:text-slate-900 {
+/* High Contrast Inverted Elements in Dark Mode (Pure White Buttons/Pills with Black Typography) */
+.dark .dark\:bg-white,
+.dark .dark\:bg-white *,
+.dark .dark\:bg-slate-100,
+.dark .dark\:bg-slate-100 *,
+.dark .dark\:bg-slate-200,
+.dark .dark\:bg-slate-200 *,
+.dark .dark\:text-black,
+.dark .dark\:text-slate-950,
+.dark [class*="dark:bg-white"],
+.dark [class*="dark:bg-white"] *,
+.dark [class*="dark:bg-slate-100"],
+.dark [class*="dark:bg-slate-100"] * {
+  color: #0A0A0B !important;
+}
+
+/* High Contrast Light Typography on Dark Surfaces in Dark Mode */
+.dark .text-slate-900:not([class*="dark:text-"]):not([class*="dark:bg-white"]):not([class*="dark:bg-white"] *):not([class*="dark:bg-slate-100"]):not([class*="dark:bg-slate-100"] *),
+.dark .dark\:text-slate-900:not([class*="dark:bg-white"]):not([class*="dark:bg-white"] *):not([class*="dark:bg-slate-100"]):not([class*="dark:bg-slate-100"] *) {
   color: #FFFFFF !important;
 }
 
