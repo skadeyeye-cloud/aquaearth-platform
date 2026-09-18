@@ -67,8 +67,6 @@ export default function Sidebar({ onMobileItemClick }: { onMobileItemClick?: () 
   const canSeeProjects = !isHR && (isSuperadmin || isManager || role === 'PROJECT_MANAGER' || role === 'FIELD_STAFF' || role === 'TECHNICAL_CONSULTANT');
   const canSeeField = !isHR && (isSuperadmin || role === 'FIELD_STAFF' || role === 'TECHNICAL_CONSULTANT' || role === 'PROJECT_MANAGER');
   const canSeeDocs = true; // Knowledge repository is universal
-  const canSeeQA = !isHR && (isSuperadmin || isManager || role === 'QA_LEAD' || role === 'PROJECT_MANAGER' || role === 'TECHNICAL_CONSULTANT');
-  const canSeeCompliance = isSuperadmin || role === 'COMPLIANCE_OFFICER' || role === 'QA_LEAD';
   const canSeeVault = true; // Universal access to scoped project deliverables & personal uploads
   const canSeeITDesign = isSuperadmin || role === 'IT_LEAD' || role === 'DESIGN_LEAD' || role === 'IT_DESIGN_OFFICER';
   
@@ -112,8 +110,6 @@ export default function Sidebar({ onMobileItemClick }: { onMobileItemClick?: () 
       title: 'Quality & Governance',
       items: [
         { name: 'Documents & Repository', href: '/documents', icon: FileText, visible: canSeeDocs },
-        { name: 'QA/QC Technical Review', href: '/qa', icon: CheckCircle2, visible: canSeeQA },
-        { name: 'Regulatory & Compliance', href: '/compliance', icon: ShieldCheck, visible: canSeeCompliance },
         { name: 'AquaEarth Vault', href: '/vault', icon: HardDrive, visible: canSeeVault },
       ]
     },

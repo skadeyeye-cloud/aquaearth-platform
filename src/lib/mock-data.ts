@@ -1706,7 +1706,7 @@ export const INITIAL_NOTIFICATIONS: import('./types').NotificationItem[] = [
     actionType: 'REVIEW_QA',
     actionTargetId: 'qa-1',
     actionLabel: 'Enter QA Gate',
-    actionUrl: '/qa',
+    actionUrl: '/projects',
     actionDone: false
   },
   {
@@ -1720,7 +1720,7 @@ export const INITIAL_NOTIFICATIONS: import('./types').NotificationItem[] = [
     actionType: 'RENEW_PERMIT',
     actionTargetId: 'perm-2',
     actionLabel: 'Initiate Renewal Cycle',
-    actionUrl: '/compliance',
+    actionUrl: '/projects',
     actionDone: false
   },
   {

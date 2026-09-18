@@ -79,8 +79,6 @@ export default function Header({ onOpenMobileSidebar }: HeaderProps) {
     if (path.startsWith('/projects')) return { section: 'Project Delivery', title: 'Projects & Milestones', icon: FolderKanban };
     if (path.startsWith('/field')) return { section: 'Field Operations', title: 'Field Data Capture', icon: Smartphone };
     if (path.startsWith('/documents')) return { section: 'Quality & Governance', title: 'Documents Repository', icon: FileText };
-    if (path.startsWith('/qa')) return { section: 'Quality & Governance', title: 'QA/QC Technical Review', icon: CheckCircle2 };
-    if (path.startsWith('/compliance')) return { section: 'Quality & Governance', title: 'Regulatory Matrix', icon: ShieldCheck };
     if (path.startsWith('/vault')) return { section: 'Quality & Governance', title: 'AquaEarth Vault', icon: HardDrive };
     if (path.startsWith('/operations/it-design')) return { section: 'Operational Support', title: 'IT & Design Studio', icon: Layers };
     if (path.startsWith('/finance')) return { section: 'Operational Support', title: 'Milestone Finance', icon: Receipt };
