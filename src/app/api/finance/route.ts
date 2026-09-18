@@ -47,3 +47,34 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json();
+    const { id, status, paidDate, whtCreditNoteReceived, whtCreditNoteNumber } = body;
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'Invoice ID is required' }, { status: 400 });
+    }
+
+    const updateData: any = {};
+    if (status) {
+      updateData.status = status;
+      if (status === 'PAID') {
+        updateData.paidDate = paidDate ? new Date(paidDate) : new Date();
+      }
+    }
+    if (whtCreditNoteReceived !== undefined) updateData.whtCreditNoteReceived = Boolean(whtCreditNoteReceived);
+    if (whtCreditNoteNumber !== undefined) updateData.whtCreditNoteNumber = whtCreditNoteNumber;
+
+    const invoice = await prisma.invoice.update({
+      where: { id },
+      data: updateData
+    });
+
+    return NextResponse.json({ success: true, invoice });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+

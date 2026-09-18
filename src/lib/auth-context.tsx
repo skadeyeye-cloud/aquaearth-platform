@@ -1817,6 +1817,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setInvoices(prev => [newInv, ...prev]);
 
+    // Asynchronous Cloud Database Sync with Neon
+    apiClient.createInvoice({
+      projectId: newInv.projectId,
+      projectName: newInv.projectName,
+      clientId: newInv.clientId,
+      clientName: newInv.clientName,
+      milestoneDescription: newInv.milestoneDescription,
+      subtotalNgn: newInv.subtotalNgn,
+      vatRatePercent: newInv.vatRatePercent,
+      whtRatePercent: newInv.whtRatePercent,
+      dueDate: newInv.dueDate
+    }).then(res => {
+      if (res?.success && res.invoice?.id) {
+        setInvoices(prev => prev.map(i => i.id === newInv.id ? { ...i, id: res.invoice.id } : i));
+      }
+    }).catch(err => console.warn('[AquaEarth] Invoice cloud sync warning:', err));
+
     const audit: AuditRecord = {
       id: `aud-${Date.now()}`,
       actorId: currentUser.id,
@@ -1843,6 +1860,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       return inv;
     }));
+
+    // Asynchronous Cloud Database Sync with Neon
+    apiClient.updateInvoice(invoiceId, {
+      status: 'PAID',
+      paidDate: new Date().toISOString().split('T')[0],
+      whtCreditNoteReceived: !!whtCreditNumber,
+      whtCreditNoteNumber: whtCreditNumber
+    }).catch(err => console.warn('[AquaEarth] Invoice payment cloud sync warning:', err));
 
     const inv = invoices.find(i => i.id === invoiceId);
     const audit: AuditRecord = {

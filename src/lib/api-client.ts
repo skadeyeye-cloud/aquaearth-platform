@@ -223,5 +223,63 @@ export const apiClient = {
       console.warn('[apiClient] createSupportTicket failed:', err);
       return { success: false, error: String(err) };
     }
+  },
+
+  // Milestone Invoices & Finance
+  async getInvoices() {
+    try {
+      const res = await fetch('/api/finance');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      return data.success ? data.invoices : null;
+    } catch (err) {
+      console.warn('[apiClient] getInvoices fallback:', err);
+      return null;
+    }
+  },
+
+  async createInvoice(payload: {
+    projectId: string;
+    projectName: string;
+    clientId: string;
+    clientName: string;
+    milestoneDescription: string;
+    subtotalNgn: number;
+    vatRatePercent?: number;
+    whtRatePercent?: number;
+    dueDate: string;
+  }) {
+    try {
+      const res = await fetch('/api/finance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      console.warn('[apiClient] createInvoice failed:', err);
+      return { success: false, error: String(err) };
+    }
+  },
+
+  async updateInvoice(id: string, updates: {
+    status?: string;
+    paidDate?: string;
+    whtCreditNoteReceived?: boolean;
+    whtCreditNoteNumber?: string;
+  }) {
+    try {
+      const res = await fetch('/api/finance', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, ...updates })
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      console.warn('[apiClient] updateInvoice failed:', err);
+      return { success: false, error: String(err) };
+    }
   }
 };
