@@ -285,8 +285,8 @@ export default function CrmAccountsPage() {
       {/* Log Interaction Modal */}
       <AnimatePresence>
         {isLogOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsLogOpen(false)} className="fixed inset-0 bg-black/50 backdrop-blur-md" />
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsLogOpen(false)} className="fixed inset-0 bg-black/70 backdrop-blur-md" />
             <motion.div initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} className="relative bg-white dark:bg-[#0C0C0D] rounded-3xl shadow-2xl max-w-sm w-full border border-black/[0.08] dark:border-white/[0.12] p-6 space-y-4 z-10 text-xs">
               <div className="flex items-center justify-between border-b border-black/[0.05] dark:border-white/[0.08] pb-2">
                 <h3 className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F6F4F0]">Log Communication</h3>
