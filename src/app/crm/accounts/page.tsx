@@ -209,13 +209,13 @@ export default function CrmAccountsPage() {
               {/* Primary Contact Details */}
               <div className="p-3 bg-black/[0.02] dark:bg-white/[0.03] rounded-2xl border border-black/[0.04] dark:border-white/[0.06] space-y-1.5 text-xs">
                 <div className="font-medium text-[#1D1D1F] dark:text-[#F6F4F0] flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5 text-[#86868B]" />
+                  <Users className="w-3.5 h-3.5 text-[#86868B] dark:text-[#A39E93]" />
                   <span>{account.primaryContact.name}</span>
-                  <span className="text-[10px] text-[#86868B]">({account.primaryContact.role})</span>
+                  <span className="text-[10px] text-[#86868B] dark:text-[#D1CDC7]">({account.primaryContact.role})</span>
                 </div>
-                <div className="text-[11px] text-[#86868B] flex items-center gap-3">
-                  <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {account.primaryContact.email}</span>
-                  <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {account.primaryContact.phone}</span>
+                <div className="text-[11px] text-[#86868B] dark:text-[#D1CDC7] flex items-center gap-3">
+                  <span className="flex items-center gap-1"><Mail className="w-3 h-3 text-[#86868B] dark:text-[#A39E93]" /> {account.primaryContact.email}</span>
+                  <span className="flex items-center gap-1"><Phone className="w-3 h-3 text-[#86868B] dark:text-[#A39E93]" /> {account.primaryContact.phone}</span>
                 </div>
               </div>
 
