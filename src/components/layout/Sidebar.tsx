@@ -75,6 +75,7 @@ export default function Sidebar({ onMobileItemClick }: { onMobileItemClick?: () 
   // Finance is visible to Superadmins, Finance Officers, and Line Managers/Admins (scoped to own budgets)
   const canSeeFinance = isSuperadmin || isFinance || isLineManager;
   const canSeeHR = isSuperadmin || role === 'HR_ADMIN' || isManager;
+  const canSeeLeave = isSuperadmin || isHR || isLineManager;
   const canSeeAdmin = isSuperadmin;
 
   const navSections: NavSection[] = [
@@ -123,6 +124,7 @@ export default function Sidebar({ onMobileItemClick }: { onMobileItemClick?: () 
         { name: 'IT & Design Ops Studio', href: '/operations/it-design', icon: Layers, visible: canSeeITDesign },
         { name: 'Milestone Finance & Invoicing', href: '/finance', icon: Receipt, visible: canSeeFinance },
         { name: 'HR & Human Capital', href: '/hr/staff', icon: UserCheck, visible: canSeeHR },
+        { name: 'Staff Leave Tracking', href: '/hr/leave', icon: CalendarCheck, visible: canSeeLeave },
         { name: 'Onboarding & Recruitment', href: '/hr/onboarding', icon: Users, visible: canSeeHR },
         { name: 'User Access & Roles', href: '/admin/users', icon: Lock, visible: canSeeAdmin },
       ]

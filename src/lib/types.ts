@@ -136,6 +136,7 @@ export interface LeaveItem {
   approvedByName?: string;
   approverRole?: string;
   approvalDate?: string;
+  approverComments?: string;
 }
 
 export type KpiWorkItemType = 

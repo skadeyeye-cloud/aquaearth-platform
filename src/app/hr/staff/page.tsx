@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { UserProfile, QueryResolution, PayrollRecord } from '@/lib/types';
 import { 
@@ -24,7 +25,8 @@ import {
   ShieldAlert,
   Calendar,
   Sparkles,
-  Edit3
+  Edit3,
+  ArrowUpRight
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { haptics } from '@/lib/haptics';
@@ -204,6 +206,15 @@ export default function HRStaffPage() {
         >
           Auto HR Report
         </button>
+
+        <Link
+          href="/hr/leave"
+          className="px-3.5 py-1.5 rounded-xl transition-all whitespace-nowrap cursor-pointer text-slate-600 dark:text-[#D1CDC7] hover:text-slate-900 dark:hover:text-white hover:bg-black/[0.02] dark:hover:bg-white/[0.04] flex items-center gap-1.5"
+        >
+          <Calendar className="w-3.5 h-3.5 text-blue-500" />
+          <span>Staff Leave Tracking</span>
+          <ArrowUpRight className="w-3 h-3 text-slate-400" />
+        </Link>
       </div>
 
       {/* Tab 1: Staff */}
