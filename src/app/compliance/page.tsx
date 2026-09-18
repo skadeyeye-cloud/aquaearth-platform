@@ -15,11 +15,7 @@ import {
   DollarSign,
   Plus,
   Lock,
-  ExternalLink,
-  Radio,
-  Eye,
-  MapPin,
-  Users
+  ExternalLink
 } from 'lucide-react';
 import { CompliancePermit, RegulatoryBody } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -28,7 +24,6 @@ export default function CompliancePage() {
   const { compliancePermits, projects, renewCompliancePermit } = useAuth();
   const [selectedBody, setSelectedBody] = useState<string>('ALL');
   const [isRenewingPermit, setIsRenewingPermit] = useState<CompliancePermit | null>(null);
-  const [showDisplayLocations, setShowDisplayLocations] = useState(false);
 
   const filteredPermits = compliancePermits.filter(p => {
     return selectedBody === 'ALL' || p.regulatoryBody === selectedBody;
@@ -36,7 +31,6 @@ export default function CompliancePage() {
 
   const expiringSoon = compliancePermits.filter(p => p.daysRemaining <= 30);
   const totalFeesNgn = compliancePermits.reduce((acc, curr) => acc + curr.statutoryFeeNgn, 0);
-  const publicDisplayPermits = compliancePermits.filter(p => p.publicDisplay?.isRequired);
 
   const handleConfirmRenewal = () => {
     if (!isRenewingPermit) return;
@@ -50,11 +44,8 @@ export default function CompliancePage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-            Statutory Compliance & Regulatory Radar
+            Statutory Compliance Tracker
           </h1>
-          <p className="text-xs text-slate-500 dark:text-[#A39E93] mt-0.5">
-            FMEnv, NESREA, NUPRC permits, 21-day public display countdown, and EIA panel reviews
-          </p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -64,90 +55,6 @@ export default function CompliancePage() {
           </button>
         </div>
       </div>
-
-      {/* 21-Day Statutory Public Display & Panel Review Radar */}
-      {publicDisplayPermits.length > 0 && (
-        <div className="p-5 bg-gradient-to-r from-blue-950/20 via-indigo-950/20 to-purple-950/20 border border-blue-500/30 rounded-3xl space-y-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/30 animate-pulse">
-                <Radio className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30">
-                    Statutory 21-Day Public Display Active
-                  </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30">
-                    FMEnv EIA Panel Review Track
-                  </span>
-                </div>
-                <h2 className="text-sm font-bold text-slate-900 dark:text-white mt-1">
-                  {publicDisplayPermits[0].projectName} • Notice Ref: {publicDisplayPermits[0].permitNumber}
-                </h2>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 shrink-0">
-              <div className="text-right">
-                <div className="text-2xl font-black text-blue-600 dark:text-blue-400 font-mono tnum">
-                  {publicDisplayPermits[0].publicDisplay?.daysRemaining} Days
-                </div>
-                <div className="text-[10px] text-slate-500 font-medium">Remaining of 21-Day Mandate</div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowDisplayLocations(!showDisplayLocations)}
-                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold active:scale-[0.96] flex items-center gap-1.5 cursor-pointer"
-              >
-                <MapPin className="w-3.5 h-3.5" />
-                <span>{showDisplayLocations ? 'Hide Reading Centers' : 'View 4 Reading Centers'}</span>
-              </button>
-            </div>
-          </div>
-
-          {/* 21-Day Timeline Progress Bar */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-[11px] font-mono text-slate-600 dark:text-slate-300">
-              <span>Display Gazetted: {publicDisplayPermits[0].publicDisplay?.startDate}</span>
-              <span className="font-bold text-blue-600 dark:text-blue-400">
-                Day {21 - (publicDisplayPermits[0].publicDisplay?.daysRemaining || 14)} of 21 (33% elapsed)
-              </span>
-              <span>Deadline: {publicDisplayPermits[0].publicDisplay?.endDate}</span>
-            </div>
-            <div className="w-full h-2 bg-black/[0.08] dark:bg-white/[0.1] rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-500" 
-                style={{ width: `${Math.round(((21 - (publicDisplayPermits[0].publicDisplay?.daysRemaining || 14)) / 21) * 100)}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Collapsible Display Centers */}
-          {showDisplayLocations && publicDisplayPermits[0].publicDisplay?.locations && (
-            <div className="p-3.5 bg-black/[0.03] dark:bg-white/[0.03] rounded-2xl border border-black/[0.06] dark:border-white/[0.08] space-y-2 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-[11px] text-slate-900 dark:text-white flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-rose-500" />
-                  Statutory Public Inspection Centers (FMEnv Gazetted)
-                </span>
-                <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400">
-                  {publicDisplayPermits[0].publicDisplay.objectionsCount || 0} Memoranda Received
-                </span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {publicDisplayPermits[0].publicDisplay.locations.map((loc, idx) => (
-                  <div key={idx} className="p-2 bg-white dark:bg-black/60 rounded-xl border border-black/[0.06] dark:border-white/[0.08] flex items-start gap-2">
-                    <span className="font-mono font-bold text-blue-600 dark:text-blue-400 text-[10px] mt-0.5">#{idx + 1}</span>
-                    <span className="text-slate-700 dark:text-slate-300 text-[11px]">{loc}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Expiry Warning Banner if <= 30 days */}
       {expiringSoon.length > 0 && (
@@ -184,11 +91,9 @@ export default function CompliancePage() {
         </div>
 
         <div className="apple-glass-card rounded-2xl p-4 space-y-1">
-          <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400">Public Display Radar</div>
-          <div className="text-xl font-extrabold text-blue-600 dark:text-blue-400 tnum">
-            {publicDisplayPermits.length > 0 ? `${publicDisplayPermits[0].publicDisplay?.daysRemaining}d Left` : 'None Active'}
-          </div>
-          <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">21-day statutory countdown</div>
+          <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400">Upcoming Renewals</div>
+          <div className="text-xl font-extrabold text-amber-600 dark:text-amber-400 tnum">{expiringSoon.length} Impending</div>
+          <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Automated 30/14/7d alerts</div>
         </div>
 
         <div className="apple-glass-card rounded-2xl p-4 space-y-1">
@@ -198,9 +103,9 @@ export default function CompliancePage() {
         </div>
 
         <div className="apple-glass-card rounded-2xl p-4 space-y-1">
-          <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400">Review Gate Tracks</div>
-          <div className="text-xl font-extrabold text-purple-600 dark:text-purple-400 tnum">Panel + Internal</div>
-          <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">FMEnv EIA review matrix</div>
+          <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400">Covered Regulators</div>
+          <div className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 tnum">5 Agencies</div>
+          <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">FMEnv, NESREA, NUPRC, LASEPA</div>
         </div>
       </div>
 
@@ -242,16 +147,6 @@ export default function CompliancePage() {
                     {permit.regulatoryBody}
                   </span>
                   <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400 font-bold">{permit.permitNumber}</span>
-                  {permit.regulatoryReviewType && (
-                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/40">
-                      {permit.regulatoryReviewType === 'PANEL_REVIEW' ? '🎙️ Panel Review' : '📋 Internal Review'}
-                    </span>
-                  )}
-                  {permit.publicDisplay?.isRequired && (
-                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/40 flex items-center gap-1">
-                      <Radio className="w-2.5 h-2.5" /> 21d Display
-                    </span>
-                  )}
                 </div>
 
                 <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full tnum ${

@@ -315,24 +315,7 @@ export interface ProjectRecord {
 }
 
 // Module 5: Field Data Capture Types
-export type FieldFormType = 
-  | 'BOREHOLE_LOG' 
-  | 'WATER_SAMPLING' 
-  | 'ECOLOGY_TRANSECT' 
-  | 'METOCEAN_READING'
-  | 'AIR_QUALITY_NOISE'
-  | 'SOIL_SAMPLING'
-  | 'SOCIOECONOMIC_SURVEY';
-
-export interface ChainOfCustodyRecord {
-  labName: string;
-  batchNumber: string;
-  sampleCount: number;
-  preservationMethod: string; // e.g. "Ice chest at <=4°C with HNO3 preservation"
-  dispatchDate: string;
-  turnaroundDays: number;
-  status: 'IN_TRANSIT' | 'RECEIVED_BY_LAB' | 'ANALYZED';
-}
+export type FieldFormType = 'BOREHOLE_LOG' | 'WATER_SAMPLING' | 'ECOLOGY_TRANSECT' | 'METOCEAN_READING';
 
 export interface FieldRecordItem {
   id: string;
@@ -343,8 +326,6 @@ export interface FieldRecordItem {
   technicianId: string;
   technicianName: string;
   timestamp: string;
-  samplingEquipment?: string;
-  chainOfCustody?: ChainOfCustodyRecord;
   gps: {
     lat: number;
     lng: number;
@@ -365,13 +346,7 @@ export type DocumentCategory =
   | 'LAB_CERTIFICATE' 
   | 'REGULATORY_PERMIT' 
   | 'GIS_MAP' 
-  | 'FIELD_LOG'
-  | 'IMML_APPROVAL'
-  | 'JOB_COMPLETION_CERT'
-  | 'CLIENT_FEEDBACK_CPFS'
-  | 'COMMENT_CHECKLIST'
-  | 'SCOPING_REPORT'
-  | 'INFORMATION_REQUEST_SHEET';
+  | 'FIELD_LOG';
 
 export interface DocumentItem {
   id: string;
@@ -398,16 +373,6 @@ export type QaReviewStage =
   | 'APPROVED_RELEASED' 
   | 'REVISION_REQUESTED';
 
-export interface QaCommentChecklistItem {
-  id: string;
-  sectionOrPage: string;
-  reviewerComment: string;
-  reviewerName: string;
-  authorResponse?: string;
-  status: 'OPEN' | 'RESOLVED' | 'WAIVED';
-  resolvedAt?: string;
-}
-
 export interface QaReviewItem {
   id: string;
   documentId: string;
@@ -424,7 +389,6 @@ export interface QaReviewItem {
   qaLeadName?: string;
   managingConsultantSigned: boolean;
   tamperProofCertificateHash?: string;
-  commentChecklist?: QaCommentChecklistItem[];
   reviewNotes: Array<{
     author: string;
     role: string;
@@ -437,16 +401,6 @@ export interface QaReviewItem {
 
 // Module 8: Regulatory Compliance
 export type RegulatoryBody = 'FMEnv' | 'NESREA' | 'NUPRC' | 'STATE_MOE' | 'NIWA';
-
-export interface PublicDisplayRecord {
-  isRequired: boolean;
-  startDate?: string;
-  endDate?: string;
-  daysRemaining?: number;
-  locations?: string[];
-  status: 'NOT_STARTED' | 'ACTIVE_DISPLAY' | 'COMPLETED' | 'OBJECTIONS_RECEIVED';
-  objectionsCount?: number;
-}
 
 export interface CompliancePermit {
   id: string;
@@ -465,8 +419,6 @@ export interface CompliancePermit {
   cycleDurationYears: number;
   officerInCharge: string;
   stampedCertificateUrl?: string;
-  publicDisplay?: PublicDisplayRecord;
-  regulatoryReviewType?: 'PANEL_REVIEW' | 'INTERNAL_REVIEW';
 }
 
 // Module 10: Finance & Invoicing Types

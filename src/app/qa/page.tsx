@@ -16,31 +16,19 @@ import {
   Sparkles,
   ChevronRight,
   ShieldAlert,
-  Send,
-  ListChecks,
-  CornerDownRight,
-  Plus,
-  Check,
-  RotateCcw
+  Send
 } from 'lucide-react';
-import { QaReviewItem, QaReviewStage, QaCommentChecklistItem } from '@/lib/types';
+import { QaReviewItem, QaReviewStage } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePresence } from '@/lib/presence-context';
 
 export default function QaReviewPage() {
-  const { qaReviews, currentUser, advanceQaReview, updateCommentChecklist, addCommentChecklistItem } = useAuth();
+  const { qaReviews, currentUser, advanceQaReview } = useAuth();
   const { getColleaguesInModule } = usePresence();
   const activeColleagues = getColleaguesInModule('/qa');
   const [selectedQa, setSelectedQa] = useState<QaReviewItem | null>(null);
   const [isCertificateOpen, setIsCertificateOpen] = useState(false);
   const [certificateQa, setCertificateQa] = useState<QaReviewItem | null>(null);
-
-  // Comment Checklist Form State
-  const [activeAddingForQaId, setActiveAddingForQaId] = useState<string | null>(null);
-  const [newCommentSection, setNewCommentSection] = useState('');
-  const [newCommentText, setNewCommentText] = useState('');
-  const [replyingCommentId, setReplyingCommentId] = useState<string | null>(null);
-  const [authorReplyText, setAuthorReplyText] = useState('');
 
   const isSuperadmin = currentUser.accessTier === 'SUPERADMIN' || currentUser.functionalRole === 'SUPERADMIN' || currentUser.functionalRole === 'MANAGING_CONSULTANT';
   const isHR = (currentUser.functionalRole === 'HR_ADMIN' || currentUser.departmentName === 'Human Resources') && !isSuperadmin;
@@ -78,26 +66,6 @@ export default function QaReviewPage() {
     advanceQaReview(selectedQa.id, actionType, reviewComment);
     setSelectedQa(null);
     setReviewComment('');
-  };
-
-  const handleAddCommentChecklist = (qaId: string) => {
-    if (!newCommentSection.trim() || !newCommentText.trim()) return;
-    addCommentChecklistItem(qaId, {
-      sectionOrPage: newCommentSection.trim(),
-      reviewerComment: newCommentText.trim(),
-      reviewerName: currentUser.name,
-      status: 'OPEN'
-    });
-    setNewCommentSection('');
-    setNewCommentText('');
-    setActiveAddingForQaId(null);
-  };
-
-  const handleSaveAuthorReply = (qaId: string, commentId: string) => {
-    if (!authorReplyText.trim()) return;
-    updateCommentChecklist(qaId, commentId, 'RESOLVED', authorReplyText.trim());
-    setReplyingCommentId(null);
-    setAuthorReplyText('');
   };
 
   const handleViewCertificate = (qa: QaReviewItem) => {
@@ -256,176 +224,6 @@ export default function QaReviewPage() {
                 </div>
               </div>
 
-              {/* Comment Checklist (SOP Section Gate) */}
-              <div className="space-y-2 pt-2 border-t border-black/[0.05] dark:border-white/[0.08]">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                      <ListChecks className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                      Author & Reviewer Comment Checklist
-                    </span>
-                    {qa.commentChecklist && (
-                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                        qa.commentChecklist.every(c => c.status === 'RESOLVED' || c.status === 'WAIVED')
-                          ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
-                          : 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700'
-                      }`}>
-                        {qa.commentChecklist.filter(c => c.status === 'RESOLVED' || c.status === 'WAIVED').length} of {qa.commentChecklist.length} Resolved
-                      </span>
-                    )}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveAddingForQaId(activeAddingForQaId === qa.id ? null : qa.id)}
-                    className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    <Plus className="w-3 h-3" />
-                    {activeAddingForQaId === qa.id ? 'Cancel' : 'Add Comment Item'}
-                  </button>
-                </div>
-
-                {/* Inline Add Comment Form */}
-                {activeAddingForQaId === qa.id && (
-                  <div className="p-3 bg-indigo-50/50 dark:bg-indigo-950/30 rounded-2xl border border-indigo-200 dark:border-indigo-800/40 space-y-2 text-xs">
-                    <div className="font-bold text-[11px] text-indigo-950 dark:text-indigo-200">Log Reviewer Comment against Deliverable Section</div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                      <input
-                        type="text"
-                        placeholder="Section / Page (e.g. Section 3.2, p. 45)"
-                        value={newCommentSection}
-                        onChange={(e) => setNewCommentSection(e.target.value)}
-                        className="p-2 bg-white dark:bg-black border border-black/[0.1] dark:border-white/15 rounded-xl text-xs text-slate-900 dark:text-white"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Reviewer required amendment / observation..."
-                        value={newCommentText}
-                        onChange={(e) => setNewCommentText(e.target.value)}
-                        className="md:col-span-2 p-2 bg-white dark:bg-black border border-black/[0.1] dark:border-white/15 rounded-xl text-xs text-slate-900 dark:text-white"
-                      />
-                    </div>
-                    <div className="flex justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleAddCommentChecklist(qa.id)}
-                        className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold active:scale-[0.96] cursor-pointer flex items-center gap-1"
-                      >
-                        <Plus className="w-3 h-3" /> Append to Checklist
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Comments Table / Cards */}
-                {qa.commentChecklist && qa.commentChecklist.length > 0 ? (
-                  <div className="divide-y divide-black/[0.04] dark:divide-white/[0.08] border border-black/[0.06] dark:border-white/[0.08] rounded-2xl overflow-hidden bg-slate-50/50 dark:bg-white/[0.02]">
-                    {qa.commentChecklist.map((item) => (
-                      <div key={item.id} className="p-3 space-y-2 text-xs">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-mono font-bold text-[10px] px-2 py-0.5 rounded-lg bg-black/[0.05] dark:bg-white/[0.08] text-slate-800 dark:text-slate-200">
-                              {item.sectionOrPage}
-                            </span>
-                            <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                              By <b className="text-slate-700 dark:text-slate-300">{item.reviewerName}</b>
-                            </span>
-                          </div>
-
-                          {/* Status and Action toggles */}
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => updateCommentChecklist(qa.id, item.id, item.status === 'RESOLVED' ? 'OPEN' : 'RESOLVED')}
-                              className={`px-2 py-0.5 rounded-lg text-[9px] font-bold border transition-all active:scale-[0.96] flex items-center gap-1 cursor-pointer ${
-                                item.status === 'RESOLVED'
-                                  ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
-                                  : 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700'
-                              }`}
-                            >
-                              {item.status === 'RESOLVED' ? <Check className="w-2.5 h-2.5" /> : <RotateCcw className="w-2.5 h-2.5" />}
-                              {item.status}
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => updateCommentChecklist(qa.id, item.id, 'WAIVED')}
-                              className={`px-1.5 py-0.5 rounded-lg text-[9px] font-medium transition-all active:scale-[0.96] cursor-pointer ${
-                                item.status === 'WAIVED'
-                                  ? 'bg-slate-200 dark:bg-white/[0.15] text-slate-800 dark:text-white font-bold'
-                                  : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
-                              }`}
-                            >
-                              Waive
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Reviewer Note */}
-                        <div className="text-[11px] text-slate-800 dark:text-slate-200 font-medium pl-1 border-l-2 border-amber-500/60">
-                          {item.reviewerComment}
-                        </div>
-
-                        {/* Lead Author Response Section */}
-                        {item.authorResponse ? (
-                          <div className="pl-3 py-1 bg-white/60 dark:bg-white/[0.04] rounded-xl border border-black/[0.04] dark:border-white/[0.06] text-[11px] text-slate-600 dark:text-slate-300 flex items-start gap-1.5">
-                            <CornerDownRight className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                            <div>
-                              <span className="font-semibold text-emerald-700 dark:text-emerald-400">Author Resolution: </span>
-                              <span>{item.authorResponse}</span>
-                              {item.resolvedAt && (
-                                <span className="text-[9px] text-slate-400 font-mono ml-2">({item.resolvedAt})</span>
-                              )}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="pt-1">
-                            {replyingCommentId === item.id ? (
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="text"
-                                  placeholder="Type author resolution or revision details..."
-                                  value={authorReplyText}
-                                  onChange={(e) => setAuthorReplyText(e.target.value)}
-                                  className="flex-1 p-1.5 bg-white dark:bg-black border border-black/[0.1] dark:border-white/15 rounded-lg text-xs text-slate-900 dark:text-white"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => handleSaveAuthorReply(qa.id, item.id)}
-                                  className="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[10px] font-bold cursor-pointer"
-                                >
-                                  Resolve
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setReplyingCommentId(null)}
-                                  className="px-2 py-1 text-slate-400 text-[10px] cursor-pointer"
-                                >
-                                  Cancel
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => { setReplyingCommentId(item.id); setAuthorReplyText(''); }}
-                                className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
-                              >
-                                <CornerDownRight className="w-3 h-3" />
-                                Add Author Resolution Response
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-2.5 text-center text-[10px] text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-white/[0.02] rounded-xl border border-dashed border-black/[0.08] dark:border-white/[0.08]">
-                    No formal comment checklist items logged yet for this review cycle.
-                  </div>
-                )}
-              </div>
-
               {/* Review Trail */}
               <div className="space-y-2 pt-1">
                 <div className="text-[10px] font-bold text-slate-400 dark:text-slate-400 uppercase tracking-wider">Review Audit Trail</div>
@@ -498,16 +296,6 @@ export default function QaReviewPage() {
               <p className="text-[11px] text-slate-600 dark:text-slate-300">
                 Verify calculations, borehole logs, citations, and compliance with Nigerian statutory guidelines.
               </p>
-
-              {/* Comment Checklist Gate Status Warning */}
-              {selectedQa.commentChecklist && selectedQa.commentChecklist.some(c => c.status === 'OPEN') && (
-                <div className="p-2.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/50 rounded-2xl text-[11px] text-amber-800 dark:text-amber-300 flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                  <span>
-                    <b>SOP Gate Alert:</b> {selectedQa.commentChecklist.filter(c => c.status === 'OPEN').length} checklist comment(s) remain open. Verify author resolution or waive before release.
-                  </span>
-                </div>
-              )}
 
               <form onSubmit={handleReviewSubmit} className="space-y-3">
                 <div>

@@ -59,18 +59,6 @@ export default function DocumentsPage() {
         return 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20';
       case 'GIS_MAP':
         return 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20';
-      case 'IMML_APPROVAL':
-        return 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/30';
-      case 'JOB_COMPLETION_CERT':
-        return 'bg-blue-500/15 text-blue-800 dark:text-blue-300 border-blue-500/30';
-      case 'CLIENT_FEEDBACK_CPFS':
-        return 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/30';
-      case 'COMMENT_CHECKLIST':
-        return 'bg-purple-500/15 text-purple-800 dark:text-purple-300 border-purple-500/30';
-      case 'SCOPING_REPORT':
-        return 'bg-indigo-500/15 text-indigo-800 dark:text-indigo-300 border-indigo-500/30';
-      case 'INFORMATION_REQUEST_SHEET':
-        return 'bg-cyan-500/15 text-cyan-800 dark:text-cyan-300 border-cyan-500/30';
       default:
         return 'bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/20';
     }
@@ -212,16 +200,11 @@ export default function DocumentsPage() {
             className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-black/[0.08] dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-hidden"
           >
             <option value="ALL">All Categories</option>
-            <option value="IMML_APPROVAL">📜 IMML Letters (Statutory Approval)</option>
-            <option value="JOB_COMPLETION_CERT">🤝 Job Completion Certs (JCC)</option>
-            <option value="CLIENT_FEEDBACK_CPFS">⭐ Client Feedback Sheets (CPFS)</option>
-            <option value="COMMENT_CHECKLIST">📋 QA Comment Checklists</option>
             <option value="TECHNICAL_REPORT">Technical Reports (EIA/Geotech)</option>
             <option value="PROPOSAL">Commercial Proposals</option>
             <option value="LAB_CERTIFICATE">Laboratory Certificates</option>
             <option value="REGULATORY_PERMIT">Regulatory Permits</option>
             <option value="GIS_MAP">GIS Maps & CAD Charts</option>
-            <option value="INFORMATION_REQUEST_SHEET">📝 Information Request Sheets (IRS)</option>
           </select>
         </div>
       </div>
@@ -416,15 +399,9 @@ export default function DocumentsPage() {
                       className="w-full p-2 bg-slate-50 dark:bg-white/5 border border-black/[0.08] dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white"
                     >
                       <option value="TECHNICAL_REPORT">Technical Report</option>
-                      <option value="IMML_APPROVAL">Impact Mitigation Monitoring Letter (IMML Approval)</option>
-                      <option value="JOB_COMPLETION_CERT">Job Completion Certificate (JCC)</option>
-                      <option value="CLIENT_FEEDBACK_CPFS">Client Performance Feedback Sheet (CPFS)</option>
-                      <option value="COMMENT_CHECKLIST">Quality Assurance Comment Checklist</option>
                       <option value="PROPOSAL">Commercial Proposal</option>
                       <option value="LAB_CERTIFICATE">Lab Certificate</option>
-                      <option value="REGULATORY_PERMIT">Regulatory Permit</option>
                       <option value="GIS_MAP">GIS Map / CAD Chart</option>
-                      <option value="INFORMATION_REQUEST_SHEET">Information Request Sheet (IRS)</option>
                     </select>
                   </div>
                 </div>

@@ -232,8 +232,6 @@ interface AuthContextType {
   uploadDocument: (doc: Omit<DocumentItem, 'id' | 'documentNumber' | 'uploadedAt'>) => void;
   submitForQa: (docId: string, peerReviewerId: string, qaLeadId: string) => void;
   advanceQaReview: (qaId: string, action: 'APPROVED' | 'REJECTED', comment: string) => void;
-  updateCommentChecklist: (qaId: string, commentId: string, status: 'OPEN' | 'RESOLVED' | 'WAIVED', authorResponse?: string) => void;
-  addCommentChecklistItem: (qaId: string, item: Omit<import('./types').QaCommentChecklistItem, 'id'>) => void;
   renewCompliancePermit: (permitId: string) => void;
   createInvoice: (inv: Omit<InvoiceItem, 'id' | 'invoiceNumber' | 'vatAmountNgn' | 'whtDeductionNgn' | 'netPayableNgn' | 'issuedDate'>) => void;
   markInvoicePaid: (invoiceId: string, whtCreditNumber?: string) => void;
@@ -324,38 +322,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProjects(storedProjects || []);
 
       const storedField = getStoredData<FieldRecordItem[]>('field_records', INITIAL_FIELD_RECORDS);
-      const existingFieldIds = new Set((storedField || []).map(f => f.id));
-      const missingField = INITIAL_FIELD_RECORDS.filter(f => !existingFieldIds.has(f.id));
-      setFieldRecords([...(storedField || []), ...missingField]);
+      setFieldRecords(storedField || []);
 
       const storedDocs = getStoredData<DocumentItem[]>('documents', INITIAL_DOCUMENTS);
-      const existingDocIds = new Set((storedDocs || []).map(d => d.id));
-      const missingDocs = INITIAL_DOCUMENTS.filter(d => !existingDocIds.has(d.id));
-      setDocuments([...(storedDocs || []), ...missingDocs]);
+      setDocuments(storedDocs || []);
 
       const storedQa = getStoredData<QaReviewItem[]>('qa_reviews', INITIAL_QA_REVIEWS);
-      const existingQaIds = new Set((storedQa || []).map(q => q.id));
-      const missingQa = INITIAL_QA_REVIEWS.filter(q => !existingQaIds.has(q.id));
-      const mergedQa = [...(storedQa || []), ...missingQa].map(q => {
-        const init = INITIAL_QA_REVIEWS.find(i => i.id === q.id);
-        if (init?.commentChecklist && (!q.commentChecklist || q.commentChecklist.length === 0)) {
-          return { ...q, commentChecklist: init.commentChecklist };
-        }
-        return q;
-      });
-      setQaReviews(mergedQa);
+      setQaReviews(storedQa || []);
 
       const storedPermits = getStoredData<CompliancePermit[]>('compliance', INITIAL_COMPLIANCE_PERMITS);
-      const existingPermitIds = new Set((storedPermits || []).map(p => p.id));
-      const missingPermits = INITIAL_COMPLIANCE_PERMITS.filter(p => !existingPermitIds.has(p.id));
-      const mergedPermits = [...(storedPermits || []), ...missingPermits].map(p => {
-        const init = INITIAL_COMPLIANCE_PERMITS.find(i => i.id === p.id);
-        if (init && (init.publicDisplay || init.regulatoryReviewType)) {
-          return { ...p, publicDisplay: init.publicDisplay || p.publicDisplay, regulatoryReviewType: init.regulatoryReviewType || p.regulatoryReviewType };
-        }
-        return p;
-      });
-      setCompliancePermits(mergedPermits);
+      setCompliancePermits(storedPermits || []);
 
       const storedInvoices = getStoredData<InvoiceItem[]>('invoices', INITIAL_INVOICES);
       setInvoices(storedInvoices || []);
@@ -1791,44 +1767,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
     };
     setAuditLogs(prev => [audit, ...prev]);
-  };
-
-  const updateCommentChecklist = (qaId: string, commentId: string, status: 'OPEN' | 'RESOLVED' | 'WAIVED', authorResponse?: string) => {
-    setQaReviews(prev => prev.map(qa => {
-      if (qa.id === qaId && qa.commentChecklist) {
-        return {
-          ...qa,
-          commentChecklist: qa.commentChecklist.map(item => {
-            if (item.id === commentId) {
-              return {
-                ...item,
-                status,
-                authorResponse: authorResponse !== undefined ? authorResponse : item.authorResponse,
-                resolvedAt: status === 'RESOLVED' ? new Date().toISOString().replace('T', ' ').substring(0, 16) : undefined
-              };
-            }
-            return item;
-          })
-        };
-      }
-      return qa;
-    }));
-  };
-
-  const addCommentChecklistItem = (qaId: string, item: Omit<import('./types').QaCommentChecklistItem, 'id'>) => {
-    const newItem: import('./types').QaCommentChecklistItem = {
-      ...item,
-      id: `chk-${Date.now()}`
-    };
-    setQaReviews(prev => prev.map(qa => {
-      if (qa.id === qaId) {
-        return {
-          ...qa,
-          commentChecklist: [...(qa.commentChecklist || []), newItem]
-        };
-      }
-      return qa;
-    }));
   };
 
   const renewCompliancePermit = (permitId: string) => {
@@ -3643,8 +3581,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       uploadDocument,
       submitForQa,
       advanceQaReview,
-      updateCommentChecklist,
-      addCommentChecklistItem,
       renewCompliancePermit,
       createInvoice,
       markInvoicePaid,
