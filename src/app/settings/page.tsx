@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/lib/auth-context';
 import { haptics } from '@/lib/haptics';
@@ -27,19 +27,12 @@ import {
   Eye,
   EyeOff,
   Sparkles,
-  CheckCircle2
+  CheckCircle2,
+  UploadCloud,
+  Trash2,
+  Image as ImageIcon
 } from 'lucide-react';
 
-const PRESET_AVATARS = [
-  { label: 'Dr. Kaine (Executive)', url: '/avatars/kaine-edike.png' },
-  { label: 'Executive Female', url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&fit=crop&q=80' },
-  { label: 'Engineer Male', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&fit=crop&q=80' },
-  { label: 'Scientist Female', url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&fit=crop&q=80' },
-  { label: 'Technical Lead', url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&fit=crop&q=80' },
-  { label: 'Field Operations', url: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=200&fit=crop&q=80' },
-  { label: 'Quality Lead', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&fit=crop&q=80' },
-  { label: 'Corporate Legal', url: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&fit=crop&q=80' },
-];
 
 const OFFICE_LOCATIONS = [
   'Port Harcourt HQ — Trans-Amadi Industrial Layout',
@@ -66,9 +59,14 @@ export default function SettingsPage() {
   const [emergencyPhone, setEmergencyPhone] = useState(currentUser.emergencyContact?.phone || '+234 802 999 1122');
   const [emergencyRelation, setEmergencyRelation] = useState(currentUser.emergencyContact?.relation || 'Spouse / Next of Kin');
 
-  // Avatar Picker Modal State
+  // Avatar Device Upload Modal State
   const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false);
-  const [customAvatarUrl, setCustomAvatarUrl] = useState('');
+  const [selectedFilePreview, setSelectedFilePreview] = useState<string | null>(null);
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [selectedFileSize, setSelectedFileSize] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Password Change Form States
   const [currentPassword, setCurrentPassword] = useState('');
@@ -187,6 +185,84 @@ export default function SettingsPage() {
     haptics.selection();
   };
 
+  // Process Device Image Upload
+  const processImageFile = (file: File) => {
+    setUploadError(null);
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Unsupported file format. Please select a PNG, JPG, WEBP, or GIF image.');
+      haptics.warning();
+      return;
+    }
+    // Limit to 5MB
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('Image size exceeds 5MB limit. Please choose a smaller photo.');
+      haptics.warning();
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      if (dataUrl) {
+        setSelectedFilePreview(dataUrl);
+        setSelectedFileName(file.name);
+        const sizeKb = Math.round(file.size / 1024);
+        setSelectedFileSize(sizeKb > 1024 ? `${(sizeKb / 1024).toFixed(1)} MB` : `${sizeKb} KB`);
+        haptics.selection();
+      }
+    };
+    reader.onerror = () => {
+      setUploadError('Failed to read image from device. Please try another file.');
+      haptics.warning();
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDeviceFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processImageFile(file);
+    }
+    if (e.target) {
+      e.target.value = '';
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      processImageFile(file);
+    }
+  };
+
+  const handleApplyUploadedAvatar = () => {
+    if (selectedFilePreview) {
+      setAvatar(selectedFilePreview);
+      updateUserProfile(currentUser.id, { avatar: selectedFilePreview });
+      haptics.success();
+      setIsAvatarPickerOpen(false);
+      setSelectedFilePreview(null);
+      setSelectedFileName(null);
+      setSelectedFileSize(null);
+      setSaveSuccessNotice('Profile photo updated successfully.');
+      setTimeout(() => setSaveSuccessNotice(null), 3500);
+    }
+  };
+
+  const handleRemoveAvatar = () => {
+    haptics.selection();
+    setAvatar('');
+    updateUserProfile(currentUser.id, { avatar: '' });
+    setSelectedFilePreview(null);
+    setSelectedFileName(null);
+    setSelectedFileSize(null);
+    setIsAvatarPickerOpen(false);
+    setSaveSuccessNotice('Profile photo removed.');
+    setTimeout(() => setSaveSuccessNotice(null), 3500);
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-6 select-none pb-12">
       {/* Header */}
@@ -272,7 +348,7 @@ export default function SettingsPage() {
               }}
               className="w-full py-2 px-3 bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] dark:hover:bg-white/[0.1] text-slate-700 dark:text-slate-200 rounded-2xl text-xs font-semibold transition-all active:scale-[0.98] cursor-pointer"
             >
-              Choose Profile Photo
+              Upload Profile Photo
             </button>
           </div>
 
@@ -641,7 +717,7 @@ export default function SettingsPage() {
 
       </div>
 
-      {/* Avatar Picker Modal */}
+      {/* Device Avatar Upload Modal */}
       <AnimatePresence>
         {isAvatarPickerOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -649,92 +725,147 @@ export default function SettingsPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsAvatarPickerOpen(false)}
+              onClick={() => {
+                setIsAvatarPickerOpen(false);
+                setSelectedFilePreview(null);
+                setUploadError(null);
+              }}
               className="fixed inset-0 bg-black/60 backdrop-blur-md"
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="relative w-full max-w-lg bg-white dark:bg-[#0c0c0e] border border-black/[0.08] dark:border-white/[0.12] rounded-3xl shadow-2xl p-6 z-10 space-y-5"
+              className="relative w-full max-w-md bg-white dark:bg-[#121214] border border-black/[0.08] dark:border-white/[0.12] rounded-3xl shadow-2xl p-6 z-10 space-y-5"
             >
+              {/* Modal Header */}
               <div className="flex items-center justify-between pb-3 border-b border-black/[0.05] dark:border-white/[0.08]">
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Choose Profile Picture</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Select a professional portrait or enter a photo URL.</p>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Profile Picture</h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-300">Upload a portrait directly from your device.</p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setIsAvatarPickerOpen(false)}
-                  className="p-1.5 rounded-xl hover:bg-black/[0.05] dark:hover:bg-white/[0.08] text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors"
+                  onClick={() => {
+                    setIsAvatarPickerOpen(false);
+                    setSelectedFilePreview(null);
+                    setUploadError(null);
+                  }}
+                  className="p-1.5 rounded-xl hover:bg-black/[0.05] dark:hover:bg-white/[0.08] text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
-              {/* Presets Grid */}
-              <div className="space-y-2">
-                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Corporate Presets
-                </span>
-                <div className="grid grid-cols-4 gap-3">
-                  {PRESET_AVATARS.map((preset, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => {
-                        setAvatar(preset.url);
-                        haptics.selection();
-                        setIsAvatarPickerOpen(false);
-                      }}
-                      className="group flex flex-col items-center gap-1.5 p-2 rounded-2xl hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all cursor-pointer text-center"
-                    >
-                      <img
-                        src={preset.url}
-                        alt={preset.label}
-                        className={`w-14 h-14 rounded-2xl object-cover ring-2 transition-all ${
-                          avatar === preset.url
-                            ? 'ring-emerald-500 shadow-md scale-105'
-                            : 'ring-black/[0.06] dark:ring-white/10 group-hover:ring-emerald-400'
-                        }`}
-                      />
-                      <span className="text-[10px] text-slate-600 dark:text-slate-400 font-medium truncate w-full">
-                        {preset.label.split(' ')[0]}
-                      </span>
-                    </button>
-                  ))}
+              {/* Upload Error Alert */}
+              {uploadError && (
+                <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/50 text-rose-800 dark:text-rose-300 border border-rose-500/30 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
+                  <span className="font-medium">{uploadError}</span>
                 </div>
-              </div>
+              )}
 
-              {/* Custom URL Input */}
-              <div className="space-y-2 pt-2 border-t border-black/[0.05] dark:border-white/[0.08]">
-                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Or Custom Photo Web URL
-                </span>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="url"
-                    value={customAvatarUrl}
-                    onChange={(e) => setCustomAvatarUrl(e.target.value)}
-                    placeholder="https://images.unsplash.com/..."
-                    className="flex-1 px-3 py-2 rounded-xl bg-slate-50 dark:bg-black border border-black/[0.08] dark:border-white/15 text-xs text-slate-900 dark:text-white font-medium focus:outline-hidden"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (customAvatarUrl.trim()) {
-                        setAvatar(customAvatarUrl.trim());
-                        haptics.selection();
-                        setIsAvatarPickerOpen(false);
-                        setCustomAvatarUrl('');
-                      }
-                    }}
-                    className="px-3.5 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-950 text-xs font-bold transition-all active:scale-[0.96] cursor-pointer"
-                  >
-                    Apply
-                  </button>
+              {/* Hidden File Input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png, image/jpeg, image/jpg, image/webp, image/gif"
+                onChange={handleDeviceFileInput}
+                className="hidden"
+              />
+
+              {/* Preview or Dropzone */}
+              {selectedFilePreview ? (
+                <div className="space-y-4">
+                  <div className="p-5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.08] flex flex-col items-center text-center space-y-3">
+                    <img
+                      src={selectedFilePreview}
+                      alt="Selected preview"
+                      className="w-28 h-28 rounded-3xl object-cover ring-4 ring-emerald-500/30 shadow-lg"
+                    />
+                    <div className="space-y-0.5">
+                      <div className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[260px]">
+                        {selectedFileName || 'Selected Photo'}
+                      </div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                        {selectedFileSize}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex-1 py-2.5 px-3 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.08] dark:hover:bg-white/[0.12] text-slate-800 dark:text-white text-xs font-bold transition-all active:scale-[0.96] cursor-pointer"
+                    >
+                      Choose Different
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleApplyUploadedAvatar}
+                      className="flex-1 py-2.5 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-xs transition-all active:scale-[0.96] cursor-pointer"
+                    >
+                      Use as Photo
+                    </button>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-4">
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setIsDragging(true);
+                    }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`p-8 rounded-3xl border-2 border-dashed transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-3 ${
+                      isDragging
+                        ? 'border-emerald-500 bg-emerald-500/10 scale-[1.01]'
+                        : 'border-slate-300 dark:border-white/20 hover:border-emerald-500 dark:hover:border-emerald-400 bg-slate-50/70 dark:bg-white/[0.03] hover:bg-slate-100/70 dark:hover:bg-white/[0.05]'
+                    }`}
+                  >
+                    <div className="p-3.5 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                      <UploadCloud className="w-6 h-6" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-xs font-bold text-slate-900 dark:text-white">
+                        Choose photo from device
+                      </div>
+                      <div className="text-[11px] text-slate-600 dark:text-slate-300 font-medium">
+                        Drag and drop your image here, or click to browse
+                      </div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 pt-0.5 font-medium">
+                        PNG, JPG, WEBP, or GIF (up to 5MB)
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="mt-1 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-950 text-xs font-bold shadow-xs transition-all active:scale-[0.96] cursor-pointer"
+                    >
+                      Browse Files
+                    </button>
+                  </div>
+
+                  {/* Remove Current Photo Option if one exists */}
+                  {avatar && (
+                    <div className="pt-2 border-t border-black/[0.05] dark:border-white/[0.08] flex items-center justify-between">
+                      <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">
+                        Current profile photo is active
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleRemoveAvatar}
+                        className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Remove Photo</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </motion.div>
           </div>
         )}

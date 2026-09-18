@@ -84,8 +84,8 @@ export default function QaReviewPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1.5 text-xs font-semibold text-purple-800 bg-purple-50 px-3 py-1.5 rounded-xl border border-purple-200 shadow-2xs">
-            <ShieldCheck className="w-4 h-4 text-purple-600" />
+          <span className="flex items-center gap-1.5 text-xs font-semibold text-purple-800 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 px-3 py-1.5 rounded-xl border border-purple-200 dark:border-purple-500/30 shadow-2xs">
+            <ShieldCheck className="w-4 h-4 text-purple-600 dark:text-purple-400" />
             Hard Release Gate Active
           </span>
         </div>
@@ -120,35 +120,35 @@ export default function QaReviewPage() {
       {/* SLA & Review Telemetry */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
         <div className="apple-glass-card rounded-2xl p-4 space-y-1">
-          <div className="text-[10px] uppercase font-bold text-slate-400">Under Review</div>
-          <div className="text-xl font-extrabold text-slate-900 tnum">{activeReviews.length} Deliverables</div>
-          <div className="text-[10px] text-slate-500 font-medium">Locked pending sign-off</div>
+          <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400">Under Review</div>
+          <div className="text-xl font-extrabold text-slate-900 dark:text-white tnum">{activeReviews.length} Deliverables</div>
+          <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Locked pending sign-off</div>
         </div>
 
         <div className="apple-glass-card rounded-2xl p-4 space-y-1">
-          <div className="text-[10px] uppercase font-bold text-slate-400">SLA Performance</div>
-          <div className="text-xl font-extrabold text-emerald-600 tnum">100% On-Time</div>
-          <div className="text-[10px] text-slate-500 font-medium">48h target turnaround SLA</div>
+          <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400">SLA Performance</div>
+          <div className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 tnum">100% On-Time</div>
+          <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">48h target turnaround SLA</div>
         </div>
 
         <div className="apple-glass-card rounded-2xl p-4 space-y-1">
-          <div className="text-[10px] uppercase font-bold text-slate-400">Leadership Sign-Offs</div>
-          <div className="text-xl font-extrabold text-purple-600 tnum">
+          <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400">Leadership Sign-Offs</div>
+          <div className="text-xl font-extrabold text-purple-600 dark:text-purple-400 tnum">
             {qaReviews.filter(q => q.managingConsultantSigned).length} Approved
           </div>
-          <div className="text-[10px] text-slate-500 font-medium">Managing Consultant verified</div>
+          <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Managing Consultant verified</div>
         </div>
 
         <div className="apple-glass-card rounded-2xl p-4 space-y-1">
-          <div className="text-[10px] uppercase font-bold text-slate-400">QA KPI Points</div>
-          <div className="text-xl font-extrabold text-amber-600 tnum">+25 pts / Release</div>
-          <div className="text-[10px] text-slate-500 font-medium">Automated M13 engine reward</div>
+          <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400">QA KPI Points</div>
+          <div className="text-xl font-extrabold text-amber-600 dark:text-amber-400 tnum">+25 pts / Release</div>
+          <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Automated M13 engine reward</div>
         </div>
       </div>
 
       {/* Active Review Chains */}
       <div className="space-y-4">
-        <h2 className="text-sm font-bold text-slate-900">Active Technical Review Chains</h2>
+        <h2 className="text-sm font-bold text-slate-900 dark:text-white">Active Technical Review Chains</h2>
 
         <div className="space-y-3">
           {activeReviews.map((qa) => (
@@ -160,26 +160,26 @@ export default function QaReviewPage() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-xs font-bold text-slate-600 whitespace-nowrap shrink-0">{qa.projectCode}</span>
-                    <span className="text-[9px] font-bold px-2 py-0.2 rounded-full bg-purple-50 text-purple-800 border border-purple-200 whitespace-nowrap shrink-0">
+                    <span className="font-mono text-xs font-bold text-slate-600 dark:text-slate-300 whitespace-nowrap shrink-0">{qa.projectCode}</span>
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950/50 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-500/30 whitespace-nowrap shrink-0">
                       Current: {qa.stage.replace(/_/g, ' ')}
                     </span>
-                    <span className="text-[10px] text-slate-400 font-medium inline-flex items-center gap-1 whitespace-nowrap shrink-0">
-                      <Clock className="w-3 h-3 text-amber-600" />
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium inline-flex items-center gap-1 whitespace-nowrap shrink-0">
+                      <Clock className="w-3 h-3 text-amber-600 dark:text-amber-400" />
                       {qa.slaDeadline}
                     </span>
                   </div>
 
-                  <h3 className="text-sm font-bold text-slate-900">{qa.documentTitle}</h3>
-                  <div className="text-[11px] text-slate-500">
-                    Lead Author: <b>{qa.authorName}</b> • Peer Reviewer: <b>{qa.peerReviewerName}</b> • QA Lead: <b>{qa.qaLeadName}</b>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">{qa.documentTitle}</h3>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Lead Author: <b className="text-slate-800 dark:text-slate-200">{qa.authorName}</b> • Peer Reviewer: <b className="text-slate-800 dark:text-slate-200">{qa.peerReviewerName}</b> • QA Lead: <b className="text-slate-800 dark:text-slate-200">{qa.qaLeadName}</b>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     onClick={() => setSelectedQa(qa)}
-                    className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-2xs transition-all active:scale-[0.96] inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"
+                    className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-950 rounded-xl text-xs font-semibold shadow-2xs transition-all active:scale-[0.96] inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
                   >
                     <UserCheck className="w-3.5 h-3.5" />
                     <span>Review & Advance</span>
@@ -188,37 +188,37 @@ export default function QaReviewPage() {
               </div>
 
               {/* 4-Stage Visual Stepper */}
-              <div className="p-3 bg-slate-50/70 rounded-2xl border border-black/[0.04] overflow-x-auto">
+              <div className="p-3 bg-slate-50/70 dark:bg-white/[0.03] rounded-2xl border border-black/[0.04] dark:border-white/[0.06] overflow-x-auto">
                 <div className="grid grid-cols-4 gap-2 text-center text-[10px] min-w-[500px]">
-                  <div className="p-2 bg-emerald-50 text-emerald-800 rounded-xl font-bold border border-emerald-200 flex items-center justify-center gap-1 whitespace-nowrap shrink-0">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                  <div className="p-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 rounded-xl font-bold border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center gap-1 whitespace-nowrap shrink-0">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                     1. Author Submitted
                   </div>
 
                   <div className={`p-2 rounded-xl font-bold flex items-center justify-center gap-1 whitespace-nowrap shrink-0 ${
-                    qa.stage === 'PEER_REVIEW' ? 'bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs' :
-                    (qa.stage === 'QA_LEAD_REVIEW' || qa.stage === 'LEADERSHIP_SIGNOFF' || qa.stage === 'APPROVED_RELEASED') ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' :
-                    'bg-slate-100 text-slate-400'
+                    qa.stage === 'PEER_REVIEW' ? 'bg-amber-100 dark:bg-amber-950/50 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40 shadow-2xs' :
+                    (qa.stage === 'QA_LEAD_REVIEW' || qa.stage === 'LEADERSHIP_SIGNOFF' || qa.stage === 'APPROVED_RELEASED') ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30' :
+                    'bg-slate-100 dark:bg-white/[0.05] text-slate-400 dark:text-slate-500'
                   }`}>
-                    {qa.stage === 'PEER_REVIEW' ? <Clock className="w-3 h-3 text-amber-600" /> : <CheckCircle2 className="w-3 h-3" />}
+                    {qa.stage === 'PEER_REVIEW' ? <Clock className="w-3 h-3 text-amber-600 dark:text-amber-400" /> : <CheckCircle2 className="w-3 h-3" />}
                     2. Peer Review
                   </div>
 
                   <div className={`p-2 rounded-xl font-bold flex items-center justify-center gap-1 whitespace-nowrap shrink-0 ${
-                    qa.stage === 'QA_LEAD_REVIEW' ? 'bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs' :
-                    (qa.stage === 'LEADERSHIP_SIGNOFF' || qa.stage === 'APPROVED_RELEASED') ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' :
-                    'bg-slate-100 text-slate-400'
+                    qa.stage === 'QA_LEAD_REVIEW' ? 'bg-amber-100 dark:bg-amber-950/50 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40 shadow-2xs' :
+                    (qa.stage === 'LEADERSHIP_SIGNOFF' || qa.stage === 'APPROVED_RELEASED') ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30' :
+                    'bg-slate-100 dark:bg-white/[0.05] text-slate-400 dark:text-slate-500'
                   }`}>
-                    {qa.stage === 'QA_LEAD_REVIEW' ? <Clock className="w-3 h-3 text-amber-600" /> : <CheckCircle2 className="w-3 h-3" />}
+                    {qa.stage === 'QA_LEAD_REVIEW' ? <Clock className="w-3 h-3 text-amber-600 dark:text-amber-400" /> : <CheckCircle2 className="w-3 h-3" />}
                     3. QA Lead Review
                   </div>
 
                   <div className={`p-2 rounded-xl font-bold flex items-center justify-center gap-1 whitespace-nowrap shrink-0 ${
-                    qa.stage === 'LEADERSHIP_SIGNOFF' ? 'bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs' :
-                    qa.stage === 'APPROVED_RELEASED' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' :
-                    'bg-slate-100 text-slate-400'
+                    qa.stage === 'LEADERSHIP_SIGNOFF' ? 'bg-amber-100 dark:bg-amber-950/50 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40 shadow-2xs' :
+                    qa.stage === 'APPROVED_RELEASED' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30' :
+                    'bg-slate-100 dark:bg-white/[0.05] text-slate-400 dark:text-slate-500'
                   }`}>
-                    {qa.stage === 'LEADERSHIP_SIGNOFF' ? <Clock className="w-3 h-3 text-amber-600" /> : <Lock className="w-3 h-3" />}
+                    {qa.stage === 'LEADERSHIP_SIGNOFF' ? <Clock className="w-3 h-3 text-amber-600 dark:text-amber-400" /> : <Lock className="w-3 h-3" />}
                     4. Managing Sign-Off
                   </div>
                 </div>
@@ -226,14 +226,16 @@ export default function QaReviewPage() {
 
               {/* Review Trail */}
               <div className="space-y-2 pt-1">
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Review Audit Trail</div>
+                <div className="text-[10px] font-bold text-slate-400 dark:text-slate-400 uppercase tracking-wider">Review Audit Trail</div>
                 {qa.reviewNotes.map((note, idx) => (
-                  <div key={idx} className="p-2.5 bg-white rounded-xl border border-black/[0.04] text-xs space-y-0.5">
-                    <div className="flex items-center justify-between text-[10px]">
-                      <span className="font-bold text-slate-800">{note.author} ({note.role})</span>
-                      <span className="text-slate-400 font-mono tnum">{note.timestamp}</span>
+                  <div key={idx} className="p-3 bg-slate-50 dark:bg-white/[0.04] rounded-2xl border border-black/[0.06] dark:border-white/[0.08] text-xs space-y-1">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-bold text-slate-900 dark:text-white">
+                        {note.author} <span className="font-normal text-slate-500 dark:text-slate-400">({note.role})</span>
+                      </span>
+                      <span className="text-slate-500 dark:text-slate-400 font-mono text-[10px] tnum">{note.timestamp}</span>
                     </div>
-                    <p className="text-[11px] text-slate-600">{note.comment}</p>
+                    <p className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed font-medium">{note.comment}</p>
                   </div>
                 ))}
               </div>
@@ -243,22 +245,22 @@ export default function QaReviewPage() {
       </div>
 
       {/* Released & Certified Deliverables */}
-      <div className="space-y-4 pt-4 border-t border-black/[0.05]">
-        <h2 className="text-sm font-bold text-slate-900">Released & Certified Deliverables (Hard Gate Passed)</h2>
+      <div className="space-y-4 pt-4 border-t border-black/[0.05] dark:border-white/[0.08]">
+        <h2 className="text-sm font-bold text-slate-900 dark:text-white">Released & Certified Deliverables (Hard Gate Passed)</h2>
 
         <div className="space-y-3">
           {releasedReviews.map((qa) => (
             <div key={qa.id} className="apple-glass-card rounded-3xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
               <div className="space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-mono text-xs font-bold text-emerald-700 whitespace-nowrap shrink-0">{qa.projectCode}</span>
-                  <span className="text-[9px] font-bold px-2 py-0.2 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 inline-flex items-center gap-1 whitespace-nowrap shrink-0">
-                    <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                  <span className="font-mono text-xs font-bold text-emerald-700 dark:text-emerald-400 whitespace-nowrap shrink-0">{qa.projectCode}</span>
+                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 inline-flex items-center gap-1 whitespace-nowrap shrink-0">
+                    <ShieldCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                     QA Certified & Released
                   </span>
                 </div>
-                <h3 className="font-bold text-xs text-slate-900">{qa.documentTitle}</h3>
-                <div className="text-[10px] text-slate-400 font-mono">
+                <h3 className="font-bold text-xs text-slate-900 dark:text-white">{qa.documentTitle}</h3>
+                <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
                   Cert Hash: {qa.tamperProofCertificateHash}
                 </div>
               </div>
@@ -266,9 +268,9 @@ export default function QaReviewPage() {
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={() => handleViewCertificate(qa)}
-                  className="px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-semibold transition-all active:scale-[0.96] inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"
+                  className="px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 rounded-xl text-xs font-semibold transition-all active:scale-[0.96] inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
                 >
-                  <Award className="w-3.5 h-3.5 text-emerald-700" />
+                  <Award className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
                   <span>View Cryptographic Cert</span>
                 </button>
               </div>
@@ -281,29 +283,29 @@ export default function QaReviewPage() {
       <AnimatePresence>
         {selectedQa && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedQa(null)} className="fixed inset-0 bg-black/40 backdrop-blur-md" />
-            <motion.div initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} className="relative bg-white rounded-3xl shadow-2xl max-w-md w-full border border-black/[0.08] p-6 space-y-4 z-10 text-xs">
-              <div className="flex items-center justify-between border-b border-black/[0.05] pb-2">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedQa(null)} className="fixed inset-0 bg-black/60 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} className="relative bg-white dark:bg-[#121214] rounded-3xl shadow-2xl max-w-md w-full border border-black/[0.08] dark:border-white/[0.12] p-6 space-y-4 z-10 text-xs">
+              <div className="flex items-center justify-between border-b border-black/[0.05] dark:border-white/[0.08] pb-2">
                 <div>
-                  <span className="text-[10px] font-bold text-purple-600 uppercase">Reviewing: {selectedQa.stage.replace(/_/g, ' ')}</span>
-                  <h3 className="text-sm font-bold text-slate-900">Technical Peer & QA Sign-Off</h3>
+                  <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase">Reviewing: {selectedQa.stage.replace(/_/g, ' ')}</span>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Technical Peer & QA Sign-Off</h3>
                 </div>
-                <button onClick={() => setSelectedQa(null)} className="text-slate-400 hover:text-slate-700">&times;</button>
+                <button onClick={() => setSelectedQa(null)} className="p-1 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer">&times;</button>
               </div>
 
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-slate-600 dark:text-slate-300">
                 Verify calculations, borehole logs, citations, and compliance with Nigerian statutory guidelines.
               </p>
 
               <form onSubmit={handleReviewSubmit} className="space-y-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Decision</label>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Decision</label>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() => setActionType('APPROVED')}
-                      className={`p-2 rounded-xl text-xs font-bold border transition-all active:scale-[0.96] flex items-center justify-center gap-1.5 ${
-                        actionType === 'APPROVED' ? 'bg-emerald-600 text-white border-emerald-700 shadow-2xs' : 'bg-slate-50 text-slate-700 border-black/[0.08]'
+                      className={`p-2.5 rounded-xl text-xs font-bold border transition-all active:scale-[0.96] flex items-center justify-center gap-1.5 cursor-pointer ${
+                        actionType === 'APPROVED' ? 'bg-emerald-600 text-white border-emerald-700 shadow-2xs' : 'bg-slate-50 dark:bg-white/[0.04] text-slate-700 dark:text-slate-300 border-black/[0.08] dark:border-white/[0.08]'
                       }`}
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
@@ -313,8 +315,8 @@ export default function QaReviewPage() {
                     <button
                       type="button"
                       onClick={() => setActionType('REJECTED')}
-                      className={`p-2 rounded-xl text-xs font-bold border transition-all active:scale-[0.96] flex items-center justify-center gap-1.5 ${
-                        actionType === 'REJECTED' ? 'bg-rose-600 text-white border-rose-700 shadow-2xs' : 'bg-slate-50 text-slate-700 border-black/[0.08]'
+                      className={`p-2.5 rounded-xl text-xs font-bold border transition-all active:scale-[0.96] flex items-center justify-center gap-1.5 cursor-pointer ${
+                        actionType === 'REJECTED' ? 'bg-rose-600 text-white border-rose-700 shadow-2xs' : 'bg-slate-50 dark:bg-white/[0.04] text-slate-700 dark:text-slate-300 border-black/[0.08] dark:border-white/[0.08]'
                       }`}
                     >
                       <AlertTriangle className="w-3.5 h-3.5" />
@@ -324,20 +326,20 @@ export default function QaReviewPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Technical Reviewer Comments</label>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Technical Reviewer Comments</label>
                   <textarea
                     required
                     rows={3}
                     value={reviewComment}
                     onChange={(e) => setReviewComment(e.target.value)}
                     placeholder="Note any verified data points, laboratory cross-checks, or required amendments..."
-                    className="w-full p-2 bg-slate-50 border border-black/[0.08] rounded-xl text-xs resize-none"
+                    className="w-full p-2.5 bg-slate-50 dark:bg-black border border-black/[0.08] dark:border-white/15 rounded-xl text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden resize-none"
                   />
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2 border-t border-black/[0.05]">
-                  <button type="button" onClick={() => setSelectedQa(null)} className="px-3 py-1.5 text-slate-500 font-semibold">Cancel</button>
-                  <button type="submit" className="px-4 py-1.5 bg-slate-900 text-white rounded-xl font-bold shadow-xs active:scale-[0.96]">Submit Sign-Off</button>
+                <div className="flex justify-end gap-2 pt-2 border-t border-black/[0.05] dark:border-white/[0.08]">
+                  <button type="button" onClick={() => setSelectedQa(null)} className="px-3 py-1.5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white font-semibold cursor-pointer">Cancel</button>
+                  <button type="submit" className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-950 rounded-xl font-bold shadow-xs active:scale-[0.96] cursor-pointer">Submit Sign-Off</button>
                 </div>
               </form>
             </motion.div>
@@ -349,20 +351,20 @@ export default function QaReviewPage() {
       <AnimatePresence>
         {isCertificateOpen && certificateQa && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCertificateOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-md" />
-            <motion.div initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} className="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full border border-black/[0.08] p-8 space-y-6 z-10 text-xs">
-              <div className="text-center space-y-1.5 border-b border-black/[0.06] pb-4">
-                <div className="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center mx-auto mb-2">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCertificateOpen(false)} className="fixed inset-0 bg-black/60 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} className="relative bg-white dark:bg-[#121214] rounded-3xl shadow-2xl max-w-lg w-full border border-black/[0.08] dark:border-white/[0.12] p-8 space-y-6 z-10 text-xs">
+              <div className="text-center space-y-1.5 border-b border-black/[0.06] dark:border-white/[0.08] pb-4">
+                <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 rounded-2xl flex items-center justify-center mx-auto mb-2">
                   <ShieldCheck className="w-6 h-6" />
                 </div>
-                <div className="text-[10px] font-bold text-emerald-700 tracking-wider uppercase">AquaEarth Advisory & Quality Directorate</div>
-                <h2 className="text-base font-extrabold text-slate-900">Certificate of Technical Review & QA Clearance</h2>
-                <div className="text-[10px] font-mono text-slate-400">{certificateQa.projectCode}</div>
+                <div className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 tracking-wider uppercase">AquaEarth Advisory & Quality Directorate</div>
+                <h2 className="text-base font-extrabold text-slate-900 dark:text-white">Certificate of Technical Review & QA Clearance</h2>
+                <div className="text-[10px] font-mono text-slate-400 dark:text-slate-500">{certificateQa.projectCode}</div>
               </div>
 
-              <div className="space-y-3 text-[11px] text-slate-600">
+              <div className="space-y-3 text-[11px] text-slate-600 dark:text-slate-300">
                 <div>This document certifies that the deliverable:</div>
-                <div className="p-3 bg-slate-50 rounded-xl border font-bold text-slate-900 text-xs">
+                <div className="p-3 bg-slate-50 dark:bg-white/[0.04] rounded-xl border border-black/[0.06] dark:border-white/[0.08] font-bold text-slate-900 dark:text-white text-xs">
                   {certificateQa.documentTitle}
                 </div>
                 <p>
@@ -371,7 +373,7 @@ export default function QaReviewPage() {
               </div>
 
               {/* Hash & Verification Footer */}
-              <div className="p-3 bg-slate-900 text-white rounded-2xl space-y-1 text-[10px] font-mono">
+              <div className="p-3 bg-slate-900 dark:bg-black text-white rounded-2xl space-y-1 text-[10px] font-mono border border-transparent dark:border-white/10">
                 <div className="text-emerald-400 font-bold">SHA-256 Tamper-Proof Cryptographic Hash</div>
                 <div className="break-all opacity-80">{certificateQa.tamperProofCertificateHash}</div>
                 <div className="text-[9px] text-slate-400 pt-1">Signed by: Kaine Edike (Managing Consultant) • Stamped in Nigeria Vault</div>
@@ -380,7 +382,7 @@ export default function QaReviewPage() {
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   onClick={() => setIsCertificateOpen(false)}
-                  className="px-4 py-1.5 bg-slate-900 text-white rounded-xl font-semibold active:scale-[0.96]"
+                  className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-950 rounded-xl font-semibold active:scale-[0.96] cursor-pointer"
                 >
                   Done
                 </button>
