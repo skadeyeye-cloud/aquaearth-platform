@@ -86,17 +86,21 @@ model Certification {
 }
 
 model LeaveRequest {
-  id          String   @id @default(uuid())
-  userId      String
-  leaveType   String
-  startDate   DateTime
-  endDate     DateTime
-  daysCount   Int
-  status      String   @default("PENDING")
-  reason      String?
-  createdAt   DateTime @default(now())
+  id             String    @id @default(uuid())
+  userId         String
+  leaveType      String
+  startDate      DateTime
+  endDate        DateTime
+  daysCount      Int
+  status         String    @default("PENDING") // PENDING, APPROVED, REJECTED, CANCELLED
+  reason         String?
+  approvedById   String?
+  reviewComments String?
+  reviewedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Task {

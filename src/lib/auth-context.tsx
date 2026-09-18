@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { getStoredData, setStoredData, clearDatabase } from './storage';
+import { apiClient } from './api-client';
 import { 
   UserProfile, 
   TaskItem, 
@@ -432,6 +433,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Cloud Database Sync: background sync with Neon PostgreSQL
+  useEffect(() => {
+    let isMounted = true;
+    async function syncWithNeonCloud() {
+      try {
+        const [cloudLeaves, cloudTasks, cloudOpps] = await Promise.allSettled([
+          apiClient.getLeaveRequests(),
+          apiClient.getTasks(),
+          apiClient.getOpportunities()
+        ]);
+
+        if (!isMounted) return;
+
+        if (cloudLeaves.status === 'fulfilled' && cloudLeaves.value && cloudLeaves.value.length > 0) {
+          setLeaveRequests(cloudLeaves.value);
+        }
+        if (cloudTasks.status === 'fulfilled' && cloudTasks.value && cloudTasks.value.length > 0) {
+          setTasks(cloudTasks.value);
+        }
+        if (cloudOpps.status === 'fulfilled' && cloudOpps.value && cloudOpps.value.length > 0) {
+          setOpportunities(cloudOpps.value);
+        }
+      } catch (err) {
+        console.warn('[AquaEarth] Background Neon cloud sync note:', err);
+      }
+    }
+
+    syncWithNeonCloud();
+    return () => { isMounted = false; };
+  }, []);
+
   // Theme synchronization to DOM
   useEffect(() => {
     if (theme === 'dark') {
@@ -613,6 +645,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       timestamp: now.toISOString().replace('T', ' ').substring(0, 19)
     };
     setAuditLogs(prev => [audit, ...prev]);
+
+    // Asynchronous Cloud Database Sync with Neon
+    apiClient.recordAttendance({
+      action: 'CLOCK_IN',
+      userId: currentUser.id,
+      locationTag: locationTag || 'Lekki HQ',
+      coordinates,
+      notes: `Clocked in via platform (${status})`
+    }).catch(err => console.warn('[AquaEarth] Attendance cloud sync warning:', err));
 
     return {
       success: true,
@@ -1072,6 +1113,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       return t;
     }));
+
+    // Asynchronous Cloud Database Sync with Neon
+    const isNowDone = progressPercent >= 100 || newStatus === 'DONE';
+    const finalStatus = isNowDone ? 'DONE' : (newStatus || (progressPercent > 0 ? 'IN_PROGRESS' : undefined));
+    apiClient.updateTask(taskId, {
+      status: finalStatus,
+      loggedHours
+    }).catch(err => console.warn('[AquaEarth] Task cloud sync warning:', err));
   };
 
   const updateTaskStatus = (taskId: string, newStatus: TaskItem['status']) => {
@@ -1101,6 +1150,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setTickets(prev => [newTicket, ...prev]);
 
+    // Asynchronous Cloud Database Sync with Neon
+    apiClient.createSupportTicket({
+      requesterId: currentUser.id,
+      category: newTicket.category,
+      subject: newTicket.subject,
+      description: newTicket.description,
+      priority: newTicket.priority
+    }).catch(err => console.warn('[AquaEarth] Support ticket cloud sync warning:', err));
+
     const audit: AuditRecord = {
       id: `aud-${Date.now()}`,
       actorId: currentUser.id,
@@ -1115,15 +1173,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const submitLeaveRequest = (leaveData: Omit<LeaveItem, 'id' | 'userId' | 'userName' | 'status' | 'createdAt'>) => {
+    const tempId = `lv-${Date.now()}`;
     const newLeave: LeaveItem = {
       ...leaveData,
-      id: `lv-${Date.now()}`,
+      id: tempId,
       userId: currentUser.id,
       userName: currentUser.name,
       status: 'PENDING',
       createdAt: new Date().toISOString().split('T')[0]
     };
     setLeaveRequests(prev => [newLeave, ...prev]);
+
+    // Asynchronous Cloud Database Sync with Neon
+    apiClient.createLeaveRequest({
+      userId: currentUser.id,
+      leaveType: newLeave.leaveType,
+      startDate: newLeave.startDate,
+      endDate: newLeave.endDate,
+      daysCount: newLeave.daysCount,
+      reason: newLeave.reason
+    }).then(res => {
+      if (res?.success && res.leave?.id) {
+        setLeaveRequests(prev => prev.map(l => l.id === tempId ? { ...l, id: res.leave.id } : l));
+      }
+    }).catch(err => console.warn('[AquaEarth] Leave submit cloud sync warning:', err));
   };
 
   const updateLeaveStatus = (leaveId: string, status: LeaveItem['status'], comment?: string) => {
@@ -1169,6 +1242,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
     };
     setAuditLogs(prev => [audit, ...prev]);
+
+    // Asynchronous Cloud Database Sync with Neon
+    apiClient.updateLeaveStatus({
+      id: leaveId,
+      status: status as any,
+      approvedById: currentUser.id,
+      reviewComments: comment
+    }).catch(err => console.warn('[AquaEarth] Leave status cloud sync warning:', err));
   };
 
   const updateUserStatus = (userId: string, status: 'ACTIVE' | 'DEACTIVATED' | 'SUSPENDED') => {
@@ -1362,6 +1443,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
     };
     setAuditLogs(prev => [audit, ...prev]);
+
+    // Asynchronous Cloud Database Sync with Neon
+    apiClient.updateOpportunity(oppId, {
+      stage: newStage,
+      winLossReason: reason,
+      winningCompetitor: competitor
+    }).catch(err => console.warn('[AquaEarth] Opportunity cloud sync warning:', err));
 
     return { success: true };
   };
@@ -3322,6 +3410,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
     };
     setAuditLogs(prev => [audit, ...prev]);
+
+    // Asynchronous Cloud Database Sync with Neon
+    apiClient.updateUserProfile(userId, {
+      phone: data.phone,
+      location: data.location,
+      bio: data.bio,
+      avatar: data.avatar,
+      skills: data.skills,
+      emergencyContact: data.emergencyContact
+    }).catch(err => console.warn('[AquaEarth] Profile cloud sync warning:', err));
 
     return {
       success: true,

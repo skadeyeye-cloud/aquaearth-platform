@@ -443,7 +443,208 @@ async function main() {
   }
   console.log('✔ Active Engineering Tasks seeded');
 
-  console.log('✨ All 14 Users, 11 Departments, 5 Clients, 3 Projects & Tasks seeded in Neon!');
+  // 6. BD Opportunities & Tenders
+  const opportunities = [
+    {
+      id: 'opp-1',
+      title: 'Escravos Deep Offshore Geotechnical Campaign — Phase II',
+      clientName: 'Chevron Nigeria Limited (CNL)',
+      serviceLinesJson: JSON.stringify(['Geotechnical Drilling', 'CPT Sounding', 'Metocean']),
+      estimatedValue: 145000000,
+      currency: 'NGN',
+      stage: 'WON',
+      source: 'DIRECT_INVITE',
+      submissionDeadline: new Date('2026-07-15'),
+      decisionDate: new Date('2026-07-28'),
+      bdOwnerName: 'Miss Ozioma',
+      technicalLeadName: 'Engr. Femi Adebayo',
+      convertedProjectId: 'prj-1'
+    },
+    {
+      id: 'opp-2',
+      title: 'Bonny Island Channel Drone Bathymetry & Sediment Transport Study',
+      clientName: 'Nigeria LNG Limited (NLNG)',
+      serviceLinesJson: JSON.stringify(['GIS, Hydrographic & Topographic Survey']),
+      estimatedValue: 58000000,
+      currency: 'NGN',
+      stage: 'WON',
+      source: 'RFP_PORTAL',
+      submissionDeadline: new Date('2026-08-01'),
+      decisionDate: new Date('2026-08-10'),
+      bdOwnerName: 'Miss Ozioma',
+      technicalLeadName: 'Halima Yusuf',
+      convertedProjectId: 'prj-2'
+    },
+    {
+      id: 'opp-3',
+      title: 'Bonga South West Aparo (BSWA) Subsea Soil Mechanics Advisory',
+      clientName: 'Shell Petroleum Development Company (SPDC)',
+      serviceLinesJson: JSON.stringify(['Geotechnical Drilling', 'CPT Sounding']),
+      estimatedValue: 220000000,
+      currency: 'NGN',
+      stage: 'PROPOSAL_DRAFTING',
+      source: 'NIPEX_TENDER',
+      submissionDeadline: new Date('2026-10-15'),
+      bdOwnerName: 'Miss Ozioma',
+      technicalLeadName: 'Engr. Femi Adebayo'
+    },
+    {
+      id: 'opp-4',
+      title: 'Egina FPSO Nearshore Environmental Baseline Verification',
+      clientName: 'TotalEnergies EP Nigeria',
+      serviceLinesJson: JSON.stringify(['Environmental Impact Assessment (EIA)']),
+      estimatedValue: 42000000,
+      currency: 'NGN',
+      stage: 'QUALIFYING',
+      source: 'REFERRAL',
+      submissionDeadline: new Date('2026-10-30'),
+      bdOwnerName: 'Kaine Edike',
+      technicalLeadName: 'Dr. Ngozi Eze'
+    }
+  ];
+
+  for (const opp of opportunities) {
+    await prisma.opportunity.upsert({
+      where: { id: opp.id },
+      update: opp,
+      create: opp,
+    });
+  }
+  console.log('✔ BD Opportunities & Pipeline seeded');
+
+  // 7. Staff Leave Requests
+  const leaveRequests = [
+    {
+      id: 'lev-1',
+      userId: 'usr-6', // Tunde Bakare
+      leaveType: 'ANNUAL',
+      startDate: new Date('2026-10-01'),
+      endDate: new Date('2026-10-12'),
+      daysCount: 10,
+      status: 'PENDING',
+      reason: 'Annual family leave following Escravos offshore campaign.',
+      approvedById: null,
+      reviewComments: null,
+    },
+    {
+      id: 'lev-2',
+      userId: 'usr-7', // Halima Yusuf
+      leaveType: 'STUDY',
+      startDate: new Date('2026-11-05'),
+      endDate: new Date('2026-11-09'),
+      daysCount: 5,
+      status: 'APPROVED',
+      reason: 'Hydrographic surveying technical certification workshop.',
+      approvedById: 'usr-4', // Engr. Femi Adebayo
+      reviewComments: 'Approved. Essential for Q4 coastal hydrographic deliverables.',
+      reviewedAt: new Date('2026-09-10'),
+    },
+    {
+      id: 'lev-3',
+      userId: 'usr-9', // Blessing John
+      leaveType: 'CASUAL',
+      startDate: new Date('2026-09-25'),
+      endDate: new Date('2026-09-26'),
+      daysCount: 2,
+      status: 'APPROVED',
+      reason: 'Personal medical checkup.',
+      approvedById: 'usr-2', // Chidi Okafor
+      reviewComments: 'Approved by IT Lead.',
+      reviewedAt: new Date('2026-09-15'),
+    }
+  ];
+
+  for (const lr of leaveRequests) {
+    await prisma.leaveRequest.upsert({
+      where: { id: lr.id },
+      update: lr,
+      create: lr,
+    });
+  }
+  console.log('✔ Staff Leave Requests seeded');
+
+  // 8. Support Requests (IT & Design Ops)
+  const supportRequests = [
+    {
+      id: 'sup-1',
+      ticketNumber: 'TKT-2026-001',
+      requesterId: 'usr-6',
+      category: 'HARDWARE',
+      subject: 'Toughbook Field Tablet Battery Replacement for Offshore CPT Rig',
+      description: 'Panasonic Toughbook battery degradation below 40% capacity while in field at Escravos.',
+      priority: 'HIGH',
+      status: 'RESOLVED',
+      assignedToId: 'usr-2',
+    },
+    {
+      id: 'sup-2',
+      ticketNumber: 'TKT-2026-002',
+      requesterId: 'usr-12',
+      category: 'DESIGN',
+      subject: 'High-Value SPDC Bonga Tender Document Master Formatting',
+      description: 'Format 120-page technical bid proposal with ISO corporate typography, infographics, and covers.',
+      priority: 'URGENT',
+      status: 'IN_PROGRESS',
+      assignedToId: 'usr-9',
+    }
+  ];
+
+  for (const sr of supportRequests) {
+    await prisma.supportRequest.upsert({
+      where: { id: sr.id },
+      update: sr,
+      create: sr,
+    });
+  }
+  console.log('✔ Support Tickets seeded');
+
+  // 9. Initial Attendance Records
+  const attendanceRecords = [
+    {
+      id: 'att-1',
+      userId: 'usr-1',
+      date: '2026-09-18',
+      clockInTime: '07:45:00',
+      clockOutTime: null,
+      locationTag: 'Lekki HQ',
+      status: 'PRESENT',
+      kpiAwarded: 10,
+      notes: 'Punctual executive arrival'
+    },
+    {
+      id: 'att-2',
+      userId: 'usr-2',
+      date: '2026-09-18',
+      clockInTime: '07:58:00',
+      clockOutTime: null,
+      locationTag: 'Lekki HQ',
+      status: 'PRESENT',
+      kpiAwarded: 10,
+      notes: 'IT Infrastructure monitoring shift'
+    },
+    {
+      id: 'att-3',
+      userId: 'usr-6',
+      date: '2026-09-18',
+      clockInTime: '08:05:00',
+      clockOutTime: null,
+      locationTag: 'Escravos Field Base',
+      status: 'PRESENT',
+      kpiAwarded: 10,
+      notes: 'Offshore geotechnical muster'
+    }
+  ];
+
+  for (const att of attendanceRecords) {
+    await prisma.attendanceRecord.upsert({
+      where: { id: att.id },
+      update: att,
+      create: att,
+    });
+  }
+  console.log('✔ Attendance records seeded');
+
+  console.log('✨ All 14 Personnel, 11 Departments, 5 Clients, 3 Projects, 3 Tasks, 4 Bids, 3 Leaves & Support Tickets successfully seeded in Neon!');
 }
 
 main()
@@ -454,3 +655,4 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+
