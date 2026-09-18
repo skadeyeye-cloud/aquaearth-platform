@@ -377,7 +377,7 @@ export default function KpiLeaderboardPage() {
                           <div className="font-semibold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
                             {entry.name}
                             {isMe && (
-                              <span className="text-[9px] bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-1.5 py-0.2 rounded font-bold">YOU</span>
+                              <span className="text-[9px] bg-slate-900 dark:bg-white text-white dark:text-black px-1.5 py-0.5 rounded font-bold">YOU</span>
                             )}
                           </div>
                           <div className="text-[10px] text-slate-500 dark:text-slate-400">{entry.jobTitle}</div>
