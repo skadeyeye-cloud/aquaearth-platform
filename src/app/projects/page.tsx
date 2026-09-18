@@ -150,9 +150,12 @@ export default function ProjectsPage() {
         leadName: parsedLeadPm,
         progressPercent: 0,
         milestones: [
-          { id: `m-ai-1-${idx}`, name: `${sl}: Desktop Inception & Method Statement`, workstream: sl, targetDate: '2026-09-25', status: 'PENDING', isGatePrerequisite: true, deliverablesCount: 1 },
-          { id: `m-ai-2-${idx}`, name: `${sl}: Offshore Survey & Field Acquisition`, workstream: sl, targetDate: '2026-10-30', status: 'PENDING', isGatePrerequisite: true, deliverablesCount: 4 },
-          { id: `m-ai-3-${idx}`, name: `${sl}: Engineering Analysis & Draft Deliverable`, workstream: sl, targetDate: '2026-11-30', status: 'PENDING', deliverablesCount: 2 }
+          { id: `m-ai-1-${idx}`, name: `Stage 2: Mobilization, Inception & IRS Data Gathering`, workstream: sl, targetDate: '2026-09-25', status: 'PENDING', isGatePrerequisite: true, deliverablesCount: 1 },
+          { id: `m-ai-2-${idx}`, name: `Stage 3: Regulatory Registration & Scoping (FMEnv / State MoE)`, workstream: sl, targetDate: '2026-10-15', status: 'PENDING', isGatePrerequisite: true, deliverablesCount: 1 },
+          { id: `m-ai-3-${idx}`, name: `Stage 4: Field Acquisition (Aeroqual/Auger) & Lab CoC`, workstream: sl, targetDate: '2026-10-30', status: 'PENDING', isGatePrerequisite: true, deliverablesCount: 4 },
+          { id: `m-ai-4-${idx}`, name: `Stage 5: Report Drafting & 4-Gate QA Review with Comment Checklist`, workstream: sl, targetDate: '2026-11-20', status: 'PENDING', isGatePrerequisite: true, deliverablesCount: 2 },
+          { id: `m-ai-5-${idx}`, name: `Stage 6: Client Review & 21-Day Public Display / Panel Review`, workstream: sl, targetDate: '2026-12-10', status: 'PENDING', isGatePrerequisite: true, deliverablesCount: 1 },
+          { id: `m-ai-6-${idx}`, name: `Stage 7: Regulatory IMML Issuance & JCC / CPFS Close-Out`, workstream: sl, targetDate: '2026-12-31', status: 'PENDING', deliverablesCount: 1 }
         ]
       }))
     });
@@ -194,8 +197,12 @@ export default function ProjectsPage() {
         leadName: leadPm?.name || currentUser.name,
         progressPercent: 0,
         milestones: [
-          { id: `m-1-${idx}`, name: `${sl} Phase 1: Inception & Scoping`, workstream: sl, targetDate: newProjStartDate, status: 'PENDING', deliverablesCount: 1 },
-          { id: `m-2-${idx}`, name: `${sl} Phase 2: Technical Execution`, workstream: sl, targetDate: newProjEndDate, status: 'PENDING', deliverablesCount: 2 }
+          { id: `m-1-${idx}`, name: `Stage 2: Mobilization & IRS Data Gathering`, workstream: sl, targetDate: newProjStartDate, status: 'PENDING', deliverablesCount: 1 },
+          { id: `m-2-${idx}`, name: `Stage 3: Regulatory Registration & Scoping Report`, workstream: sl, targetDate: newProjStartDate, status: 'PENDING', deliverablesCount: 1 },
+          { id: `m-3-${idx}`, name: `Stage 4: Fieldwork Acquisition & Lab Custody`, workstream: sl, targetDate: newProjEndDate, status: 'PENDING', deliverablesCount: 2 },
+          { id: `m-4-${idx}`, name: `Stage 5: Report Drafting & QA Comment Checklist`, workstream: sl, targetDate: newProjEndDate, status: 'PENDING', deliverablesCount: 1 },
+          { id: `m-5-${idx}`, name: `Stage 6: 21-Day Public Display / Panel Review`, workstream: sl, targetDate: newProjEndDate, status: 'PENDING', deliverablesCount: 1 },
+          { id: `m-6-${idx}`, name: `Stage 7: Regulatory IMML Approval & JCC Sign-off`, workstream: sl, targetDate: newProjEndDate, status: 'PENDING', deliverablesCount: 1 }
         ]
       }))
     });

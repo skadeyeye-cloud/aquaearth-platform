@@ -19,9 +19,14 @@ import {
   Droplets,
   Trees,
   Waves,
-  Hammer
+  Hammer,
+  Wind,
+  Activity,
+  Truck,
+  FileCheck,
+  Thermometer
 } from 'lucide-react';
-import { FieldFormType, FieldRecordItem } from '@/lib/types';
+import { FieldFormType, FieldRecordItem, ChainOfCustodyRecord } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function FieldCapturePage() {
@@ -55,15 +60,16 @@ export default function FieldCapturePage() {
   const [selectedRecord, setSelectedRecord] = useState<FieldRecordItem | null>(null);
 
   // Form State
-  const [formType, setFormType] = useState<FieldFormType>('BOREHOLE_LOG');
+  const [formType, setFormType] = useState<FieldFormType>('AIR_QUALITY_NOISE');
   const [projectId, setProjectId] = useState(projects[0]?.id || '');
-  const [samplePointId, setSamplePointId] = useState('BH-05 (Escravos River Crossing)');
-  const [lat, setLat] = useState(5.5912);
-  const [lng, setLng] = useState(5.1887);
-  const [elevation, setElevation] = useState(2.8);
+  const [samplePointId, setSamplePointId] = useState('AQ-01 (Refinery Perimeter West Gate)');
+  const [lat, setLat] = useState(6.4315);
+  const [lng, setLng] = useState(4.0892);
+  const [elevation, setElevation] = useState(2.0);
   const [accuracy, setAccuracy] = useState(0.04);
+  const [samplingEquipment, setSamplingEquipment] = useState('Aeroqual Series 500 Handheld Gas & PM Monitor (Serial AQ-500-8812)');
   
-  // Form Payload
+  // Borehole Form Payload
   const [strata, setStrata] = useState('Very soft dark grey organic CLAY with peat fragments');
   const [depth, setDepth] = useState('12.0m');
   const [waterStrike, setWaterStrike] = useState('1.8m below GL');
@@ -74,6 +80,26 @@ export default function FieldCapturePage() {
   const [dissolvedOxygen, setDissolvedOxygen] = useState(6.4);
   const [temp, setTemp] = useState(27.8);
   const [cocBarcode, setCocBarcode] = useState('COC-FMENV-2026-9912');
+
+  // Air Quality & Noise parameters (Aeroqual Series 500)
+  const [pm25, setPm25] = useState(14.8);
+  const [pm10, setPm10] = useState(28.3);
+  const [vocPpm, setVocPpm] = useState(0.042);
+  const [coPpm, setCoPpm] = useState(1.2);
+  const [no2Ppm, setNo2Ppm] = useState(0.018);
+  const [so2Ppm, setSo2Ppm] = useState(0.005);
+  const [noiseDbA, setNoiseDbA] = useState(54.2);
+  const [relHumidity, setRelHumidity] = useState(78);
+  const [ambientTemp, setAmbientTemp] = useState(29.5);
+
+  // Soil Sampling & Chain of Custody (Hand Auger)
+  const [soilDepth, setSoilDepth] = useState('0.0m - 0.5m (Topsoil)');
+  const [soilTexture, setSoilTexture] = useState('Dark organic sandy loam with trace laterite');
+  const [sampleJars, setSampleJars] = useState(8);
+  const [testsRequested, setTestsRequested] = useState('TPH (GC-FID), BTEX, Heavy Metals (Pb, Cd, Cr, Ni, V), PAHs');
+  const [labName, setLabName] = useState('Analytika Environmental Testing Laboratories Port Harcourt');
+  const [turnaroundDays, setTurnaroundDays] = useState(7);
+  const [iceChestTemp, setIceChestTemp] = useState(3.4);
 
   const handleAcquireGps = () => {
     // Simulate real GPS sensor lock
@@ -86,17 +112,67 @@ export default function FieldCapturePage() {
     e.preventDefault();
     const proj = projects.find(p => p.id === projectId);
 
-    const payload = formType === 'BOREHOLE_LOG' ? {
-      depthM: depth,
-      strataClassification: strata,
-      waterStrikeDepth: waterStrike,
-      sptNValue: sptN
-    } : {
-      pH: Number(ph),
-      dissolvedOxygenMgL: Number(dissolvedOxygen),
-      temperatureC: Number(temp),
-      chainOfCustodyBarcode: cocBarcode
-    };
+    let payload: Record<string, any> = {};
+    let cocRecord: ChainOfCustodyRecord | undefined = undefined;
+
+    if (formType === 'BOREHOLE_LOG') {
+      payload = {
+        depthM: depth,
+        strataClassification: strata,
+        waterStrikeDepth: waterStrike,
+        sptNValue: sptN
+      };
+    } else if (formType === 'AIR_QUALITY_NOISE') {
+      payload = {
+        pm25: Number(pm25),
+        pm10: Number(pm10),
+        vocPpm: Number(vocPpm),
+        coPpm: Number(coPpm),
+        no2Ppm: Number(no2Ppm),
+        so2Ppm: Number(so2Ppm),
+        noiseDbA: Number(noiseDbA),
+        ambientTempC: Number(ambientTemp),
+        relHumidityPct: Number(relHumidity),
+        notes: 'In-situ direct sensor readout logged via calibrated Aeroqual Series 500 meter.'
+      };
+    } else if (formType === 'SOIL_SAMPLING') {
+      payload = {
+        coreDepthM: soilDepth,
+        soilTexture,
+        sampleJars: Number(sampleJars),
+        testsRequested,
+        preservationIceChestTempC: Number(iceChestTemp)
+      };
+      cocRecord = {
+        labName,
+        batchNumber: cocBarcode || `COC-AEL-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+        sampleCount: Number(sampleJars),
+        preservationMethod: `Sealed pre-cleaned amber glass jars on blue ice (<= ${iceChestTemp}°C)`,
+        dispatchDate: new Date().toISOString().split('T')[0],
+        turnaroundDays: Number(turnaroundDays),
+        status: 'IN_TRANSIT'
+      };
+    } else if (formType === 'WATER_SAMPLING') {
+      payload = {
+        pH: Number(ph),
+        dissolvedOxygenMgL: Number(dissolvedOxygen),
+        temperatureC: Number(temp),
+        chainOfCustodyBarcode: cocBarcode
+      };
+      cocRecord = {
+        labName,
+        batchNumber: cocBarcode,
+        sampleCount: 4,
+        preservationMethod: 'Ice chest <= 4°C with HNO3 preservation',
+        dispatchDate: new Date().toISOString().split('T')[0],
+        turnaroundDays: 7,
+        status: 'IN_TRANSIT'
+      };
+    } else {
+      payload = {
+        observations: 'Transect observation log verified.'
+      };
+    }
 
     createFieldRecord({
       formType,
@@ -105,6 +181,8 @@ export default function FieldCapturePage() {
       samplePointId,
       technicianId: currentUser.id,
       technicianName: currentUser.name,
+      samplingEquipment,
+      chainOfCustody: cocRecord,
       gps: {
         lat: Number(lat),
         lng: Number(lng),
@@ -112,12 +190,31 @@ export default function FieldCapturePage() {
         accuracyM: Number(accuracy)
       },
       payload,
-      photoUrls: ['https://images.unsplash.com/photo-1578328819058-b69f3a3b0f6b?w=400'],
+      photoUrls: ['https://images.unsplash.com/photo-1581093458791-9f3c3900df4b?w=400'],
       syncStatus: isOnline ? 'SYNCED' : 'LOCAL_QUEUED',
       isLockedForQA: true
     });
 
     setIsNewRecordOpen(false);
+  };
+
+  const getFormTypeIcon = (type: FieldFormType) => {
+    switch (type) {
+      case 'BOREHOLE_LOG':
+        return <Hammer className="w-4 h-4 text-amber-600 dark:text-amber-400" />;
+      case 'AIR_QUALITY_NOISE':
+        return <Wind className="w-4 h-4 text-sky-600 dark:text-sky-400" />;
+      case 'SOIL_SAMPLING':
+        return <Layers className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />;
+      case 'WATER_SAMPLING':
+        return <Droplets className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />;
+      case 'ECOLOGY_TRANSECT':
+        return <Trees className="w-4 h-4 text-lime-600 dark:text-lime-400" />;
+      case 'METOCEAN_READING':
+        return <Waves className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />;
+      default:
+        return <Activity className="w-4 h-4 text-slate-600" />;
+    }
   };
 
   return (
@@ -128,6 +225,9 @@ export default function FieldCapturePage() {
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
             Field Data & In-Situ Sampling
           </h1>
+          <p className="text-xs text-slate-500 dark:text-[#A39E93] mt-0.5">
+            Aeroqual Series 500 air/gas telemetry, hand auger core sampling, and cold-chain lab custody
+          </p>
         </div>
 
         {/* Action Controls & Offline Toggle */}
@@ -169,8 +269,8 @@ export default function FieldCapturePage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
         <div className="apple-glass-card rounded-2xl p-4 space-y-1">
           <div className="text-[10px] uppercase font-bold text-slate-400">Captured Field Records</div>
-          <div className="text-xl font-extrabold text-slate-900 tnum">{fieldRecords.length} Entries</div>
-          <div className="text-[10px] text-slate-500 font-medium">Auto-GPS tagged & watermarked</div>
+          <div className="text-xl font-extrabold text-slate-900 dark:text-white tnum">{fieldRecords.length} Entries</div>
+          <div className="text-[10px] text-slate-500 font-medium">In-situ Aeroqual & Lab cores</div>
         </div>
 
         <div className="apple-glass-card rounded-2xl p-4 space-y-1">
@@ -188,29 +288,31 @@ export default function FieldCapturePage() {
         </div>
 
         <div className="apple-glass-card rounded-2xl p-4 space-y-1">
-          <div className="text-[10px] uppercase font-bold text-slate-400">QA Integrity Lock</div>
-          <div className="text-xl font-extrabold text-purple-600 tnum">100% Locked</div>
-          <div className="text-[10px] text-slate-500 font-medium">Defensible regulatory audit trail</div>
+          <div className="text-[10px] uppercase font-bold text-slate-400">Lab Chain of Custody</div>
+          <div className="text-xl font-extrabold text-cyan-600 dark:text-cyan-400 tnum">
+            {fieldRecords.filter(f => f.chainOfCustody).length} Active CoCs
+          </div>
+          <div className="text-[10px] text-slate-500 font-medium">Cold chain &le;4°C preserved</div>
         </div>
       </div>
 
       {/* Field Records Feed */}
       <div className="apple-glass-card rounded-3xl overflow-hidden">
-        <div className="px-6 py-3.5 border-b border-black/[0.05] flex items-center justify-between">
-          <h2 className="text-xs font-bold text-slate-900">Live Field Transmission Stream</h2>
+        <div className="px-6 py-3.5 border-b border-black/[0.05] dark:border-white/[0.08] flex items-center justify-between">
+          <h2 className="text-xs font-bold text-slate-900 dark:text-white">Live Field Transmission Stream</h2>
           <span className="text-[11px] text-slate-400 dark:text-[#A39E93] font-mono tnum">Live Repository Sync</span>
         </div>
 
-        <div className="divide-y divide-black/[0.04]">
+        <div className="divide-y divide-black/[0.04] dark:divide-white/[0.08]">
           {fieldRecords.map((record) => (
             <div 
               key={record.id} 
               onClick={() => setSelectedRecord(record)}
-              className="p-4 hover:bg-black/[0.02] transition-colors cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs"
+              className="p-4 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs"
             >
               <div className="flex items-start gap-3">
-                <div className="p-2.5 rounded-2xl bg-slate-100 dark:bg-white/[0.08] text-slate-700 dark:text-slate-300 shrink-0 mt-0.5">
-                  {record.formType === 'BOREHOLE_LOG' ? <Hammer className="w-4 h-4 text-amber-700 dark:text-amber-400" /> : <Droplets className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />}
+                <div className="p-2.5 rounded-2xl bg-slate-100 dark:bg-white/[0.08] shrink-0 mt-0.5">
+                  {getFormTypeIcon(record.formType)}
                 </div>
 
                 <div className="space-y-0.5">
@@ -226,11 +328,22 @@ export default function FieldCapturePage() {
                     }`}>
                       {record.syncStatus}
                     </span>
+                    {record.samplingEquipment && (
+                      <span className="text-[9px] font-medium px-2 py-0.5 rounded-full bg-sky-50 dark:bg-sky-950/30 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/40 truncate max-w-xs">
+                        🔧 {record.samplingEquipment.split('(')[0].trim()}
+                      </span>
+                    )}
+                    {record.chainOfCustody && (
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-cyan-50 dark:bg-cyan-950/30 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800/40 flex items-center gap-1">
+                        <Truck className="w-2.5 h-2.5" />
+                        CoC: {record.chainOfCustody.batchNumber}
+                      </span>
+                    )}
                   </div>
 
-                  <div className="text-[11px] text-slate-600">{record.projectName}</div>
+                  <div className="text-[11px] text-slate-600 dark:text-slate-300">{record.projectName}</div>
 
-                  <div className="text-[10px] text-slate-400 flex items-center gap-3 pt-0.5 font-mono">
+                  <div className="text-[10px] text-slate-400 dark:text-[#A39E93] flex items-center gap-3 pt-0.5 font-mono flex-wrap">
                     <span className="flex items-center gap-1">
                       <MapPin className="w-3 h-3 text-emerald-600" />
                       {record.gps.lat.toFixed(4)}°N, {record.gps.lng.toFixed(4)}°E (&plusmn;{record.gps.accuracyM}m)
@@ -246,8 +359,8 @@ export default function FieldCapturePage() {
 
               {/* Watermark & QA Lock Indicator */}
               <div className="flex items-center gap-2 shrink-0">
-                <span className="flex items-center gap-1 text-[10px] font-semibold text-purple-800 bg-purple-50 border border-purple-200 px-2 py-1 rounded-xl">
-                  <Lock className="w-3 h-3 text-purple-600" />
+                <span className="flex items-center gap-1 text-[10px] font-semibold text-purple-800 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800/40 px-2 py-1 rounded-xl">
+                  <Lock className="w-3 h-3 text-purple-600 dark:text-purple-400" />
                   QA Locked
                 </span>
 
@@ -268,10 +381,10 @@ export default function FieldCapturePage() {
         {selectedRecord && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedRecord(null)} className="fixed inset-0 bg-black/60 backdrop-blur-md" />
-            <motion.div initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} className="relative bg-white dark:bg-[#121214] rounded-3xl shadow-2xl max-w-lg w-full border border-black/[0.08] dark:border-white/[0.12] p-6 space-y-4 z-10 text-xs">
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} className="relative bg-white dark:bg-[#121214] rounded-3xl shadow-2xl max-w-lg w-full border border-black/[0.08] dark:border-white/[0.12] p-6 space-y-4 z-10 text-xs max-h-[90vh] overflow-y-auto">
               <div className="flex items-start justify-between border-b border-black/[0.05] dark:border-white/[0.08] pb-2">
                 <div>
-                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">Field Log Inspector</span>
+                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">Field Log & Equipment Inspector</span>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white">{selectedRecord.samplePointId}</h3>
                   <div className="text-[11px] text-slate-400 dark:text-slate-500">{selectedRecord.projectName}</div>
                 </div>
@@ -283,14 +396,60 @@ export default function FieldCapturePage() {
                 <img
                   src={selectedRecord.photoUrls[0]}
                   alt="Field Evidence"
-                  className="w-full h-48 object-cover opacity-90"
+                  className="w-full h-44 object-cover opacity-90"
                 />
                 {/* On-screen Watermark Stamp */}
-                <div className="absolute bottom-2 left-2 right-2 p-2 bg-black/75 backdrop-blur-md rounded-xl text-[9px] font-mono text-white leading-tight shadow-md border border-white/10">
+                <div className="absolute bottom-2 left-2 right-2 p-2 bg-black/80 backdrop-blur-md rounded-xl text-[9px] font-mono text-white leading-tight shadow-md border border-white/10">
                   <div className="text-emerald-400 font-bold">AquaEarth Differential GPS Watermark (PRD FR 37)</div>
                   <div>{selectedRecord.watermarkText}</div>
                 </div>
               </div>
+
+              {/* Equipment Used Card */}
+              {selectedRecord.samplingEquipment && (
+                <div className="p-3 bg-sky-50/50 dark:bg-sky-950/20 rounded-2xl border border-sky-100 dark:border-sky-800/30 space-y-1">
+                  <div className="text-[10px] font-bold text-sky-700 dark:text-sky-300 uppercase flex items-center gap-1.5">
+                    <Activity className="w-3 h-3 text-sky-600" />
+                    Standard Field Equipment Protocol
+                  </div>
+                  <div className="text-xs font-semibold text-slate-900 dark:text-white">
+                    {selectedRecord.samplingEquipment}
+                  </div>
+                </div>
+              )}
+
+              {/* Chain of Custody (CoC) Card if Present */}
+              {selectedRecord.chainOfCustody && (
+                <div className="p-3.5 bg-cyan-50/50 dark:bg-cyan-950/20 rounded-2xl border border-cyan-200 dark:border-cyan-800/40 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-cyan-800 dark:text-cyan-300 uppercase flex items-center gap-1.5">
+                      <Truck className="w-3.5 h-3.5 text-cyan-600" />
+                      Laboratory Chain of Custody (CoC)
+                    </span>
+                    <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-900/50 text-cyan-800 dark:text-cyan-200 border border-cyan-300 dark:border-cyan-700">
+                      {selectedRecord.chainOfCustody.status.replace(/_/g, ' ')}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    <div className="p-2 bg-white dark:bg-white/[0.06] rounded-xl border border-black/[0.04] dark:border-white/[0.08]">
+                      <div className="text-[9px] text-slate-400 uppercase font-mono">Batch Barcode</div>
+                      <div className="font-mono font-bold text-slate-900 dark:text-white">{selectedRecord.chainOfCustody.batchNumber}</div>
+                    </div>
+                    <div className="p-2 bg-white dark:bg-white/[0.06] rounded-xl border border-black/[0.04] dark:border-white/[0.08]">
+                      <div className="text-[9px] text-slate-400 uppercase font-mono">Sample Count & SLA</div>
+                      <div className="font-bold text-slate-900 dark:text-white">{selectedRecord.chainOfCustody.sampleCount} Jars | {selectedRecord.chainOfCustody.turnaroundDays}d Turnaround</div>
+                    </div>
+                  </div>
+                  <div className="p-2 bg-white dark:bg-white/[0.06] rounded-xl border border-black/[0.04] dark:border-white/[0.08] text-[11px] space-y-0.5">
+                    <div className="text-[9px] text-slate-400 uppercase font-mono">Destination Accredited Lab</div>
+                    <div className="font-semibold text-slate-800 dark:text-slate-200">{selectedRecord.chainOfCustody.labName}</div>
+                    <div className="text-[10px] text-cyan-700 dark:text-cyan-400 flex items-center gap-1 pt-1 font-mono">
+                      <Thermometer className="w-3 h-3 text-cyan-600" />
+                      {selectedRecord.chainOfCustody.preservationMethod}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Data Payload Parameters */}
               <div className="p-3 bg-slate-50 dark:bg-white/[0.04] rounded-2xl border border-black/[0.05] dark:border-white/[0.08] space-y-1.5">
@@ -327,7 +486,7 @@ export default function FieldCapturePage() {
               <div className="flex items-center justify-between border-b border-black/[0.05] dark:border-white/[0.08] pb-2">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white">New Field Data Observation</h3>
-                  <div className="text-[10px] text-slate-400 dark:text-slate-500">Offline-ready digital web log</div>
+                  <div className="text-[10px] text-slate-400 dark:text-slate-500">Aeroqual in-situ or physical lab sampling</div>
                 </div>
                 <button onClick={() => setIsNewRecordOpen(false)} className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer">&times;</button>
               </div>
@@ -338,11 +497,29 @@ export default function FieldCapturePage() {
                     <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">Form Template</label>
                     <select
                       value={formType}
-                      onChange={(e) => setFormType(e.target.value as FieldFormType)}
+                      onChange={(e) => {
+                        const val = e.target.value as FieldFormType;
+                        setFormType(val);
+                        if (val === 'AIR_QUALITY_NOISE') {
+                          setSamplingEquipment('Aeroqual Series 500 Handheld Gas & PM Monitor (Serial AQ-500-8812) + Cirrus CR:162C Sound Meter');
+                          setSamplePointId('AQ-01 (Refinery Perimeter West Gate)');
+                        } else if (val === 'SOIL_SAMPLING') {
+                          setSamplingEquipment('Dormer 70mm Stainless Steel Hand Auger with Teflon core liners');
+                          setSamplePointId('SS-01 (Process Area)');
+                        } else if (val === 'WATER_SAMPLING') {
+                          setSamplingEquipment('Hydro-Bailer Teflon Double-Check Valve + YSI ProDSS Meter');
+                          setSamplePointId('SW-01 (Effluent Outfall)');
+                        } else {
+                          setSamplingEquipment('DGPS Trimble RTK Receiver + Geological Logging Rig');
+                          setSamplePointId('BH-05 (Escravos River Crossing)');
+                        }
+                      }}
                       className="w-full p-2 bg-slate-50 dark:bg-black border border-black/[0.08] dark:border-white/15 rounded-xl text-xs font-semibold text-slate-900 dark:text-white"
                     >
+                      <option value="AIR_QUALITY_NOISE">💨 Air Quality & Noise (Aeroqual 500)</option>
+                      <option value="SOIL_SAMPLING">🪵 Soil Sampling (Hand Auger & Lab CoC)</option>
+                      <option value="WATER_SAMPLING">🧪 Water Sampling (Hydro-Bailer)</option>
                       <option value="BOREHOLE_LOG">🏗️ Geotech Borehole Log</option>
-                      <option value="WATER_SAMPLING">🧪 Water Quality Probing</option>
                       <option value="ECOLOGY_TRANSECT">🌿 Ecological Transect</option>
                       <option value="METOCEAN_READING">🌊 Metocean Oceanographic</option>
                     </select>
@@ -373,6 +550,17 @@ export default function FieldCapturePage() {
                   />
                 </div>
 
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">Sampling Equipment & Model</label>
+                  <input
+                    type="text"
+                    required
+                    value={samplingEquipment}
+                    onChange={(e) => setSamplingEquipment(e.target.value)}
+                    className="w-full p-2 bg-slate-50 dark:bg-black border border-black/[0.08] dark:border-white/15 rounded-xl text-xs text-slate-900 dark:text-white"
+                  />
+                </div>
+
                 {/* GPS Location Bar */}
                 <div className="p-3 bg-slate-50 dark:bg-white/[0.04] rounded-2xl border border-black/[0.05] dark:border-white/[0.08] space-y-2">
                   <div className="flex items-center justify-between">
@@ -395,7 +583,82 @@ export default function FieldCapturePage() {
                 </div>
 
                 {/* Dynamic Form Fields */}
-                {formType === 'BOREHOLE_LOG' ? (
+                {formType === 'AIR_QUALITY_NOISE' ? (
+                  <div className="space-y-2.5 p-3 bg-sky-50/40 dark:bg-sky-950/20 rounded-2xl border border-sky-100 dark:border-sky-800/30">
+                    <div className="text-[10px] font-bold text-sky-800 dark:text-sky-300 uppercase flex items-center gap-1">
+                      <Wind className="w-3 h-3 text-sky-600" /> Aeroqual In-Situ Gas & Noise Direct Readout
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-[9px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">PM2.5 (&mu;g/m³)</label>
+                        <input type="number" step="0.1" value={pm25} onChange={(e) => setPm25(Number(e.target.value))} className="w-full p-1.5 bg-white dark:bg-black border border-black/[0.08] dark:border-white/15 rounded-xl text-xs font-mono text-slate-900 dark:text-white" />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">PM10 (&mu;g/m³)</label>
+                        <input type="number" step="0.1" value={pm10} onChange={(e) => setPm10(Number(e.target.value))} className="w-full p-1.5 bg-white dark:bg-black border border-black/[0.08] dark:border-white/15 rounded-xl text-xs font-mono text-slate-900 dark:text-white" />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">Noise (dBA)</label>
+                        <input type="number" step="0.1" value={noiseDbA} onChange={(e) => setNoiseDbA(Number(e.target.value))} className="w-full p-1.5 bg-white dark:bg-black border border-black/[0.08] dark:border-white/15 rounded-xl text-xs font-mono text-slate-900 dark:text-white" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-[9px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">VOC (ppm)</label>
+                        <input type="number" step="0.001" value={vocPpm} onChange={(e) => setVocPpm(Number(e.target.value))} className="w-full p-1.5 bg-white dark:bg-black border border-black/[0.08] dark:border-white/15 rounded-xl text-xs font-mono text-slate-900 dark:text-white" />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">CO (ppm)</label>
+                        <input type="number" step="0.1" value={coPpm} onChange={(e) => setCoPpm(Number(e.target.value))} className="w-full p-1.5 bg-white dark:bg-black border border-black/[0.08] dark:border-white/15 rounded-xl text-xs font-mono text-slate-900 dark:text-white" />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">NO2 (ppm)</label>
+                        <input type="number" step="0.001" value={no2Ppm} onChange={(e) => setNo2Ppm(Number(e.target.value))} className="w-full p-1.5 bg-white dark:bg-black border border-black/[0.08] dark:border-white/15 rounded-xl text-xs font-mono text-slate-900 dark:text-white" />
+                      </div>
+                    </div>
+                  </div>
+                ) : formType === 'SOIL_SAMPLING' ? (
+                  <div className="space-y-2.5 p-3 bg-cyan-50/40 dark:bg-cyan-950/20 rounded-2xl border border-cyan-100 dark:border-cyan-800/30">
+                    <div className="text-[10px] font-bold text-cyan-800 dark:text-cyan-300 uppercase flex items-center gap-1">
+                      <Truck className="w-3 h-3 text-cyan-600" /> Hand Auger Sampling & Lab Custody
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[9px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">Auger Core Depth</label>
+                        <input type="text" value={soilDepth} onChange={(e) => setSoilDepth(e.target.value)} className="w-full p-1.5 bg-white dark:bg-black border border-black/[0.08] dark:border-white/15 rounded-xl text-xs text-slate-900 dark:text-white" />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">Soil Texture / Lithology</label>
+                        <input type="text" value={soilTexture} onChange={(e) => setSoilTexture(e.target.value)} className="w-full p-1.5 bg-white dark:bg-black border border-black/[0.08] dark:border-white/15 rounded-xl text-xs text-slate-900 dark:text-white" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-[9px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">Sample Jars</label>
+                        <input type="number" value={sampleJars} onChange={(e) => setSampleJars(Number(e.target.value))} className="w-full p-1.5 bg-white dark:bg-black border border-black/[0.08] dark:border-white/15 rounded-xl text-xs font-mono text-slate-900 dark:text-white" />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">Cold Temp (&le;4°C)</label>
+                        <input type="number" step="0.1" value={iceChestTemp} onChange={(e) => setIceChestTemp(Number(e.target.value))} className="w-full p-1.5 bg-white dark:bg-black border border-black/[0.08] dark:border-white/15 rounded-xl text-xs font-mono text-slate-900 dark:text-white" />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">Turnaround SLA</label>
+                        <select value={turnaroundDays} onChange={(e) => setTurnaroundDays(Number(e.target.value))} className="w-full p-1.5 bg-white dark:bg-black border border-black/[0.08] dark:border-white/15 rounded-xl text-xs text-slate-900 dark:text-white">
+                          <option value={7}>7 Days (Std)</option>
+                          <option value={3}>3 Days (Rush)</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">Accredited Laboratory Name</label>
+                      <input type="text" value={labName} onChange={(e) => setLabName(e.target.value)} className="w-full p-1.5 bg-white dark:bg-black border border-black/[0.08] dark:border-white/15 rounded-xl text-xs text-slate-900 dark:text-white" />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">Tests Requested</label>
+                      <input type="text" value={testsRequested} onChange={(e) => setTestsRequested(e.target.value)} className="w-full p-1.5 bg-white dark:bg-black border border-black/[0.08] dark:border-white/15 rounded-xl text-xs text-slate-900 dark:text-white" />
+                    </div>
+                  </div>
+                ) : formType === 'BOREHOLE_LOG' ? (
                   <div className="space-y-2.5">
                     <div>
                       <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">Strata Classification (ASTM D2487)</label>

@@ -1238,6 +1238,16 @@ export const INITIAL_FIELD_RECORDS: import('./types').FieldRecordItem[] = [
     technicianId: 'usr-5',
     technicianName: 'Dr. Ngozi Eze',
     timestamp: '2026-09-01 14:15',
+    samplingEquipment: 'Hydro-Bailer Teflon Double-Check Valve + YSI ProDSS Multi-parameter Meter',
+    chainOfCustody: {
+      labName: 'Analytika Environmental Testing Laboratories Port Harcourt',
+      batchNumber: 'COC-AEL-2026-0901',
+      sampleCount: 6,
+      preservationMethod: 'Ice chest at <= 4°C with HNO3 preservation for trace metals',
+      dispatchDate: '2026-09-01',
+      turnaroundDays: 7,
+      status: 'RECEIVED_BY_LAB'
+    },
     gps: {
       lat: 6.4281,
       lng: 4.0924,
@@ -1257,6 +1267,77 @@ export const INITIAL_FIELD_RECORDS: import('./types').FieldRecordItem[] = [
     watermarkText: 'PRJ-2026-003 | SW-02 | 6.4281°N, 4.0924°E | 2026-09-01 14:15 | Dr. Ngozi Eze',
     syncStatus: 'SYNCED',
     isLockedForQA: false
+  },
+  {
+    id: 'fld-103',
+    formType: 'AIR_QUALITY_NOISE',
+    projectId: 'prj-3',
+    projectName: 'Dangote Lekki Refinery Phase 2 ESIA',
+    samplePointId: 'AQ-01 (Refinery Perimeter West Gate)',
+    technicianId: 'usr-5',
+    technicianName: 'Dr. Ngozi Eze',
+    timestamp: '2026-09-02 09:45',
+    samplingEquipment: 'Aeroqual Series 500 Handheld Gas & Particulate Monitor (Serial AQ-500-8812) + Cirrus CR:162C Sound Level Meter',
+    gps: {
+      lat: 6.4315,
+      lng: 4.0892,
+      elevationM: 2.0,
+      accuracyM: 0.05
+    },
+    payload: {
+      pm25: 14.8,
+      pm10: 28.3,
+      vocPpm: 0.042,
+      coPpm: 1.2,
+      no2Ppm: 0.018,
+      so2Ppm: 0.005,
+      noiseDbA: 54.2,
+      windSpeedMs: 2.1,
+      ambientTempC: 29.5,
+      relHumidityPct: 78,
+      notes: 'Direct in-situ direct readout logging. Ambient noise dominated by coastal surf and light service vehicle traffic.'
+    },
+    photoUrls: ['https://images.unsplash.com/photo-1581093458791-9f3c3900df4b?w=400'],
+    watermarkText: 'PRJ-2026-003 | AQ-01 | Aeroqual Series 500 | 6.4315°N, 4.0892°E | 2026-09-02 09:45 | Dr. Ngozi Eze',
+    syncStatus: 'SYNCED',
+    isLockedForQA: false
+  },
+  {
+    id: 'fld-104',
+    formType: 'SOIL_SAMPLING',
+    projectId: 'prj-1',
+    projectName: 'Chevron Escravos Terminal Expansion',
+    samplePointId: 'SS-08 (Fuel Oil Manifold Area)',
+    technicianId: 'usr-6',
+    technicianName: 'Tunde Bakare',
+    timestamp: '2026-09-02 13:10',
+    samplingEquipment: 'Dormer 70mm Stainless Steel Hand Auger with Teflon core liners',
+    chainOfCustody: {
+      labName: 'Analytika Environmental Testing Laboratories Port Harcourt',
+      batchNumber: 'COC-AEL-2026-0882',
+      sampleCount: 8,
+      preservationMethod: 'Sealed pre-cleaned amber glass jars packed in insulated cooler box on blue ice (<= 4°C)',
+      dispatchDate: '2026-09-02',
+      turnaroundDays: 7,
+      status: 'IN_TRANSIT'
+    },
+    gps: {
+      lat: 5.5898,
+      lng: 5.1855,
+      elevationM: 2.1,
+      accuracyM: 0.06
+    },
+    payload: {
+      coreDepthM: '0.0m - 0.5m (Topsoil) & 0.5m - 1.0m (Subsoil)',
+      soilTexture: 'Dark organic sandy loam with hydrocarbon sheen trace at 0.3m',
+      sampleJars: 8,
+      testsRequested: 'TPH (GC-FID), BTEX, Heavy Metals (Pb, Cd, Cr, Ni, V), PAHs',
+      preservationIceChestTempC: 3.2
+    },
+    photoUrls: ['https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=400'],
+    watermarkText: 'PRJ-2026-001 | SS-08 | Hand Auger | 5.5898°N, 5.1855°E | 2026-09-02 13:10 | Tunde Bakare',
+    syncStatus: 'SYNCED',
+    isLockedForQA: true
   }
 ];
 
@@ -1320,6 +1401,66 @@ export const INITIAL_DOCUMENTS: import('./types').DocumentItem[] = [
     storageTier: 'COLD_ARCHIVE',
     uploadedAt: '2026-03-25 11:00',
     downloadUrl: '/vault/downloads/DOC-2026-012-STAMPED.pdf'
+  },
+  {
+    id: 'doc-5',
+    title: 'FMEnv Impact Mitigation Monitoring Letter (IMML Statutory Approval) - Dangote Lekki Phase 1',
+    documentNumber: 'DOC-2026-IMML-001',
+    projectId: 'prj-4',
+    projectName: 'Dangote Lekki Refinery Phase 1 Environmental Audit',
+    category: 'IMML_APPROVAL',
+    version: 'v1.0 Signed & Sealed',
+    fileSizeMb: 5.6,
+    authorName: 'Dr. Ngozi Eze',
+    qaStatus: 'RELEASED_TO_CLIENT',
+    storageTier: 'ACTIVE_VAULT',
+    uploadedAt: '2026-04-12 14:00',
+    downloadUrl: '/vault/downloads/DOC-2026-IMML-001-FMENV-SEALED.pdf'
+  },
+  {
+    id: 'doc-6',
+    title: 'Client Job Completion Certificate (JCC Sign-off) - Chevron Escravos Campaign Stage 1',
+    documentNumber: 'DOC-2026-JCC-014',
+    projectId: 'prj-1',
+    projectName: 'Chevron Escravos Terminal Expansion',
+    category: 'JOB_COMPLETION_CERT',
+    version: 'v1.0 Executed',
+    fileSizeMb: 2.1,
+    authorName: 'Engr. Femi Adebayo',
+    qaStatus: 'RELEASED_TO_CLIENT',
+    storageTier: 'ACTIVE_VAULT',
+    uploadedAt: '2026-08-30 17:30',
+    downloadUrl: '/vault/downloads/DOC-2026-JCC-014-CHEVRON.pdf'
+  },
+  {
+    id: 'doc-7',
+    title: 'Client Performance Feedback Sheet (CPFS) - Dangote Lekki Audit Closeout Evaluation',
+    documentNumber: 'DOC-2026-CPFS-008',
+    projectId: 'prj-4',
+    projectName: 'Dangote Lekki Refinery Phase 1 Environmental Audit',
+    category: 'CLIENT_FEEDBACK_CPFS',
+    version: 'v1.0 Completed (Rating: 4.9/5)',
+    fileSizeMb: 1.8,
+    authorName: 'Dr. Ngozi Eze',
+    qaStatus: 'RELEASED_TO_CLIENT',
+    storageTier: 'ACTIVE_VAULT',
+    uploadedAt: '2026-04-18 10:20',
+    downloadUrl: '/vault/downloads/DOC-2026-CPFS-008-DANGOTE.pdf'
+  },
+  {
+    id: 'doc-8',
+    title: 'Quality Assurance Comment Checklist - Chevron Escravos Interpretative Report Review',
+    documentNumber: 'DOC-2026-CHK-001',
+    projectId: 'prj-1',
+    projectName: 'Chevron Escravos Terminal Expansion',
+    category: 'COMMENT_CHECKLIST',
+    version: 'v0.9 Author Resolution Tracking',
+    fileSizeMb: 3.4,
+    authorName: 'Amina Bello',
+    qaStatus: 'IN_REVIEW',
+    storageTier: 'ACTIVE_VAULT',
+    uploadedAt: '2026-09-02 11:00',
+    downloadUrl: '/vault/downloads/DOC-2026-CHK-001-RESOLUTION.pdf'
   }
 ];
 
@@ -1340,6 +1481,34 @@ export const INITIAL_QA_REVIEWS: import('./types').QaReviewItem[] = [
     qaLeadName: 'Amina Bello',
     managingConsultantSigned: false,
     tamperProofCertificateHash: 'SHA256:8f4c2e8a719d3b5e4f2a1b9c8d7e6f5a4b3c2d1e0f',
+    commentChecklist: [
+      {
+        id: 'chk-1',
+        sectionOrPage: 'Section 3.4 (p. 28)',
+        reviewerComment: 'Verify if borehole BH-04 SPT N-values have been corrected for overburden pressure (CN factor).',
+        reviewerName: 'Engr. Femi Adebayo',
+        authorResponse: 'Corrected using Liao & Whitman equation (1986); overburden correction curve updated in Fig 3.7.',
+        status: 'RESOLVED',
+        resolvedAt: '2026-09-01 16:30'
+      },
+      {
+        id: 'chk-2',
+        sectionOrPage: 'Section 5.2 (p. 45)',
+        reviewerComment: 'Include foundation settlement limits according to Eurocode 7 / Chevron Engineering Standard.',
+        reviewerName: 'Engr. Femi Adebayo',
+        authorResponse: 'Pending finite element settlement analysis recalibration with lab consolidation results.',
+        status: 'OPEN'
+      },
+      {
+        id: 'chk-3',
+        sectionOrPage: 'Appendix B (p. 62)',
+        reviewerComment: 'Ensure Aeroqual Series 500 sensor calibration certificates and hand auger CoC are appended.',
+        reviewerName: 'Amina Bello',
+        authorResponse: 'Factory calibration certificate from Aeroqual Ltd (valid to Nov 2026) and CoC batch #0882 added to Appendix B3.',
+        status: 'RESOLVED',
+        resolvedAt: '2026-09-02 10:15'
+      }
+    ],
     reviewNotes: [
       {
         author: 'Tunde Bakare',
@@ -1470,6 +1639,39 @@ export const INITIAL_COMPLIANCE_PERMITS: import('./types').CompliancePermit[] = 
     isRecurringCycle: true,
     cycleDurationYears: 1,
     officerInCharge: 'Dr. Ngozi Eze'
+  },
+  {
+    id: 'perm-5',
+    permitTitle: 'FMEnv Statutory 21-Day Public Display & EIA Panel Review Notice',
+    permitNumber: 'FMENV/EIA/PD-2026/009',
+    regulatoryBody: 'FMEnv',
+    projectId: 'prj-3',
+    projectName: 'Dangote Lekki Refinery Phase 2 ESIA',
+    status: 'ACTIVE',
+    issueDate: '2026-09-01',
+    expiryDate: '2026-09-22',
+    daysRemaining: 14,
+    statutoryFeeNgn: 6500000,
+    feeReconciled: true,
+    isRecurringCycle: false,
+    cycleDurationYears: 1,
+    officerInCharge: 'Dr. Ngozi Eze',
+    stampedCertificateUrl: '/vault/permits/FMENV-PD-2026.pdf',
+    regulatoryReviewType: 'PANEL_REVIEW',
+    publicDisplay: {
+      isRequired: true,
+      startDate: '2026-09-01',
+      endDate: '2026-09-22',
+      daysRemaining: 14,
+      locations: [
+        'FMEnv Lagos Zonal Office, Games Village, Surulere',
+        'Ibeju-Lekki Local Government Council Secretariat, Akodo',
+        'Lagos State Ministry of Environment, Alausa Secretariat, Ikeja',
+        'AquaEarth HQ Public Reading Room, Victoria Island'
+      ],
+      status: 'ACTIVE_DISPLAY',
+      objectionsCount: 2
+    }
   }
 ];
 

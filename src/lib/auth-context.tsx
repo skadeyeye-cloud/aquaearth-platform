@@ -232,6 +232,8 @@ interface AuthContextType {
   uploadDocument: (doc: Omit<DocumentItem, 'id' | 'documentNumber' | 'uploadedAt'>) => void;
   submitForQa: (docId: string, peerReviewerId: string, qaLeadId: string) => void;
   advanceQaReview: (qaId: string, action: 'APPROVED' | 'REJECTED', comment: string) => void;
+  updateCommentChecklist: (qaId: string, commentId: string, status: 'OPEN' | 'RESOLVED' | 'WAIVED', authorResponse?: string) => void;
+  addCommentChecklistItem: (qaId: string, item: Omit<import('./types').QaCommentChecklistItem, 'id'>) => void;
   renewCompliancePermit: (permitId: string) => void;
   createInvoice: (inv: Omit<InvoiceItem, 'id' | 'invoiceNumber' | 'vatAmountNgn' | 'whtDeductionNgn' | 'netPayableNgn' | 'issuedDate'>) => void;
   markInvoicePaid: (invoiceId: string, whtCreditNumber?: string) => void;
@@ -1767,6 +1769,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
     };
     setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const updateCommentChecklist = (qaId: string, commentId: string, status: 'OPEN' | 'RESOLVED' | 'WAIVED', authorResponse?: string) => {
+    setQaReviews(prev => prev.map(qa => {
+      if (qa.id === qaId && qa.commentChecklist) {
+        return {
+          ...qa,
+          commentChecklist: qa.commentChecklist.map(item => {
+            if (item.id === commentId) {
+              return {
+                ...item,
+                status,
+                authorResponse: authorResponse !== undefined ? authorResponse : item.authorResponse,
+                resolvedAt: status === 'RESOLVED' ? new Date().toISOString().replace('T', ' ').substring(0, 16) : undefined
+              };
+            }
+            return item;
+          })
+        };
+      }
+      return qa;
+    }));
+  };
+
+  const addCommentChecklistItem = (qaId: string, item: Omit<import('./types').QaCommentChecklistItem, 'id'>) => {
+    const newItem: import('./types').QaCommentChecklistItem = {
+      ...item,
+      id: `chk-${Date.now()}`
+    };
+    setQaReviews(prev => prev.map(qa => {
+      if (qa.id === qaId) {
+        return {
+          ...qa,
+          commentChecklist: [...(qa.commentChecklist || []), newItem]
+        };
+      }
+      return qa;
+    }));
   };
 
   const renewCompliancePermit = (permitId: string) => {
@@ -3581,6 +3621,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       uploadDocument,
       submitForQa,
       advanceQaReview,
+      updateCommentChecklist,
+      addCommentChecklistItem,
       renewCompliancePermit,
       createInvoice,
       markInvoicePaid,
