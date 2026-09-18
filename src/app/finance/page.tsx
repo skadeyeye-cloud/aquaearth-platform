@@ -305,19 +305,19 @@ export default function FinancePage() {
                 </span>
               )}
             </div>
-            <div className="text-[11px] text-[#86868B] dark:text-[#A1A1A6] mt-0.5">
-              {isDrK && "Founder & Managing Consultant (MD) • Primary Sign-off for All Budgets, Invoices & Petty Cash Allocations"}
-              {isBibi && "Executive Director (2nd in Command) • Authorized to approve budgets on Dr. K's behalf to prevent delays"}
-              {isErica && "Chief Financial Officer (CFO) • Vets, projects, and consolidates budgets. Reviews monthly petty cash"}
-              {isOzioma && "Senior Consultant & Commercial Liaison • Receives PM client-facing budgets and presents to MD"}
-              {isGift && "Finance Officer • Collation Lead & Primary Monthly Petty Cash Analyst (Custodian of ₦300k Fund)"}
-              {isMarvelous && "Finance Officer • Primary Invoice Preparer & Petty Cash Custodian (₦300k Fund)"}
-              {!isDrK && !isBibi && !isErica && !isOzioma && !isGift && !isMarvelous && (
-                isLineManagerOrAdmin
-                  ? "Line Manager Portal • Scoped strictly to your departmental budget submissions. Approvals & petty cash are managed by Finance & Executive Leadership."
-                  : "Standard Staff • View restricted."
-              )}
-            </div>
+            {(!isLineManagerOrAdmin || isDrK || isBibi || isErica || isOzioma || isGift || isMarvelous) && (
+              <div className="text-[11px] text-[#86868B] dark:text-[#A1A1A6] mt-0.5">
+                {isDrK && "Founder & Managing Consultant (MD) • Primary Sign-off for All Budgets, Invoices & Petty Cash Allocations"}
+                {isBibi && "Executive Director (2nd in Command) • Authorized to approve budgets on Dr. K's behalf to prevent delays"}
+                {isErica && "Chief Financial Officer (CFO) • Vets, projects, and consolidates budgets. Reviews monthly petty cash"}
+                {isOzioma && "Senior Consultant & Commercial Liaison • Receives PM client-facing budgets and presents to MD"}
+                {isGift && "Finance Officer • Collation Lead & Primary Monthly Petty Cash Analyst (Custodian of ₦300k Fund)"}
+                {isMarvelous && "Finance Officer • Primary Invoice Preparer & Petty Cash Custodian (₦300k Fund)"}
+                {!isDrK && !isBibi && !isErica && !isOzioma && !isGift && !isMarvelous && !isLineManagerOrAdmin && (
+                  "Standard Staff • View restricted."
+                )}
+              </div>
+            )}
           </div>
         </div>
 
