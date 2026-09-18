@@ -324,16 +324,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProjects(storedProjects || []);
 
       const storedField = getStoredData<FieldRecordItem[]>('field_records', INITIAL_FIELD_RECORDS);
-      setFieldRecords(storedField || []);
+      const existingFieldIds = new Set((storedField || []).map(f => f.id));
+      const missingField = INITIAL_FIELD_RECORDS.filter(f => !existingFieldIds.has(f.id));
+      setFieldRecords([...(storedField || []), ...missingField]);
 
       const storedDocs = getStoredData<DocumentItem[]>('documents', INITIAL_DOCUMENTS);
-      setDocuments(storedDocs || []);
+      const existingDocIds = new Set((storedDocs || []).map(d => d.id));
+      const missingDocs = INITIAL_DOCUMENTS.filter(d => !existingDocIds.has(d.id));
+      setDocuments([...(storedDocs || []), ...missingDocs]);
 
       const storedQa = getStoredData<QaReviewItem[]>('qa_reviews', INITIAL_QA_REVIEWS);
-      setQaReviews(storedQa || []);
+      const existingQaIds = new Set((storedQa || []).map(q => q.id));
+      const missingQa = INITIAL_QA_REVIEWS.filter(q => !existingQaIds.has(q.id));
+      const mergedQa = [...(storedQa || []), ...missingQa].map(q => {
+        const init = INITIAL_QA_REVIEWS.find(i => i.id === q.id);
+        if (init?.commentChecklist && (!q.commentChecklist || q.commentChecklist.length === 0)) {
+          return { ...q, commentChecklist: init.commentChecklist };
+        }
+        return q;
+      });
+      setQaReviews(mergedQa);
 
       const storedPermits = getStoredData<CompliancePermit[]>('compliance', INITIAL_COMPLIANCE_PERMITS);
-      setCompliancePermits(storedPermits || []);
+      const existingPermitIds = new Set((storedPermits || []).map(p => p.id));
+      const missingPermits = INITIAL_COMPLIANCE_PERMITS.filter(p => !existingPermitIds.has(p.id));
+      const mergedPermits = [...(storedPermits || []), ...missingPermits].map(p => {
+        const init = INITIAL_COMPLIANCE_PERMITS.find(i => i.id === p.id);
+        if (init && (init.publicDisplay || init.regulatoryReviewType)) {
+          return { ...p, publicDisplay: init.publicDisplay || p.publicDisplay, regulatoryReviewType: init.regulatoryReviewType || p.regulatoryReviewType };
+        }
+        return p;
+      });
+      setCompliancePermits(mergedPermits);
 
       const storedInvoices = getStoredData<InvoiceItem[]>('invoices', INITIAL_INVOICES);
       setInvoices(storedInvoices || []);
