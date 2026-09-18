@@ -57,6 +57,11 @@
   background-color: #1C1C1F !important;
 }
 
+.dark .bg-slate-100:not([class*="dark:bg-"]),
+.dark .bg-slate-200:not([class*="dark:bg-"]) {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
 /* Dark mode borders & dividers */
 .dark .border-slate-900,
 .dark .dark\:border-slate-900 {

@@ -209,18 +209,20 @@ export default function FieldCapturePage() {
               className="p-4 hover:bg-black/[0.02] transition-colors cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs"
             >
               <div className="flex items-start gap-3">
-                <div className="p-2.5 rounded-2xl bg-slate-100 text-slate-700 shrink-0 mt-0.5">
-                  {record.formType === 'BOREHOLE_LOG' ? <Hammer className="w-4 h-4 text-amber-700" /> : <Droplets className="w-4 h-4 text-cyan-600" />}
+                <div className="p-2.5 rounded-2xl bg-slate-100 dark:bg-white/[0.08] text-slate-700 dark:text-slate-300 shrink-0 mt-0.5">
+                  {record.formType === 'BOREHOLE_LOG' ? <Hammer className="w-4 h-4 text-amber-700 dark:text-amber-400" /> : <Droplets className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />}
                 </div>
 
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-xs text-slate-900">{record.samplePointId}</span>
-                    <span className="text-[9px] font-bold px-2 py-0.2 rounded-full bg-slate-100 text-slate-700 border border-black/[0.06]">
-                      {record.formType.replace('_', ' ')}
+                    <span className="font-bold text-xs text-slate-900 dark:text-white">{record.samplePointId}</span>
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-black/[0.04] dark:bg-white/[0.08] text-slate-700 dark:text-slate-300 border border-black/[0.06] dark:border-white/[0.08] whitespace-nowrap shrink-0 inline-flex items-center">
+                      {record.formType.replace(/_/g, ' ')}
                     </span>
-                    <span className={`text-[9px] font-bold px-2 py-0.2 rounded-full ${
-                      record.syncStatus === 'SYNCED' ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-800'
+                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 inline-flex items-center border ${
+                      record.syncStatus === 'SYNCED' 
+                        ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20' 
+                        : 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20'
                     }`}>
                       {record.syncStatus}
                     </span>

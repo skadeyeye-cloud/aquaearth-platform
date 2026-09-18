@@ -307,9 +307,9 @@ export default function ItDesignOperationsPage() {
                             <div className="text-[10px] text-slate-400 font-mono">S/N: {asset.serialNumber}</div>
                           )}
                         </td>
-                        <td className="px-5 py-3">
-                          <span className="px-2 py-0.5 rounded-md font-semibold text-[10px] bg-slate-100 text-slate-700">
-                            {asset.category.replace('_', ' ')}
+                        <td className="px-5 py-3 whitespace-nowrap">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full font-semibold text-[10px] bg-black/[0.04] dark:bg-white/[0.08] text-slate-700 dark:text-slate-300 border border-black/[0.06] dark:border-white/[0.08] whitespace-nowrap shrink-0">
+                            {asset.category.replace(/_/g, ' ')}
                           </span>
                         </td>
                         <td className="px-5 py-3 text-slate-700 text-[11px]">
@@ -487,7 +487,7 @@ export default function ItDesignOperationsPage() {
                         </td>
                         <td className="px-5 py-3">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-mono text-[9px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+                            <span className="font-mono text-[9px] font-bold px-2 py-0.5 rounded bg-black/[0.04] dark:bg-white/[0.08] text-slate-700 dark:text-slate-300 border border-black/[0.04] dark:border-white/[0.08] whitespace-nowrap shrink-0">
                               {user.functionalRole}
                             </span>
                             <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${
@@ -649,8 +649,8 @@ export default function ItDesignOperationsPage() {
             return (
               <motion.div whileHover={{ y: -2 }} key={sub.id} className="apple-glass-card p-5 rounded-3xl space-y-3">
                 <div className="flex items-start justify-between gap-2">
-                  <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
-                    {sub.category.replace('_', ' ')}
+                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-black/[0.04] dark:bg-white/[0.08] text-slate-700 dark:text-slate-300 border border-black/[0.06] dark:border-white/[0.08] whitespace-nowrap shrink-0">
+                    {sub.category.replace(/_/g, ' ')}
                   </span>
                   <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full tnum ${
                     isExpiring ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-emerald-50 text-emerald-800 border border-emerald-200'

@@ -47,6 +47,23 @@ export default function DocumentsPage() {
   const [version, setVersion] = useState('v0.1 Draft');
   const [fileSizeMb, setFileSizeMb] = useState(12.5);
 
+  const getCategoryBadgeStyle = (cat: string) => {
+    switch (cat) {
+      case 'TECHNICAL_REPORT':
+        return 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20';
+      case 'PROPOSAL':
+        return 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20';
+      case 'LAB_CERTIFICATE':
+        return 'bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/20';
+      case 'REGULATORY_PERMIT':
+        return 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20';
+      case 'GIS_MAP':
+        return 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20';
+      default:
+        return 'bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/20';
+    }
+  };
+
   const filteredDocs = documents.filter(doc => {
     const matchesSearch = doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           doc.documentNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -196,56 +213,58 @@ export default function DocumentsPage() {
       <div className="apple-glass-card rounded-3xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50/60 border-b border-black/[0.05] text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+            <thead className="bg-slate-50/60 dark:bg-white/[0.02] border-b border-black/[0.05] dark:border-white/[0.08] text-slate-400 dark:text-[#A39E93] font-semibold uppercase tracking-wider text-[10px]">
               <tr>
-                <th className="px-5 py-3">Document Number & Title</th>
-                <th className="px-5 py-3">Category</th>
-                <th className="px-5 py-3">Version & Size</th>
-                <th className="px-5 py-3">Author / Project</th>
-                <th className="px-5 py-3">QA Release Gate</th>
-                <th className="px-5 py-3 text-right">Actions</th>
+                <th className="px-5 py-3 whitespace-nowrap">Document Number & Title</th>
+                <th className="px-5 py-3 whitespace-nowrap">Category</th>
+                <th className="px-5 py-3 whitespace-nowrap">Version & Size</th>
+                <th className="px-5 py-3 whitespace-nowrap">Author / Project</th>
+                <th className="px-5 py-3 whitespace-nowrap">QA Release Gate</th>
+                <th className="px-5 py-3 text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-black/[0.04] font-medium">
+            <tbody className="divide-y divide-black/[0.04] dark:divide-white/[0.04] font-medium">
               {filteredDocs.map((doc) => {
                 const isApproved = doc.qaStatus === 'RELEASED_TO_CLIENT' || doc.qaStatus === 'QA_APPROVED';
                 return (
-                  <tr key={doc.id} className="hover:bg-black/[0.02] transition-colors">
+                  <tr key={doc.id} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors">
                     <td className="px-5 py-3.5">
                       <div className="space-y-0.5">
-                        <div className="font-mono text-[10px] font-bold text-slate-500">{doc.documentNumber}</div>
-                        <div className="font-semibold text-xs text-slate-900 line-clamp-1">{doc.title}</div>
+                        <div className="font-mono text-[10px] font-bold text-slate-500 dark:text-slate-400">{doc.documentNumber}</div>
+                        <div className="font-semibold text-xs text-slate-900 dark:text-white line-clamp-1">{doc.title}</div>
                       </div>
                     </td>
 
-                    <td className="px-5 py-3">
-                      <span className="px-2 py-0.2 rounded-md font-semibold text-[10px] bg-slate-100 text-slate-700">
-                        {doc.category.replace('_', ' ')}
+                    <td className="px-5 py-3 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase whitespace-nowrap shrink-0 border ${getCategoryBadgeStyle(doc.category)}`}>
+                        {doc.category.replace(/_/g, ' ')}
                       </span>
                     </td>
 
-                    <td className="px-5 py-3 text-slate-600 text-[11px]">
-                      <div className="font-bold text-slate-800">{doc.version}</div>
-                      <div className="text-[10px] text-slate-400 font-mono tnum">{doc.fileSizeMb} MB • {doc.storageTier.replace('_', ' ')}</div>
+                    <td className="px-5 py-3 text-slate-600 dark:text-slate-400 text-[11px] whitespace-nowrap">
+                      <div className="font-bold text-slate-800 dark:text-slate-200">{doc.version}</div>
+                      <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono tnum">{doc.fileSizeMb} MB • {doc.storageTier.replace(/_/g, ' ')}</div>
                     </td>
 
-                    <td className="px-5 py-3 text-slate-600 text-[11px]">
-                      <div className="font-semibold text-slate-800">{doc.authorName}</div>
-                      <div className="text-[10px] text-slate-400 truncate max-w-[180px]">{doc.projectName || '—'}</div>
+                    <td className="px-5 py-3 text-slate-600 dark:text-slate-400 text-[11px]">
+                      <div className="font-semibold text-slate-800 dark:text-slate-200">{doc.authorName}</div>
+                      <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate max-w-[180px]">{doc.projectName || '—'}</div>
                     </td>
 
-                    <td className="px-5 py-3">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                        doc.qaStatus === 'RELEASED_TO_CLIENT' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' :
-                        doc.qaStatus === 'IN_REVIEW' ? 'bg-purple-50 text-purple-800 border border-purple-200' :
-                        'bg-amber-50 text-amber-800 border border-amber-200'
+                    <td className="px-5 py-3 whitespace-nowrap">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap shrink-0 border ${
+                        doc.qaStatus === 'RELEASED_TO_CLIENT' 
+                          ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20' :
+                        doc.qaStatus === 'IN_REVIEW' 
+                          ? 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20' :
+                          'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20'
                       }`}>
-                        {doc.qaStatus === 'RELEASED_TO_CLIENT' ? <ShieldCheck className="w-3 h-3 text-emerald-600" /> : <Lock className="w-3 h-3 text-amber-600" />}
+                        {doc.qaStatus === 'RELEASED_TO_CLIENT' ? <ShieldCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400" /> : <Lock className="w-3 h-3 text-amber-600 dark:text-amber-400" />}
                         {doc.qaStatus.replace(/_/g, ' ')}
                       </span>
                     </td>
 
-                    <td className="px-5 py-3 text-right space-x-1.5">
+                    <td className="px-5 py-3 text-right space-x-1.5 whitespace-nowrap">
                       {/* Submit for QA Action */}
                       {doc.qaStatus === 'DRAFT_WATERMARKED' && (
                         <button
@@ -261,8 +280,8 @@ export default function DocumentsPage() {
                         onClick={() => alert(`Downloading: ${doc.title} (${isApproved ? 'Official Clean Copy' : 'DRAFT - WATERMARKED'})`)}
                         className={`p-1.5 rounded-xl border transition-all active:scale-[0.96] ${
                           isApproved 
-                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100' 
-                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20 hover:bg-emerald-500/20' 
+                            : 'bg-black/[0.04] dark:bg-white/[0.06] text-slate-600 dark:text-slate-300 border-black/[0.06] dark:border-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.1]'
                         }`}
                         title={isApproved ? "Download Final Release" : "Download Draft (Watermarked)"}
                       >
@@ -281,8 +300,8 @@ export default function DocumentsPage() {
       <AnimatePresence>
         {isQaSubmitOpen && selectedDocForQa && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsQaSubmitOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-md" />
-            <motion.div initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} className="relative bg-white rounded-3xl shadow-2xl max-w-md w-full border border-black/[0.08] p-6 space-y-4 z-10 text-xs">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsQaSubmitOpen(false)} className="fixed inset-0 bg-black/60 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} className="relative bg-white dark:bg-[#121214] rounded-3xl shadow-2xl max-w-md w-full border border-black/[0.08] dark:border-white/10 p-6 space-y-4 z-10 text-xs">
               <div className="flex items-center justify-between border-b border-black/[0.05] dark:border-white/10 pb-2">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white">Initiate QA Review Chain</h3>
@@ -290,20 +309,20 @@ export default function DocumentsPage() {
                 <button onClick={() => setIsQaSubmitOpen(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-white">&times;</button>
               </div>
 
-              <div className="p-3 bg-purple-50 rounded-2xl border border-purple-200 text-purple-900 text-[11px] space-y-1">
+              <div className="p-3 bg-purple-500/10 rounded-2xl border border-purple-500/20 text-purple-700 dark:text-purple-300 text-[11px] space-y-1">
                 <div className="font-bold">{selectedDocForQa.title}</div>
-                <div className="text-[10px] text-purple-800/80">
+                <div className="text-[10px] text-purple-600/80 dark:text-purple-300/80">
                   Initiates a 48h SLA review chain: Peer Review ➔ QA Lead ➔ Managing Consultant Sign-off.
                 </div>
               </div>
 
               <form onSubmit={handleConfirmQaSubmit} className="space-y-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Assign Peer Reviewer (Technical Specialist)</label>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Assign Peer Reviewer (Technical Specialist)</label>
                   <select
                     value={peerReviewerId}
                     onChange={(e) => setPeerReviewerId(e.target.value)}
-                    className="w-full p-2 bg-slate-50 border border-black/[0.08] rounded-xl text-xs font-semibold"
+                    className="w-full p-2 bg-slate-50 dark:bg-white/5 border border-black/[0.08] dark:border-white/10 rounded-xl text-xs font-semibold text-slate-900 dark:text-white"
                   >
                     {allUsers.filter(u => u.functionalRole === 'PROJECT_MANAGER' || u.functionalRole === 'TECHNICAL_CONSULTANT').map(u => (
                       <option key={u.id} value={u.id}>{u.name} ({u.jobTitle})</option>
@@ -312,11 +331,11 @@ export default function DocumentsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">QA Lead (Methodology & Standards)</label>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">QA Lead (Methodology & Standards)</label>
                   <select
                     value={qaLeadId}
                     onChange={(e) => setQaLeadId(e.target.value)}
-                    className="w-full p-2 bg-slate-50 border border-black/[0.08] rounded-xl text-xs font-semibold"
+                    className="w-full p-2 bg-slate-50 dark:bg-white/5 border border-black/[0.08] dark:border-white/10 rounded-xl text-xs font-semibold text-slate-900 dark:text-white"
                   >
                     {allUsers.filter(u => u.functionalRole === 'QA_LEAD' || u.functionalRole === 'MANAGING_CONSULTANT').map(u => (
                       <option key={u.id} value={u.id}>{u.name} ({u.jobTitle})</option>
@@ -324,9 +343,9 @@ export default function DocumentsPage() {
                   </select>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2 border-t border-black/[0.05]">
-                  <button type="button" onClick={() => setIsQaSubmitOpen(false)} className="px-3 py-1.5 text-slate-500 font-semibold">Cancel</button>
-                  <button type="submit" className="px-4 py-1.5 bg-purple-700 text-white rounded-xl font-bold shadow-xs active:scale-[0.96]">Start QA Review</button>
+                <div className="flex justify-end gap-2 pt-2 border-t border-black/[0.05] dark:border-white/10">
+                  <button type="button" onClick={() => setIsQaSubmitOpen(false)} className="px-3 py-1.5 text-slate-500 dark:text-slate-400 font-semibold">Cancel</button>
+                  <button type="submit" className="px-4 py-1.5 bg-purple-700 hover:bg-purple-800 text-white rounded-xl font-bold shadow-xs active:scale-[0.96]">Start QA Review</button>
                 </div>
               </form>
             </motion.div>
@@ -338,33 +357,33 @@ export default function DocumentsPage() {
       <AnimatePresence>
         {isUploadOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsUploadOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-md" />
-            <motion.div initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} className="relative bg-white rounded-3xl shadow-2xl max-w-md w-full border border-black/[0.08] p-6 space-y-4 z-10 text-xs">
-              <div className="flex items-center justify-between border-b border-black/[0.05] pb-2">
-                <h3 className="text-sm font-bold text-slate-900">Upload Technical Deliverable</h3>
-                <button onClick={() => setIsUploadOpen(false)} className="text-slate-400 hover:text-slate-700">&times;</button>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsUploadOpen(false)} className="fixed inset-0 bg-black/60 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} className="relative bg-white dark:bg-[#121214] rounded-3xl shadow-2xl max-w-md w-full border border-black/[0.08] dark:border-white/10 p-6 space-y-4 z-10 text-xs">
+              <div className="flex items-center justify-between border-b border-black/[0.05] dark:border-white/10 pb-2">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Upload Technical Deliverable</h3>
+                <button onClick={() => setIsUploadOpen(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-white">&times;</button>
               </div>
 
               <form onSubmit={handleUploadSubmit} className="space-y-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Document Title</label>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Document Title</label>
                   <input
                     type="text"
                     required
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="e.g. Escravos Subsea Soil Stratigraphy Interpretative Report"
-                    className="w-full p-2 bg-slate-50 border border-black/[0.08] rounded-xl text-xs"
+                    className="w-full p-2 bg-slate-50 dark:bg-white/5 border border-black/[0.08] dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Target Project</label>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Target Project</label>
                     <select
                       value={projectId}
                       onChange={(e) => setProjectId(e.target.value)}
-                      className="w-full p-2 bg-slate-50 border border-black/[0.08] rounded-xl text-xs truncate"
+                      className="w-full p-2 bg-slate-50 dark:bg-white/5 border border-black/[0.08] dark:border-white/10 rounded-xl text-xs truncate text-slate-900 dark:text-white"
                     >
                       {projects.map(p => (
                         <option key={p.id} value={p.id}>{p.projectCode} - {p.title.substring(0, 20)}...</option>
@@ -373,11 +392,11 @@ export default function DocumentsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Category</label>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Category</label>
                     <select
                       value={category}
                       onChange={(e: any) => setCategory(e.target.value)}
-                      className="w-full p-2 bg-slate-50 border border-black/[0.08] rounded-xl text-xs"
+                      className="w-full p-2 bg-slate-50 dark:bg-white/5 border border-black/[0.08] dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white"
                     >
                       <option value="TECHNICAL_REPORT">Technical Report</option>
                       <option value="PROPOSAL">Commercial Proposal</option>
@@ -389,30 +408,30 @@ export default function DocumentsPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Version</label>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Version</label>
                     <input
                       type="text"
                       value={version}
                       onChange={(e) => setVersion(e.target.value)}
-                      className="w-full p-2 bg-slate-50 border border-black/[0.08] rounded-xl text-xs font-mono"
+                      className="w-full p-2 bg-slate-50 dark:bg-white/5 border border-black/[0.08] dark:border-white/10 rounded-xl text-xs font-mono text-slate-900 dark:text-white"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">File Size (MB)</label>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">File Size (MB)</label>
                     <input
                       type="number"
                       step="0.1"
                       value={fileSizeMb}
                       onChange={(e) => setFileSizeMb(Number(e.target.value))}
-                      className="w-full p-2 bg-slate-50 border border-black/[0.08] rounded-xl text-xs font-mono"
+                      className="w-full p-2 bg-slate-50 dark:bg-white/5 border border-black/[0.08] dark:border-white/10 rounded-xl text-xs font-mono text-slate-900 dark:text-white"
                     />
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2 border-t border-black/[0.05]">
-                  <button type="button" onClick={() => setIsUploadOpen(false)} className="px-3 py-1.5 text-slate-500 font-semibold">Cancel</button>
-                  <button type="submit" className="px-4 py-1.5 bg-slate-900 text-white rounded-xl font-bold shadow-xs active:scale-[0.96]">Upload to Vault</button>
+                <div className="flex justify-end gap-2 pt-2 border-t border-black/[0.05] dark:border-white/10">
+                  <button type="button" onClick={() => setIsUploadOpen(false)} className="px-3 py-1.5 text-slate-500 dark:text-slate-400 font-semibold">Cancel</button>
+                  <button type="submit" className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 rounded-xl font-bold shadow-xs active:scale-[0.96]">Upload to Vault</button>
                 </div>
               </form>
             </motion.div>
