@@ -14,7 +14,8 @@ import {
   X, 
   Sparkles,
   Flame,
-  ChevronRight
+  ChevronRight,
+  Crown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -34,8 +35,15 @@ export default function KpiBreakdownModal({ isOpen, onClose, entry, tasks, user 
 
   if (!isOpen || !entry) return null;
 
-  // Filter tasks for this user
-  const userCompletedTasks = tasks.filter(t => t.assigneeId === entry.userId && t.status === 'DONE');
+  const isManager = user?.managementTier === 'LINE_MANAGER' || 
+                    user?.managementTier === 'TEAM_LEAD' || 
+                    user?.managementTier === 'DEPT_HEAD';
+
+  // Filter tasks for this user (direct completion)
+  const userCompletedTasks = tasks.filter(t => (t.assigneeId === entry.userId || t.completedById === entry.userId) && t.status === 'DONE');
+
+  // Supervised tasks completed on-time by direct reports
+  const userSupervisedTasks = tasks.filter(t => (t.managerId === entry.userId || t.assignedById === entry.userId) && t.assigneeId !== entry.userId && t.status === 'DONE');
 
   // Horizon multiplier/multi-period mockup
   const horizonStats = {
@@ -43,26 +51,31 @@ export default function KpiBreakdownModal({ isOpen, onClose, entry, tasks, user 
       label: 'This Week (Live Sprint)',
       attendancePts: 30,
       tasksPts: 50,
+      supervisoryPts: isManager ? 18 : 0,
       qaPts: 0,
       bdPts: 0,
-      totalPts: 80,
+      totalPts: 80 + (isManager ? 18 : 0),
       streak: 3,
-      deliverables: userCompletedTasks.slice(0, 1)
+      deliverables: userCompletedTasks.slice(0, 1),
+      supervised: userSupervisedTasks.slice(0, 1)
     },
     MONTH: {
       label: 'September 2026 (Active Cycle)',
       attendancePts: entry.onTimeCount * 10,
-      tasksPts: entry.completedCount * 50,
+      tasksPts: Math.max(userCompletedTasks.length * 20, 195),
+      supervisoryPts: isManager ? Math.max(userSupervisedTasks.length * 6, 78) : 0,
       qaPts: 50,
       bdPts: 0,
       totalPts: entry.totalScore,
       streak: entry.onTimeCount,
-      deliverables: userCompletedTasks
+      deliverables: userCompletedTasks,
+      supervised: userSupervisedTasks
     },
     QUARTER: {
       label: 'Q3 2026 (July - September)',
       attendancePts: entry.onTimeCount * 10 + 120,
       tasksPts: entry.completedCount * 50 + 200,
+      supervisoryPts: isManager ? 220 : 0,
       qaPts: 100,
       bdPts: 50,
       totalPts: entry.totalScore + 470,
@@ -82,27 +95,32 @@ export default function KpiBreakdownModal({ isOpen, onClose, entry, tasks, user 
           estimatedHours: 20,
           loggedHours: 18
         }
-      ]
+      ],
+      supervised: userSupervisedTasks
     },
     H1_H2: {
       label: 'H2 2026 (July - December Projection)',
       attendancePts: 320,
       tasksPts: 600,
+      supervisoryPts: isManager ? 410 : 0,
       qaPts: 200,
       bdPts: 100,
       totalPts: entry.totalScore + 750,
       streak: 28,
-      deliverables: userCompletedTasks
+      deliverables: userCompletedTasks,
+      supervised: userSupervisedTasks
     },
     YEAR: {
       label: '2026 Full Year Cumulative',
       attendancePts: 840,
       tasksPts: 1450,
+      supervisoryPts: isManager ? 750 : 0,
       qaPts: 400,
       bdPts: 250,
       totalPts: entry.totalScore + 2100,
       streak: 84,
-      deliverables: userCompletedTasks
+      deliverables: userCompletedTasks,
+      supervised: userSupervisedTasks
     }
   };
 
@@ -236,6 +254,16 @@ export default function KpiBreakdownModal({ isOpen, onClose, entry, tasks, user 
                 <span className="font-bold text-slate-900 dark:text-white tnum">+{currentStats.tasksPts} pts</span>
               </div>
 
+              {isManager && (
+                <div className="flex items-center justify-between py-1 border-b border-black/[0.04] dark:border-white/[0.06]">
+                  <span className="text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                    <Crown className="w-3.5 h-3.5 text-amber-500" />
+                    Managerial Supervisory Oversight & On-Time Team Deliveries
+                  </span>
+                  <span className="font-bold text-slate-900 dark:text-white tnum">+{currentStats.supervisoryPts} pts</span>
+                </div>
+              )}
+
               <div className="flex items-center justify-between py-1 border-b border-black/[0.04] dark:border-white/[0.06]">
                 <span className="text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5 text-cyan-500" />
@@ -252,27 +280,55 @@ export default function KpiBreakdownModal({ isOpen, onClose, entry, tasks, user 
           </div>
 
           {/* List of Deliverables in this Period */}
-          <div className="space-y-2">
-            <h3 className="font-bold text-xs text-slate-900 dark:text-white">
-              Deliverables Completed in Period ({currentStats.deliverables.length})
-            </h3>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <h3 className="font-bold text-xs text-slate-900 dark:text-white">
+                Direct Technical Deliverables ({currentStats.deliverables.length})
+              </h3>
 
-            {currentStats.deliverables.length === 0 ? (
-              <div className="p-4 text-center text-slate-400 bg-slate-50 dark:bg-white/[0.02] rounded-xl">
-                No closed deliverables in this immediate period.
-              </div>
-            ) : (
-              currentStats.deliverables.map((task) => (
-                <div key={task.id} className="p-3 bg-slate-50 dark:bg-white/[0.03] rounded-xl border border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between gap-2">
-                  <div>
-                    <div className="font-semibold text-xs text-slate-900 dark:text-white">{task.title}</div>
-                    <div className="text-[10px] text-slate-400">Project: {task.projectName || 'Operations'} • Completed: {task.completedAt || task.dueDate}</div>
-                  </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 tnum whitespace-nowrap shrink-0">
-                    +50 pts
-                  </span>
+              {currentStats.deliverables.length === 0 ? (
+                <div className="p-3 text-center text-slate-400 bg-slate-50 dark:bg-white/[0.02] rounded-xl text-[11px]">
+                  No closed direct deliverables in this immediate period.
                 </div>
-              ))
+              ) : (
+                currentStats.deliverables.map((task) => (
+                  <div key={task.id} className="p-3 bg-slate-50 dark:bg-white/[0.03] rounded-xl border border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between gap-2">
+                    <div>
+                      <div className="font-semibold text-xs text-slate-900 dark:text-white">{task.title}</div>
+                      <div className="text-[10px] text-slate-400">Project: {task.projectName || 'Operations'} • Completed: {task.completedAt || task.dueDate}</div>
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 tnum whitespace-nowrap shrink-0">
+                      +20 pts
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {isManager && currentStats.supervised && currentStats.supervised.length > 0 && (
+              <div className="space-y-2">
+                <h3 className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <Crown className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Supervised Team Deliverables ({currentStats.supervised.length})</span>
+                </h3>
+
+                {currentStats.supervised.map((task) => (
+                  <div key={`sup-${task.id}`} className="p-3 bg-slate-50 dark:bg-white/[0.03] rounded-xl border border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between gap-2">
+                    <div>
+                      <div className="font-semibold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <span>{task.title}</span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                          SUPERVISED
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-slate-400">Project: {task.projectName || 'Operations'} • Assignee: {task.assigneeName} • Completed: {task.completedAt || task.dueDate}</div>
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 tnum whitespace-nowrap shrink-0">
+                      +{task.kpiBreakdown?.managerPoints || 6} pts
+                    </span>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>

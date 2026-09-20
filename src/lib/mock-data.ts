@@ -697,6 +697,19 @@ export const INITIAL_LEAVE: LeaveItem[] = [
 
 export const INITIAL_KPI_LEADERBOARD: KpiLeaderboardEntry[] = [
   {
+    userId: 'usr-1',
+    name: 'Kaine Edike',
+    avatar: '/avatars/kaine-edike.png',
+    jobTitle: 'Founder & Managing Consultant',
+    departmentName: 'Executive Leadership',
+    totalScore: 520,
+    completedCount: 16,
+    onTimeCount: 15,
+    overdueCount: 0,
+    rankPosition: 1,
+    monthYear: '2026-09'
+  },
+  {
     userId: 'usr-5',
     name: 'Dr. Ngozi Eze',
     avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
@@ -706,7 +719,20 @@ export const INITIAL_KPI_LEADERBOARD: KpiLeaderboardEntry[] = [
     completedCount: 14,
     onTimeCount: 13,
     overdueCount: 0,
-    rankPosition: 1,
+    rankPosition: 2,
+    monthYear: '2026-09'
+  },
+  {
+    userId: 'usr-4',
+    name: 'Engr. Femi Adebayo',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+    jobTitle: 'Head of Geotechnical Engineering',
+    departmentName: 'Geotechnical & Geophysics',
+    totalScore: 465,
+    completedCount: 13,
+    onTimeCount: 12,
+    overdueCount: 0,
+    rankPosition: 3,
     monthYear: '2026-09'
   },
   {
@@ -719,7 +745,7 @@ export const INITIAL_KPI_LEADERBOARD: KpiLeaderboardEntry[] = [
     completedCount: 12,
     onTimeCount: 11,
     overdueCount: 1,
-    rankPosition: 2,
+    rankPosition: 4,
     monthYear: '2026-09'
   },
   {
@@ -732,7 +758,7 @@ export const INITIAL_KPI_LEADERBOARD: KpiLeaderboardEntry[] = [
     completedCount: 10,
     onTimeCount: 9,
     overdueCount: 0,
-    rankPosition: 3,
+    rankPosition: 5,
     monthYear: '2026-09'
   },
   {
@@ -745,7 +771,7 @@ export const INITIAL_KPI_LEADERBOARD: KpiLeaderboardEntry[] = [
     completedCount: 9,
     onTimeCount: 8,
     overdueCount: 1,
-    rankPosition: 4,
+    rankPosition: 6,
     monthYear: '2026-09'
   },
   {
@@ -758,7 +784,7 @@ export const INITIAL_KPI_LEADERBOARD: KpiLeaderboardEntry[] = [
     completedCount: 8,
     onTimeCount: 8,
     overdueCount: 0,
-    rankPosition: 5,
+    rankPosition: 7,
     monthYear: '2026-09'
   }
 ];
