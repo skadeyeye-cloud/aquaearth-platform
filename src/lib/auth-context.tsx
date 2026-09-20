@@ -47,7 +47,8 @@ import {
   BudgetApprovalStage,
   BudgetDeclineOutcome,
   PettyCashCustodian,
-  PettyCashCategory
+  PettyCashCategory,
+  PettyCashTopUpRecord
 } from './types';
 import { 
   INITIAL_USERS, 
@@ -80,6 +81,7 @@ import {
   INITIAL_CANDIDATE_APPLICATIONS,
   INITIAL_PETTY_CASH_FUNDS,
   INITIAL_PETTY_CASH_TRANSACTIONS,
+  INITIAL_PETTY_CASH_TOPUPS,
   INITIAL_PETTY_CASH_ANALYSES
 } from './mock-data';
 import { 
@@ -213,8 +215,17 @@ interface AuthContextType {
   declineBudgetAsMD: (budgetId: string, isAlternativeBibi?: boolean, comments?: string) => void;
   pettyCashFunds: PettyCashFund[];
   pettyCashTransactions: PettyCashTransaction[];
+  pettyCashTopUps: PettyCashTopUpRecord[];
   pettyCashAnalyses: PettyCashAnalysis[];
   logPettyCashExpense: (data: Omit<PettyCashTransaction, 'id' | 'createdAt'>) => void;
+  topUpPettyCashFund: (params: {
+    fundCustodian: PettyCashCustodian;
+    amountNgn: number;
+    fundingSource: string;
+    referenceNumber?: string;
+    notes?: string;
+    authorizedByName?: string;
+  }) => PettyCashTopUpRecord;
   generatePettyCashMonthlyAnalysis: (monthYear: string) => PettyCashAnalysis;
   approvePettyCashReplenishment: (analysisId: string, notes?: string) => void;
   confirmPaymentWithDrK: (invoiceId: string) => void;
@@ -298,6 +309,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [candidateApplications, setCandidateApplications] = useState<CandidateApplication[]>(INITIAL_CANDIDATE_APPLICATIONS);
   const [pettyCashFunds, setPettyCashFunds] = useState<PettyCashFund[]>(INITIAL_PETTY_CASH_FUNDS);
   const [pettyCashTransactions, setPettyCashTransactions] = useState<PettyCashTransaction[]>(INITIAL_PETTY_CASH_TRANSACTIONS);
+  const [pettyCashTopUps, setPettyCashTopUps] = useState<PettyCashTopUpRecord[]>(INITIAL_PETTY_CASH_TOPUPS);
   const [pettyCashAnalyses, setPettyCashAnalyses] = useState<PettyCashAnalysis[]>(INITIAL_PETTY_CASH_ANALYSES);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
@@ -415,6 +427,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const storedPettyTx = getStoredData<PettyCashTransaction[]>('petty_cash_transactions', INITIAL_PETTY_CASH_TRANSACTIONS);
       setPettyCashTransactions(storedPettyTx || INITIAL_PETTY_CASH_TRANSACTIONS);
+
+      const storedPettyTopUps = getStoredData<PettyCashTopUpRecord[]>('petty_cash_topups', INITIAL_PETTY_CASH_TOPUPS);
+      setPettyCashTopUps(storedPettyTopUps || INITIAL_PETTY_CASH_TOPUPS);
 
       const storedPettyAnalyses = getStoredData<PettyCashAnalysis[]>('petty_cash_analyses', INITIAL_PETTY_CASH_ANALYSES);
       setPettyCashAnalyses(storedPettyAnalyses || INITIAL_PETTY_CASH_ANALYSES);
@@ -588,6 +603,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isHydrated.current) setStoredData('petty_cash_transactions', pettyCashTransactions);
   }, [pettyCashTransactions]);
+
+  useEffect(() => {
+    if (isHydrated.current) setStoredData('petty_cash_topups', pettyCashTopUps);
+  }, [pettyCashTopUps]);
 
   useEffect(() => {
     if (isHydrated.current) setStoredData('petty_cash_analyses', pettyCashAnalyses);
@@ -2814,6 +2833,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logPettyCashExpense = (data: Omit<PettyCashTransaction, 'id' | 'createdAt'>) => {
+    // Custodian segregation check per SOP Section 4:
+    // Gift cannot log voucher for Marvelous, Marvelous cannot log for Gift
+    const isGift = currentUser.id === 'usr-13' || currentUser.name.toLowerCase().includes('gift');
+    const isMarvelous = currentUser.id === 'usr-14' || currentUser.name.toLowerCase().includes('marvelous');
+
+    if (isGift && data.fundCustodian === 'MARVELOUS') {
+      console.error('Segregation Violation: Gift cannot log vouchers for Marvelous');
+      throw new Error('Access Denied: Gift is not permitted to log vouchers for Marvelous\'s imprest fund.');
+    }
+
+    if (isMarvelous && data.fundCustodian === 'GIFT') {
+      console.error('Segregation Violation: Marvelous cannot log vouchers for Gift');
+      throw new Error('Access Denied: Marvelous is not permitted to log vouchers for Gift\'s imprest fund.');
+    }
+
     const newTx: PettyCashTransaction = {
       ...data,
       id: `tx-${Date.now()}`,
@@ -2843,6 +2877,84 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
     };
     setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const topUpPettyCashFund = (params: {
+    fundCustodian: PettyCashCustodian;
+    amountNgn: number;
+    fundingSource: string;
+    referenceNumber?: string;
+    notes?: string;
+    authorizedByName?: string;
+  }): PettyCashTopUpRecord => {
+    const isGift = currentUser.id === 'usr-13' || currentUser.name.toLowerCase().includes('gift');
+    const isMarvelous = currentUser.id === 'usr-14' || currentUser.name.toLowerCase().includes('marvelous');
+
+    if (isGift && params.fundCustodian === 'MARVELOUS') {
+      throw new Error('Access Denied: Gift is not permitted to top up Marvelous\'s imprest fund.');
+    }
+    if (isMarvelous && params.fundCustodian === 'GIFT') {
+      throw new Error('Access Denied: Marvelous is not permitted to top up Gift\'s imprest fund.');
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const topUpAmount = Number(params.amountNgn);
+
+    const newTopUp: PettyCashTopUpRecord = {
+      id: `topup-${Date.now()}`,
+      fundCustodian: params.fundCustodian,
+      amountNgn: topUpAmount,
+      fundingSource: params.fundingSource,
+      referenceNumber: params.referenceNumber || `TOP-${Date.now().toString().slice(-6)}`,
+      notes: params.notes,
+      authorizedByName: params.authorizedByName || currentUser.name,
+      date: todayStr,
+      createdAt: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+
+    setPettyCashTopUps(prev => [newTopUp, ...prev]);
+
+    setPettyCashFunds(prev => prev.map(fund => {
+      if (fund.custodian === params.fundCustodian) {
+        const updatedBal = fund.currentBalanceNgn + topUpAmount;
+        return {
+          ...fund,
+          currentBalanceNgn: updatedBal,
+          allocatedAmountNgn: Math.max(fund.allocatedAmountNgn, updatedBal),
+          lastReplenishedDate: todayStr
+        };
+      }
+      return fund;
+    }));
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'PETTY_CASH_TOP_UP',
+      targetType: 'Petty Cash Fund',
+      targetId: newTopUp.id,
+      details: `${currentUser.name} topped up ${params.fundCustodian}'s petty cash fund by ₦${topUpAmount.toLocaleString()} from ${params.fundingSource}. Ref: ${newTopUp.referenceNumber}`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      category: 'FINANCE',
+      title: `💵 Petty Cash Top-Up: ${params.fundCustodian} (+₦${topUpAmount.toLocaleString()})`,
+      message: `${currentUser.name} credited ${params.fundCustodian}'s fund with ₦${topUpAmount.toLocaleString()} via ${params.fundingSource}. Ref: ${newTopUp.referenceNumber}.`,
+      isRead: false,
+      priority: 'NORMAL',
+      timestamp: 'Just now',
+      actionType: 'VIEW_BUDGET',
+      actionTargetId: newTopUp.id,
+      actionLabel: 'View Fund',
+      actionUrl: '/finance?tab=petty-cash'
+    };
+    setNotifications(prev => [notif, ...prev]);
+
+    return newTopUp;
   };
 
   const generatePettyCashMonthlyAnalysis = (monthYear: string): PettyCashAnalysis => {
@@ -3741,8 +3853,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       declineBudgetAsMD,
       pettyCashFunds,
       pettyCashTransactions,
+      pettyCashTopUps,
       pettyCashAnalyses,
       logPettyCashExpense,
+      topUpPettyCashFund,
       generatePettyCashMonthlyAnalysis,
       approvePettyCashReplenishment,
       confirmPaymentWithDrK,

@@ -698,6 +698,18 @@ export interface PettyCashTransaction {
   createdAt: string;
 }
 
+export interface PettyCashTopUpRecord {
+  id: string;
+  fundCustodian: PettyCashCustodian;
+  amountNgn: number;
+  fundingSource: string;
+  referenceNumber?: string;
+  notes?: string;
+  authorizedByName: string;
+  date: string;
+  createdAt: string;
+}
+
 export interface PettyCashAnalysis {
   id: string;
   monthYear: string;

@@ -20,10 +20,12 @@ import {
   Download,
   Filter,
   Search,
-  ChevronDown
+  ChevronDown,
+  FileSpreadsheet
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { haptics, playNotificationChime } from '@/lib/haptics';
+import { exportToXls, exportToPdf } from '@/lib/export-utils';
 
 type TimeHorizon = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'H1' | 'H2' | 'YEARLY';
 
@@ -173,6 +175,70 @@ export default function AttendancePage() {
   const lateShifts = filteredRecords.filter(r => r.status === 'LATE').length;
   const punctualityRate = totalShifts > 0 ? Math.round((onTimeShifts / totalShifts) * 100) : 100;
   const totalKpiEarned = filteredRecords.reduce((acc, curr) => acc + (curr.kpiAwarded || 0), 0);
+
+  const handleExportAttendancePdf = () => {
+    exportToPdf({
+      filename: `AquaEarth_Attendance_Muster_${timeHorizon}_${new Date().toISOString().split('T')[0]}`,
+      title: 'Station Muster & Personnel Attendance Timesheet',
+      subtitle: `AquaEarth Consulting Limited — Horizon: ${timeHorizon} | Staff Filter: ${selectedStaffFilter}`,
+      category: 'STATION MUSTER TIMESHEET',
+      summaryMetrics: [
+        { label: 'Total Logs in Scope', value: String(filteredRecords.length) },
+        { label: 'Punctuality Rate', value: `${punctualityRate}%`, subtext: `${onTimeShifts} on-time` },
+        { label: 'Late Shifts', value: `${lateShifts} late`, subtext: 'Disciplinary review' },
+        { label: 'Total KPI Awarded', value: `+${totalKpiEarned} pts` }
+      ],
+      columns: [
+        { header: 'Date', key: 'date', width: '90px' },
+        { header: 'Employee', key: 'userName' },
+        { header: 'Clock-In', key: 'clockInTime', format: (val) => val ? `${val} WAT` : '—' },
+        { header: 'Clock-Out', key: 'clockOutTime', format: (val) => val ? `${val} WAT` : 'Active' },
+        { header: 'Station / Deployment', key: 'locationTag' },
+        { header: 'Status', key: 'status' },
+        { header: 'KPI Pts', key: 'kpiAwarded', align: 'center', format: (val) => `+${val}` }
+      ],
+      data: filteredRecords,
+      signatories: [
+        { role: 'STATION MUSTER OFFICER', name: currentUser.name, title: `${currentUser.jobTitle}` },
+        { role: 'HR & TALENT MANAGER', name: 'Mrs. Funmi Oladipo', title: 'HR & Personnel Lead' },
+        { role: 'EXECUTIVE CLEARANCE', name: 'Dr. Kaine Edike', title: 'Managing Consultant (MD / FNEC)' }
+      ]
+    });
+    haptics.success();
+  };
+
+  const handleExportAttendanceXls = () => {
+    exportToXls({
+      filename: `AquaEarth_Attendance_Muster_${timeHorizon}_${new Date().toISOString().split('T')[0]}`,
+      title: 'STATION MUSTER & ATTENDANCE TIMESHEET',
+      subtitle: `Horizon: ${timeHorizon} | Extracted By: ${currentUser.name}`,
+      category: 'ATTENDANCE TIMESHEET',
+      metadata: {
+        'Supervisor': currentUser.name,
+        'Horizon': timeHorizon,
+        'Staff Scope': selectedStaffFilter,
+        'Records': String(filteredRecords.length)
+      },
+      summaryMetrics: [
+        { label: 'Total Records', value: filteredRecords.length },
+        { label: 'Punctuality Rate', value: `${punctualityRate}%` },
+        { label: 'KPI Points Earned', value: totalKpiEarned }
+      ],
+      columns: [
+        { header: 'Date', key: 'date' },
+        { header: 'Employee Name', key: 'userName' },
+        { header: 'Clock In (WAT)', key: 'clockInTime' },
+        { header: 'Clock Out (WAT)', key: 'clockOutTime' },
+        { header: 'Station Location', key: 'locationTag' },
+        { header: 'GPS Coordinates', key: 'gpsCoordinates' },
+        { header: 'Shift Status', key: 'status' },
+        { header: 'KPI Points', key: 'kpiAwarded' },
+        { header: 'Shift Notes', key: 'shiftNotes' }
+      ],
+      data: filteredRecords
+    });
+    haptics.success();
+  };
 
   return (
     <div className="space-y-6 select-none">
@@ -469,16 +535,33 @@ export default function AttendancePage() {
 
         {/* Right: Roll Call Table with Clock In / Out times across horizon */}
         <div className="lg:col-span-2 bg-white dark:bg-[#0C0C0D] border border-black/[0.06] dark:border-white/[0.08] rounded-3xl p-6 space-y-4 shadow-xs">
-          <div className="flex items-center justify-between pb-3 border-b border-black/[0.05] dark:border-white/[0.08]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-black/[0.05] dark:border-white/[0.08]">
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-emerald-500" />
               <h3 className="font-semibold text-xs text-[#1D1D1F] dark:text-[#F6F4F0]">
                 {canSeeEveryone ? `Staff Attendance & Clock-In Ledger (${timeHorizon})` : 'Active Duty Roll Call'}
               </h3>
             </div>
-            <span className="text-[10px] text-[#86868B] font-mono tnum">
-              {filteredRecords.length} Record{filteredRecords.length === 1 ? '' : 's'} in Scope
-            </span>
+
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-[#86868B] font-mono tnum mr-2">
+                {filteredRecords.length} Record{filteredRecords.length === 1 ? '' : 's'} in Scope
+              </span>
+              <button
+                onClick={handleExportAttendancePdf}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-black/[0.08] dark:border-white/[0.1] hover:bg-black/[0.03] dark:hover:bg-white/[0.05] text-[11px] font-semibold text-[#1D1D1F] dark:text-[#F6F4F0] transition-all cursor-pointer active:scale-[0.97]"
+              >
+                <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>PDF</span>
+              </button>
+              <button
+                onClick={handleExportAttendanceXls}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-black/[0.08] dark:border-white/[0.1] hover:bg-black/[0.03] dark:hover:bg-white/[0.05] text-[11px] font-semibold text-[#1D1D1F] dark:text-[#F6F4F0] transition-all cursor-pointer active:scale-[0.97]"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>XLS</span>
+              </button>
+            </div>
           </div>
 
           <div className="overflow-x-auto">

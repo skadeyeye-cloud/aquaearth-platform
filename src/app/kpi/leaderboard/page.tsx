@@ -29,10 +29,13 @@ import {
   ChevronRight,
   ArrowRight,
   ShieldCheck,
-  FileText
+  FileText,
+  FileSpreadsheet
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import KpiBreakdownModal from '@/components/kpi/KpiBreakdownModal';
+import { exportToXls, exportToPdf } from '@/lib/export-utils';
+import { haptics } from '@/lib/haptics';
 import KpiWeightsManagerModal from '@/components/admin/KpiWeightsManagerModal';
 import { getPerformanceTier } from '@/lib/kpi-engine';
 
@@ -150,6 +153,69 @@ export default function KpiLeaderboardPage() {
   const currentQa = Math.round(qaPts * mult);
 
   const myTier = getPerformanceTier(myEntry.totalScore, kpiConfig?.tierThresholds);
+
+  const handleExportStandingsPdf = () => {
+    exportToPdf({
+      filename: `AquaEarth_KPI_Standings_${horizon}`,
+      title: isManagerOrLead ? 'Supervised Team Appraisal & KPI Standings' : 'Corporate KPI Appraisal Standings',
+      subtitle: `AquaEarth Consulting Limited — Cycle: ${horizon} | Line Manager: ${currentUser.name}`,
+      category: 'APPRAISAL STANDINGS',
+      summaryMetrics: [
+        { label: 'Personnel Evaluated', value: String(filteredEntries.length) },
+        { label: 'Top Score', value: `${Math.max(...filteredEntries.map(e => e.totalScore))} pts` },
+        { label: 'Average Score', value: `${Math.round(filteredEntries.reduce((a, b) => a + b.totalScore, 0) / (filteredEntries.length || 1))} pts` },
+        { label: 'Supervisory Scope', value: isSuperadmin ? 'Company-Wide' : currentUser.departmentName || 'Department' }
+      ],
+      columns: [
+        { header: 'Rank', key: 'rankPosition', width: '50px' },
+        { header: 'Employee', key: 'name' },
+        { header: 'Role / Designation', key: 'jobTitle' },
+        { header: 'Department', key: 'departmentName' },
+        { header: 'Tier', key: 'tier', format: (val) => val || 'SATISFACTORY' },
+        { header: 'Tasks Completed', key: 'completedCount', align: 'center' },
+        { header: 'On-Time Delivery', key: 'onTimeCount', align: 'center' },
+        { header: 'Total Score', key: 'totalScore', align: 'right', format: (val) => `${val} pts` }
+      ],
+      data: filteredEntries,
+      signatories: [
+        { role: 'LINE MANAGER', name: currentUser.name, title: `${currentUser.jobTitle || 'Department Lead'}` },
+        { role: 'HR & TALENT LEAD', name: 'Mrs. Funmi Oladipo', title: 'HR & Personnel Lead' },
+        { role: 'EXECUTIVE DIRECTIVE', name: 'Dr. Kaine Edike', title: 'Managing Consultant (MD / FNEC)' }
+      ]
+    });
+    haptics.success();
+  };
+
+  const handleExportStandingsXls = () => {
+    exportToXls({
+      filename: `AquaEarth_KPI_Standings_${horizon}`,
+      title: isManagerOrLead ? 'SUPERVISED TEAM KPI STANDINGS' : 'CORPORATE KPI STANDINGS',
+      subtitle: `Cycle: ${horizon} | Manager: ${currentUser.name} | Dept: ${currentUser.departmentName || 'Operations'}`,
+      category: 'KPI STANDINGS',
+      metadata: {
+        'Manager': currentUser.name,
+        'Cycle': horizon,
+        'Total Headcount': String(filteredEntries.length)
+      },
+      summaryMetrics: [
+        { label: 'Total Personnel', value: filteredEntries.length },
+        { label: 'Top Score', value: `${Math.max(...filteredEntries.map(e => e.totalScore))} pts` },
+        { label: 'Average Score', value: `${Math.round(filteredEntries.reduce((a, b) => a + b.totalScore, 0) / (filteredEntries.length || 1))} pts` }
+      ],
+      columns: [
+        { header: 'Rank', key: 'rankPosition' },
+        { header: 'Employee Name', key: 'name' },
+        { header: 'Designation', key: 'jobTitle' },
+        { header: 'Department', key: 'departmentName' },
+        { header: 'Performance Tier', key: 'tier', format: (v) => v || 'SATISFACTORY' },
+        { header: 'Tasks Delivered', key: 'completedCount', align: 'center' },
+        { header: 'On-Time Deliveries', key: 'onTimeCount', align: 'center' },
+        { header: 'Total KPI Score (Points)', key: 'totalScore', align: 'right' }
+      ],
+      data: filteredEntries
+    });
+    haptics.success();
+  };
 
   return (
     <div className="space-y-6 select-none">
@@ -823,7 +889,7 @@ export default function KpiLeaderboardPage() {
 
           {/* Supervised Team Standings Table */}
           <div className="bg-white dark:bg-[#0c0c0e] border border-black/[0.08] dark:border-white/[0.12] rounded-3xl overflow-hidden shadow-xs">
-            <div className="px-6 py-4 border-b border-black/[0.05] dark:border-white/[0.08] flex items-center justify-between">
+            <div className="px-6 py-4 border-b border-black/[0.05] dark:border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h2 className="text-xs font-bold text-slate-900 dark:text-white">
                   {isManagerOrLead ? 'Supervised Team Appraisal Standings' : 'Company Appraisal Standings'}
@@ -831,6 +897,23 @@ export default function KpiLeaderboardPage() {
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
                   Showing {filteredEntries.length} personnel in your reporting scope. Click any row to inspect deep audit breakdown.
                 </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleExportStandingsPdf}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-black/[0.08] dark:border-white/[0.1] hover:bg-black/[0.03] dark:hover:bg-white/[0.05] text-[11px] font-semibold text-slate-900 dark:text-white transition-all cursor-pointer active:scale-[0.97]"
+                >
+                  <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>PDF</span>
+                </button>
+                <button
+                  onClick={handleExportStandingsXls}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-black/[0.08] dark:border-white/[0.1] hover:bg-black/[0.03] dark:hover:bg-white/[0.05] text-[11px] font-semibold text-slate-900 dark:text-white transition-all cursor-pointer active:scale-[0.97]"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>XLS</span>
+                </button>
               </div>
             </div>
 

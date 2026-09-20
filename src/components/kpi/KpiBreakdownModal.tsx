@@ -15,9 +15,12 @@ import {
   Sparkles,
   Flame,
   ChevronRight,
-  Crown
+  Crown,
+  FileSpreadsheet
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { exportToXls, exportToPdf } from '@/lib/export-utils';
+import { haptics } from '@/lib/haptics';
 
 interface KpiBreakdownModalProps {
   isOpen: boolean;
@@ -126,9 +129,77 @@ export default function KpiBreakdownModal({ isOpen, onClose, entry, tasks, user 
 
   const currentStats = horizonStats[selectedHorizon];
 
-  const handleDownloadReport = () => {
-    setDownloadSuccess(`Generated official appraisal report: "AquaEarth_Appraisal_${entry.name.replace(/\s+/g, '_')}_${selectedHorizon}.pdf"`);
-    setTimeout(() => setDownloadSuccess(null), 5000);
+  const handleDownloadReportPdf = () => {
+    exportToPdf({
+      filename: `AquaEarth_Appraisal_${entry.name.replace(/\s+/g, '_')}_${selectedHorizon}`,
+      title: `Executive Performance & Appraisal Dossier — ${entry.name}`,
+      subtitle: `AquaEarth Consulting Limited — Evaluation Horizon: ${selectedHorizon} | Department: ${entry.departmentName}`,
+      category: 'ANNUAL & MID-CYCLE APPRAISAL',
+      metadata: {
+        'Staff Name': entry.name,
+        'Designation': entry.jobTitle,
+        'Staff ID': entry.userId,
+        'Performance Tier': entry.tier || 'SATISFACTORY',
+        'Horizon': selectedHorizon
+      },
+      summaryMetrics: [
+        { label: 'Total Score', value: `${currentStats.totalPts} pts`, subtext: `${entry.tier || 'SATISFACTORY'} Tier` },
+        { label: 'Tasks & Milestones', value: `${currentStats.tasksPts} pts`, subtext: `${userCompletedTasks.length} Delivered` },
+        { label: 'Station Punctuality', value: `${currentStats.attendancePts} pts`, subtext: `${currentStats.streak} Days Streak` },
+        { label: 'Supervisory Oversight', value: `${currentStats.supervisoryPts} pts`, subtext: `${userSupervisedTasks.length} Subordinates Led` }
+      ],
+      columns: [
+        { header: 'Task / Deliverable', key: 'title' },
+        { header: 'Project Code', key: 'projectId' },
+        { header: 'Priority', key: 'priority' },
+        { header: 'Execution Stage', key: 'stage' },
+        { header: 'Status', key: 'status' },
+        { header: 'Due Date', key: 'dueDate' }
+      ],
+      data: userCompletedTasks.length > 0 ? userCompletedTasks : tasks.slice(0, 5),
+      signatories: [
+        { role: 'EMPLOYEE APPRAISED', name: entry.name, title: entry.jobTitle },
+        { role: 'LINE MANAGER', name: 'Engr. Femi Adebayo', title: 'Head of Geotechnical Engineering' },
+        { role: 'MANAGING CONSULTANT', name: 'Dr. Kaine Edike', title: 'Managing Consultant (MD / FNEC)' }
+      ]
+    });
+    setDownloadSuccess(`Generated official appraisal PDF for ${entry.name}`);
+    setTimeout(() => setDownloadSuccess(null), 4000);
+    haptics.success();
+  };
+
+  const handleDownloadReportXls = () => {
+    exportToXls({
+      filename: `AquaEarth_Appraisal_${entry.name.replace(/\s+/g, '_')}_${selectedHorizon}`,
+      title: `EXECUTIVE APPRAISAL DOSSIER — ${entry.name.toUpperCase()}`,
+      subtitle: `Horizon: ${selectedHorizon} | Designation: ${entry.jobTitle} | Department: ${entry.departmentName}`,
+      category: 'APPRAISAL DOSSIER',
+      metadata: {
+        'Staff Name': entry.name,
+        'Staff ID': entry.userId,
+        'Department': entry.departmentName,
+        'Tier': entry.tier || 'SATISFACTORY',
+        'Horizon': selectedHorizon
+      },
+      summaryMetrics: [
+        { label: 'Total KPI Score', value: `${currentStats.totalPts} pts` },
+        { label: 'Milestone Execution', value: `${currentStats.tasksPts} pts` },
+        { label: 'Punctuality & Muster', value: `${currentStats.attendancePts} pts` },
+        { label: 'Supervisory Score', value: `${currentStats.supervisoryPts} pts` }
+      ],
+      columns: [
+        { header: 'Task / Milestone', key: 'title' },
+        { header: 'Project ID', key: 'projectId' },
+        { header: 'Priority', key: 'priority' },
+        { header: 'Stage', key: 'stage' },
+        { header: 'Status', key: 'status' },
+        { header: 'Due Date', key: 'dueDate' }
+      ],
+      data: userCompletedTasks.length > 0 ? userCompletedTasks : tasks.slice(0, 5)
+    });
+    setDownloadSuccess(`Generated official appraisal XLS for ${entry.name}`);
+    setTimeout(() => setDownloadSuccess(null), 4000);
+    haptics.success();
   };
 
   return (
@@ -357,11 +428,20 @@ export default function KpiBreakdownModal({ isOpen, onClose, entry, tasks, user 
 
               <button
                 type="button"
-                onClick={handleDownloadReport}
-                className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-black rounded-xl font-bold shadow-xs active:scale-[0.96] whitespace-nowrap shrink-0"
+                onClick={handleDownloadReportPdf}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-black rounded-xl font-bold shadow-xs active:scale-[0.96] whitespace-nowrap shrink-0 text-xs cursor-pointer"
               >
-                <Download className="w-3.5 h-3.5" />
-                <span>Download Appraisal Report (PDF)</span>
+                <Download className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Download PDF</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDownloadReportXls}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-black/[0.05] hover:bg-black/[0.1] dark:bg-white/[0.08] dark:hover:bg-white/[0.12] text-slate-800 dark:text-white rounded-xl font-bold shadow-xs active:scale-[0.96] whitespace-nowrap shrink-0 text-xs cursor-pointer"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Download XLS</span>
               </button>
             </div>
           </div>

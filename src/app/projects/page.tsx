@@ -21,11 +21,14 @@ import {
   ChevronDown,
   Lock,
   Users,
-  CheckSquare
+  CheckSquare,
+  Download,
+  FileSpreadsheet
 } from 'lucide-react';
 import { ProjectRecord, ProjectHealth, ProjectStatus, TaskItem } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { haptics } from '@/lib/haptics';
+import { exportToXls, exportToPdf } from '@/lib/export-utils';
 
 export default function ProjectsPage() {
   const { 
@@ -249,6 +252,69 @@ export default function ProjectsPage() {
 
   const projectTasks = selectedProject ? tasks.filter(t => t.projectId === selectedProject.id) : [];
 
+  const handleExportProjectsPdf = () => {
+    exportToPdf({
+      filename: `AquaEarth_Projects_Delivery_${new Date().toISOString().split('T')[0]}`,
+      title: 'Commercial Projects & Milestone Delivery Schedule',
+      subtitle: `AquaEarth Consulting Limited — Health Filter: ${healthFilter}`,
+      category: 'PROJECT DELIVERY SCHEDULE',
+      summaryMetrics: [
+        { label: 'Active Engagements', value: String(filteredProjects.length) },
+        { label: 'On Track', value: String(filteredProjects.filter(p => p.health === 'ON_TRACK').length) },
+        { label: 'At Risk / Delayed', value: String(filteredProjects.filter(p => p.health === 'AT_RISK' || p.health === 'DELAYED').length) },
+        { label: 'Portfolio Value', value: `₦${filteredProjects.reduce((a, b) => a + (b.contractValue || 0), 0).toLocaleString()}` }
+      ],
+      columns: [
+        { header: 'Code', key: 'projectCode', width: '90px' },
+        { header: 'Project Title', key: 'title' },
+        { header: 'Client', key: 'clientName' },
+        { header: 'Lead Consultant', key: 'leadConsultantName' },
+        { header: 'Health', key: 'health', format: (val) => val === 'ON_TRACK' ? 'On Track' : val === 'AT_RISK' ? 'At Risk' : 'Delayed' },
+        { header: 'Progress', key: 'progressPercent', align: 'center', format: (val) => `${val}%` },
+        { header: 'Status', key: 'status' },
+        { header: 'Due Date', key: 'dueDate' }
+      ],
+      data: filteredProjects,
+      signatories: [
+        { role: 'PROJECT MANAGER', name: currentUser.name, title: `${currentUser.jobTitle || 'Lead Consultant'}` },
+        { role: 'TECHNICAL DIRECTOR', name: 'Engr. Femi Adebayo', title: 'Head of Engineering' },
+        { role: 'MANAGING CONSULTANT', name: 'Dr. Kaine Edike', title: 'Managing Consultant (MD / FNEC)' }
+      ]
+    });
+    haptics.success();
+  };
+
+  const handleExportProjectsXls = () => {
+    exportToXls({
+      filename: `AquaEarth_Projects_Delivery_${new Date().toISOString().split('T')[0]}`,
+      title: 'COMMERCIAL PROJECTS & MILESTONE DELIVERY SCHEDULE',
+      subtitle: `Health Filter: ${healthFilter} | Extracted By: ${currentUser.name}`,
+      category: 'PROJECT SCHEDULE',
+      metadata: {
+        'Manager': currentUser.name,
+        'Filter': healthFilter,
+        'Total Count': String(filteredProjects.length)
+      },
+      summaryMetrics: [
+        { label: 'Total Engagements', value: filteredProjects.length },
+        { label: 'Portfolio Value', value: `₦${filteredProjects.reduce((a, b) => a + (b.contractValue || 0), 0).toLocaleString()}` }
+      ],
+      columns: [
+        { header: 'Project Code', key: 'projectCode' },
+        { header: 'Project Title', key: 'title' },
+        { header: 'Client Name', key: 'clientName' },
+        { header: 'Lead Consultant', key: 'leadConsultantName' },
+        { header: 'Health', key: 'health' },
+        { header: 'Progress (%)', key: 'progressPercent' },
+        { header: 'Contract Value (₦)', key: 'contractValue', format: (v) => Number(v || 0).toLocaleString() },
+        { header: 'Status', key: 'status' },
+        { header: 'Due Date', key: 'dueDate' }
+      ],
+      data: filteredProjects
+    });
+    haptics.success();
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -332,9 +398,25 @@ export default function ProjectsPage() {
           ))}
         </div>
 
-        <span className="text-xs text-[#86868B] font-mono tnum whitespace-nowrap shrink-0">
-          Showing {filteredProjects.length} engagement{filteredProjects.length === 1 ? '' : 's'}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-[#86868B] font-mono tnum whitespace-nowrap shrink-0 mr-1">
+            Showing {filteredProjects.length} engagement{filteredProjects.length === 1 ? '' : 's'}
+          </span>
+          <button
+            onClick={handleExportProjectsPdf}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-black/[0.08] dark:border-white/[0.1] hover:bg-black/[0.03] dark:hover:bg-white/[0.05] text-[11px] font-semibold text-[#1D1D1F] dark:text-[#F6F4F0] transition-all cursor-pointer active:scale-[0.97]"
+          >
+            <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>PDF</span>
+          </button>
+          <button
+            onClick={handleExportProjectsXls}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-black/[0.08] dark:border-white/[0.1] hover:bg-black/[0.03] dark:hover:bg-white/[0.05] text-[11px] font-semibold text-[#1D1D1F] dark:text-[#F6F4F0] transition-all cursor-pointer active:scale-[0.97]"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>XLS</span>
+          </button>
+        </div>
       </div>
 
       {/* Projects List */}

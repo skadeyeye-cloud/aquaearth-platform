@@ -13,7 +13,8 @@ import {
   CandidateApplication,
   PettyCashFund,
   PettyCashTransaction,
-  PettyCashAnalysis
+  PettyCashAnalysis,
+  PettyCashTopUpRecord
 } from './types';
 
 export const DEFAULT_CORPORATE_PASSWORD = 'AquaEarth@2026!';
@@ -2484,6 +2485,31 @@ export const INITIAL_PETTY_CASH_TRANSACTIONS: PettyCashTransaction[] = [
     receiptUrl: '/receipts/ppe-client.pdf',
     approvedByName: 'Gift',
     createdAt: '2026-09-11 13:10'
+  }
+];
+
+export const INITIAL_PETTY_CASH_TOPUPS: PettyCashTopUpRecord[] = [
+  {
+    id: 'topup-1',
+    fundCustodian: 'GIFT',
+    amountNgn: 100000,
+    fundingSource: 'GTBank Corporate Wire (Operating Acct)',
+    referenceNumber: 'GTB-TRF-882190',
+    notes: 'Approved mid-month imprest top-up for laboratory sample shipping and courier fees.',
+    authorizedByName: 'Mrs. Erica Okonkwo (CFO)',
+    date: '2026-09-08',
+    createdAt: '2026-09-08 11:30'
+  },
+  {
+    id: 'topup-2',
+    fundCustodian: 'MARVELOUS',
+    amountNgn: 80000,
+    fundingSource: 'Zenith Bank Petty Imprest Cheque',
+    referenceNumber: 'CHQ-ZEN-004921',
+    notes: 'Emergency logistics funding for offshore geotechnical mobilization in Escravos.',
+    authorizedByName: 'Dr. Kaine Edike (MD)',
+    date: '2026-09-09',
+    createdAt: '2026-09-09 14:15'
   }
 ];
 

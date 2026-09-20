@@ -34,7 +34,9 @@ import {
   Truck,
   Wrench,
   FileSpreadsheet,
-  AlertCircle
+  AlertCircle,
+  ArrowUpRight,
+  Lock
 } from 'lucide-react';
 import { 
   InvoiceItem, 
@@ -48,6 +50,8 @@ import { BudgetRequestModal } from '@/components/finance/BudgetRequestModal';
 import { CfoVettingModal } from '@/components/finance/CfoVettingModal';
 import { CollateBudgetModal } from '@/components/finance/CollateBudgetModal';
 import { PettyCashExpenseModal } from '@/components/finance/PettyCashExpenseModal';
+import { TopUpPettyCashModal } from '@/components/finance/TopUpPettyCashModal';
+import { exportToXls, exportToPdf } from '@/lib/export-utils';
 import { haptics } from '@/lib/haptics';
 
 export default function FinancePage() {
@@ -65,6 +69,7 @@ export default function FinancePage() {
     declineBudgetAsMD,
     pettyCashFunds,
     pettyCashTransactions,
+    pettyCashTopUps,
     pettyCashAnalyses,
     generatePettyCashMonthlyAnalysis,
     approvePettyCashReplenishment,
@@ -83,6 +88,8 @@ export default function FinancePage() {
   const [collatingBudget, setCollatingBudget] = useState<BudgetRequest | null>(null);
   const [isPettyExpenseOpen, setIsPettyExpenseOpen] = useState(false);
   const [activeCustodianForExpense, setActiveCustodianForExpense] = useState<PettyCashCustodian>('GIFT');
+  const [isTopUpOpen, setIsTopUpOpen] = useState(false);
+  const [activeCustodianForTopUp, setActiveCustodianForTopUp] = useState<PettyCashCustodian>('GIFT');
   const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<InvoiceItem | null>(null);
   const [whtCreditNo, setWhtCreditNo] = useState('WHT-FIRS-2026-');
 
@@ -193,6 +200,266 @@ export default function FinancePage() {
   const totalPaidNgn = invoices.filter(i => i.status === 'PAID').reduce((acc, curr) => acc + curr.netPayableNgn, 0);
   const totalVatTracked = invoices.reduce((acc, curr) => acc + curr.vatAmountNgn, 0);
   const totalWhtDeductions = invoices.reduce((acc, curr) => acc + curr.whtDeductionNgn, 0);
+  const totalOutstandingNgn = Math.max(0, totalBilledNgn - totalPaidNgn);
+
+  // Export Handlers
+  const handleExportBudgetsXls = () => {
+    exportToXls({
+      filename: `AquaEarth_Budgets_${new Date().toISOString().substring(0, 7)}`,
+      title: 'AQUAEARTH CONSULTING LIMITED — CORPORATE BUDGET SCHEDULE',
+      subtitle: 'Departmental & Client Facing Budget Ledger',
+      category: 'BUDGET SCHEDULE',
+      metadata: {
+        'Exported By': currentUser.name,
+        'Department': currentUser.departmentName || 'Corporate',
+        'Total Requests': String(filteredBudgets.length),
+        'Total Value': `₦${totalBudgetRequested.toLocaleString()} NGN`
+      },
+      summaryMetrics: [
+        { label: 'Total Value', value: `₦${totalBudgetRequested.toLocaleString()} NGN` },
+        { label: 'Approved Value', value: `₦${approvedBudgetAmount.toLocaleString()} NGN` },
+        { label: 'MD Pending', value: mdPendingBudgetCount },
+        { label: 'CFO Review', value: cfoReviewCount }
+      ],
+      columns: [
+        { header: 'Request #', key: 'requestNumber' },
+        { header: 'Title', key: 'title' },
+        { header: 'Department', key: 'department' },
+        { header: 'Type', key: 'budgetType', format: (val) => val === 'CLIENT_FACING' ? 'Client Project' : 'Departmental' },
+        { header: 'Category', key: 'category', format: (val) => String(val).replace(/_/g, ' ') },
+        { header: 'Amount (₦ NGN)', key: 'amountNgn', align: 'right', format: (val) => `₦${Number(val).toLocaleString()}` },
+        { header: 'Approval Stage', key: 'approvalStage', format: (val) => String(val).replace(/_/g, ' ') },
+        { header: 'Status', key: 'status' },
+        { header: 'Requested By', key: 'requestedByName' },
+        { header: 'Date', key: 'createdAt' }
+      ],
+      data: filteredBudgets
+    });
+    haptics.success();
+  };
+
+  const handleExportBudgetsPdf = () => {
+    exportToPdf({
+      filename: `AquaEarth_Budgets_${new Date().toISOString().substring(0, 7)}`,
+      title: 'Corporate Budget Schedule & Ledger',
+      subtitle: 'AquaEarth Consulting Limited — Formal Vetting & Approval Docket',
+      category: 'BUDGET RECORD',
+      summaryMetrics: [
+        { label: 'Total Value', value: `₦${totalBudgetRequested.toLocaleString()}` },
+        { label: 'Approved Value', value: `₦${approvedBudgetAmount.toLocaleString()}` },
+        { label: 'MD Pending', value: String(mdPendingBudgetCount), subtext: 'Dr. K Docket' },
+        { label: 'CFO Review', value: String(cfoReviewCount), subtext: 'Mrs. Erica' }
+      ],
+      columns: [
+        { header: 'Req #', key: 'requestNumber', width: '90px' },
+        { header: 'Title / Purpose', key: 'title' },
+        { header: 'Dept', key: 'department' },
+        { header: 'Type', key: 'budgetType', format: (val) => val === 'CLIENT_FACING' ? 'Client' : 'Dept' },
+        { header: 'Amount (₦)', key: 'amountNgn', align: 'right', format: (val) => `₦${Number(val).toLocaleString()}` },
+        { header: 'Stage', key: 'approvalStage', format: (val) => String(val).replace(/_/g, ' ') },
+        { header: 'Status', key: 'status' },
+        { header: 'By', key: 'requestedByName' }
+      ],
+      data: filteredBudgets,
+      signatories: [
+        { role: 'COMPILED BY', name: currentUser.name, title: `${currentUser.functionalRole} (Finance)` },
+        { role: 'VETTED BY', name: 'Mrs. Erica Okonkwo', title: 'Chief Financial Officer (CFO)' },
+        { role: 'FINAL APPROVAL', name: 'Dr. Kaine Edike', title: 'Managing Consultant (MD / FNEC)' }
+      ]
+    });
+    haptics.success();
+  };
+
+  const handleExportPettyCashXls = () => {
+    exportToXls({
+      filename: `AquaEarth_Petty_Cash_Ledger_${new Date().toISOString().substring(0, 7)}`,
+      title: 'AQUAEARTH CONSULTING LIMITED — IMPREST EXPENSE LEDGER',
+      subtitle: 'Official SOP Section 4 Custodian Imprest Voucher Audit',
+      category: 'PETTY CASH LEDGER',
+      metadata: {
+        'Exported By': currentUser.name,
+        'Role': currentUser.functionalRole,
+        'Total Vouchers': String(pettyCashTransactions.length),
+        'Total Spent': `₦${totalPettyCashSpent.toLocaleString()} NGN`
+      },
+      summaryMetrics: [
+        { label: 'Total Imprest Expenditure', value: `₦${totalPettyCashSpent.toLocaleString()} NGN` },
+        { label: "Gift's Balance", value: `₦${giftFund.currentBalanceNgn.toLocaleString()} NGN` },
+        { label: "Marvelous's Balance", value: `₦${marvelousFund.currentBalanceNgn.toLocaleString()} NGN` },
+        { label: 'Total Vouchers', value: pettyCashTransactions.length }
+      ],
+      columns: [
+        { header: 'Date', key: 'date', width: '100px' },
+        { header: 'Fund Custodian', key: 'fundCustodian', format: (val) => `${val}'s Fund` },
+        { header: 'Expense Category', key: 'category', format: (val) => String(val).replace(/_/g, ' ') },
+        { header: 'Description / Purpose', key: 'description' },
+        { header: 'Amount (₦ NGN)', key: 'amountNgn', align: 'right', format: (val) => `₦${Number(val).toLocaleString()}` },
+        { header: 'Receipt Reference', key: 'receiptUrl', format: (val) => val || 'Voucher on file' },
+        { header: 'Approved By', key: 'approvedByName' }
+      ],
+      data: pettyCashTransactions
+    });
+    haptics.success();
+  };
+
+  const handleExportPettyCashPdf = () => {
+    exportToPdf({
+      filename: `AquaEarth_Petty_Cash_Ledger_${new Date().toISOString().substring(0, 7)}`,
+      title: 'Imprest Petty Cash Expenditure Ledger',
+      subtitle: 'AquaEarth Consulting Limited — Official Custodian Voucher Log (SOP Section 4)',
+      category: 'PETTY CASH AUDIT',
+      summaryMetrics: [
+        { label: 'Total Disbursed', value: `₦${totalPettyCashSpent.toLocaleString()}`, subtext: 'Both Funds' },
+        { label: "Gift's Fund Available", value: `₦${giftFund.currentBalanceNgn.toLocaleString()}`, subtext: 'HQ & Collation' },
+        { label: "Marvelous's Fund Available", value: `₦${marvelousFund.currentBalanceNgn.toLocaleString()}`, subtext: 'Field Logistics' },
+        { label: 'Total Vouchers Filed', value: String(pettyCashTransactions.length), subtext: 'Verified Receipts' }
+      ],
+      columns: [
+        { header: 'Date', key: 'date', width: '90px' },
+        { header: 'Custodian', key: 'fundCustodian', format: (val) => `${val}` },
+        { header: 'Category', key: 'category', format: (val) => String(val).replace(/_/g, ' ') },
+        { header: 'Description / Purpose', key: 'description' },
+        { header: 'Amount (₦)', key: 'amountNgn', align: 'right', format: (val) => `₦${Number(val).toLocaleString()}` },
+        { header: 'Receipt Link', key: 'receiptUrl', format: (val) => val || 'On File' },
+        { header: 'Sign-off', key: 'approvedByName' }
+      ],
+      data: pettyCashTransactions,
+      signatories: [
+        { role: 'PREPARED BY', name: currentUser.name, title: `${currentUser.functionalRole} (Custodian)` },
+        { role: 'REVIEWED BY', name: 'Mrs. Erica Okonkwo', title: 'Chief Financial Officer (CFO)' },
+        { role: 'APPROVED BY', name: 'Dr. Kaine Edike', title: 'Managing Consultant (MD / FNEC)' }
+      ]
+    });
+    haptics.success();
+  };
+
+  const handleExportAnalysisXls = () => {
+    exportToXls({
+      filename: `AquaEarth_Petty_Cash_Analysis_${new Date().toISOString().substring(0, 7)}`,
+      title: 'AQUAEARTH CONSULTING LIMITED — MONTHLY PETTY CASH RECONCILIATION',
+      subtitle: 'SOP Section 4 Monthly Imprest Analysis & Replenishment Request',
+      category: 'PETTY CASH AUDIT',
+      summaryMetrics: [
+        { label: 'Total Disbursed', value: `₦${totalPettyCashSpent.toLocaleString()} NGN` },
+        { label: "Gift's Closing Balance", value: `₦${giftFund.currentBalanceNgn.toLocaleString()} NGN` },
+        { label: "Marvelous's Closing Balance", value: `₦${marvelousFund.currentBalanceNgn.toLocaleString()} NGN` }
+      ],
+      columns: [
+        { header: 'Month / Cycle', key: 'monthYear' },
+        { header: 'Compiled By', key: 'analyzedByName' },
+        { header: "Gift Opening (₦)", key: 'giftOpeningBalanceNgn', align: 'right', format: (v) => `₦${Number(v).toLocaleString()}` },
+        { header: "Gift Spent (₦)", key: 'giftDisbursedNgn', align: 'right', format: (v) => `₦${Number(v).toLocaleString()}` },
+        { header: "Gift Closing (₦)", key: 'giftClosingBalanceNgn', align: 'right', format: (v) => `₦${Number(v).toLocaleString()}` },
+        { header: "Marvelous Opening (₦)", key: 'marvelousOpeningBalanceNgn', align: 'right', format: (v) => `₦${Number(v).toLocaleString()}` },
+        { header: "Marvelous Spent (₦)", key: 'marvelousDisbursedNgn', align: 'right', format: (v) => `₦${Number(v).toLocaleString()}` },
+        { header: "Marvelous Closing (₦)", key: 'marvelousClosingBalanceNgn', align: 'right', format: (v) => `₦${Number(v).toLocaleString()}` },
+        { header: "Total Disbursed (₦)", key: 'totalDisbursedNgn', align: 'right', format: (v) => `₦${Number(v).toLocaleString()}` },
+        { header: 'Status', key: 'status', format: (v) => String(v).replace(/_/g, ' ') }
+      ],
+      data: pettyCashAnalyses
+    });
+    haptics.success();
+  };
+
+  const handleExportAnalysisPdf = () => {
+    exportToPdf({
+      filename: `AquaEarth_Petty_Cash_Analysis_${new Date().toISOString().substring(0, 7)}`,
+      title: 'Monthly Petty Cash Reconciliation & Replenishment Analysis',
+      subtitle: 'AquaEarth Consulting Limited — Official SOP Section 4 Imprest Audit Docket',
+      category: 'IMPREST AUDIT',
+      summaryMetrics: [
+        { label: 'Total Disbursed This Cycle', value: `₦${totalPettyCashSpent.toLocaleString()}`, subtext: 'Gift + Marvelous' },
+        { label: "Gift's Closing Fund", value: `₦${giftFund.currentBalanceNgn.toLocaleString()}`, subtext: 'HQ & Collation' },
+        { label: "Marvelous's Closing Fund", value: `₦${marvelousFund.currentBalanceNgn.toLocaleString()}`, subtext: 'Field Logistics' },
+        { label: 'Replenishment Requested', value: `₦${totalPettyCashSpent.toLocaleString()}`, subtext: 'MD Approval Required' }
+      ],
+      columns: [
+        { header: 'Cycle', key: 'monthYear', width: '90px' },
+        { header: 'Analyst', key: 'analyzedByName' },
+        { header: 'Gift Spent', key: 'giftDisbursedNgn', align: 'right', format: (v) => `₦${Number(v).toLocaleString()}` },
+        { header: 'Gift Balance', key: 'giftClosingBalanceNgn', align: 'right', format: (v) => `₦${Number(v).toLocaleString()}` },
+        { header: 'Marvelous Spent', key: 'marvelousDisbursedNgn', align: 'right', format: (v) => `₦${Number(v).toLocaleString()}` },
+        { header: 'Marvelous Balance', key: 'marvelousClosingBalanceNgn', align: 'right', format: (v) => `₦${Number(v).toLocaleString()}` },
+        { header: 'Total Spent', key: 'totalDisbursedNgn', align: 'right', format: (v) => `₦${Number(v).toLocaleString()}` },
+        { header: 'Status', key: 'status', format: (v) => String(v).replace(/_/g, ' ') }
+      ],
+      data: pettyCashAnalyses,
+      signatories: [
+        { role: 'PRIMARY ANALYST (SOP)', name: 'Gift', title: 'Finance & Collation Officer' },
+        { role: 'VERIFIED BY', name: 'Mrs. Erica Okonkwo', title: 'Chief Financial Officer (CFO)' },
+        { role: 'REPLENISHMENT APPROVAL', name: 'Dr. Kaine Edike', title: 'Managing Consultant (MD / FNEC)' }
+      ]
+    });
+    haptics.success();
+  };
+
+  const handleExportInvoicesXls = () => {
+    exportToXls({
+      filename: `AquaEarth_Invoices_${new Date().toISOString().substring(0, 7)}`,
+      title: 'AQUAEARTH CONSULTING LIMITED — ACCOUNTS RECEIVABLE & MILESTONES',
+      subtitle: 'Client Milestone Invoices & Tax Deduction Reconciliation (VAT & WHT)',
+      category: 'INVOICES LEDGER',
+      metadata: {
+        'Exported By': currentUser.name,
+        'Role': currentUser.functionalRole,
+        'Total Billed': `₦${totalBilledNgn.toLocaleString()} NGN`,
+        'Total Settled': `₦${totalPaidNgn.toLocaleString()} NGN`
+      },
+      summaryMetrics: [
+        { label: 'Gross Invoiced', value: `₦${(totalBilledNgn / 1000000).toFixed(2)}M` },
+        { label: 'Collected', value: `₦${(totalPaidNgn / 1000000).toFixed(2)}M` },
+        { label: 'Outstanding A/R', value: `₦${(totalOutstandingNgn / 1000000).toFixed(2)}M` },
+        { label: 'VAT Tracked (7.5%)', value: `₦${(totalVatTracked / 1000000).toFixed(2)}M` }
+      ],
+      columns: [
+        { header: 'Invoice #', key: 'invoiceNumber' },
+        { header: 'Client', key: 'clientName' },
+        { header: 'Milestone Description', key: 'milestoneDescription' },
+        { header: 'Subtotal (₦)', key: 'subtotalNgn', align: 'right', format: (val) => `₦${Number(val).toLocaleString()}` },
+        { header: 'VAT 7.5% (₦)', key: 'vatAmountNgn', align: 'right', format: (val) => `₦${Number(val).toLocaleString()}` },
+        { header: 'WHT 5.0% (₦)', key: 'whtDeductionNgn', align: 'right', format: (val) => `₦${Number(val).toLocaleString()}` },
+        { header: 'Net Payable (₦)', key: 'netPayableNgn', align: 'right', format: (val) => `₦${Number(val).toLocaleString()}` },
+        { header: 'Status', key: 'status' },
+        { header: 'Due Date', key: 'dueDate' },
+        { header: 'Dr. K Confirmed', key: 'confirmedWithDrK', format: (val) => val ? 'Yes' : 'Pending' }
+      ],
+      data: filteredInvoices
+    });
+    haptics.success();
+  };
+
+  const handleExportInvoicesPdf = () => {
+    exportToPdf({
+      filename: `AquaEarth_Invoices_${new Date().toISOString().substring(0, 7)}`,
+      title: 'Milestone Invoices & Accounts Receivable Docket',
+      subtitle: 'AquaEarth Consulting Limited — Client Milestone Invoicing, FIRS 7.5% VAT & 5% WHT Ledger',
+      category: 'ACCOUNTS RECEIVABLE',
+      summaryMetrics: [
+        { label: 'Gross Invoiced', value: `₦${(totalBilledNgn / 1000000).toFixed(2)}M`, subtext: 'All Milestones' },
+        { label: 'Cash Collected', value: `₦${(totalPaidNgn / 1000000).toFixed(2)}M`, subtext: 'Bank Cleared' },
+        { label: 'Receivables Outstanding', value: `₦${(totalOutstandingNgn / 1000000).toFixed(2)}M`, subtext: 'Unpaid Invoices' },
+        { label: 'FIRS VAT Tracked', value: `₦${(totalVatTracked / 1000000).toFixed(2)}M`, subtext: '7.5% Output VAT' }
+      ],
+      columns: [
+        { header: 'Inv #', key: 'invoiceNumber', width: '90px' },
+        { header: 'Client', key: 'clientName' },
+        { header: 'Milestone Purpose', key: 'milestoneDescription' },
+        { header: 'Subtotal (₦)', key: 'subtotalNgn', align: 'right', format: (val) => `₦${Number(val).toLocaleString()}` },
+        { header: 'VAT (₦)', key: 'vatAmountNgn', align: 'right', format: (val) => `₦${Number(val).toLocaleString()}` },
+        { header: 'WHT (₦)', key: 'whtDeductionNgn', align: 'right', format: (val) => `₦${Number(val).toLocaleString()}` },
+        { header: 'Net (₦)', key: 'netPayableNgn', align: 'right', format: (val) => `₦${Number(val).toLocaleString()}` },
+        { header: 'Status', key: 'status' },
+        { header: 'Dr. K Clearance', key: 'confirmedWithDrK', format: (val) => val ? 'Confirmed' : 'Pending' }
+      ],
+      data: filteredInvoices,
+      signatories: [
+        { role: 'PREPARED BY (SOP)', name: 'Marvelous', title: 'Invoicing & Logistics Officer' },
+        { role: 'REVIEWED BY', name: 'Mrs. Erica Okonkwo', title: 'Chief Financial Officer (CFO)' },
+        { role: 'APPROVED BY', name: 'Dr. Kaine Edike', title: 'Managing Consultant (MD / FNEC)' }
+      ]
+    });
+    haptics.success();
+  };
 
   const handleCreateInvoice = (e: React.FormEvent) => {
     e.preventDefault();
@@ -509,6 +776,30 @@ export default function FinancePage() {
 
           {/* Budgets Table with Live SLA and Action Buttons */}
           <div className="rounded-3xl overflow-hidden bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
+            <div className="p-4 sm:p-5 border-b border-black/[0.04] dark:border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="font-semibold text-xs text-[#1D1D1F] dark:text-[#F5F5F7]">
+                  Departmental & Client Budget Ledger ({filteredBudgets.length} Requests)
+                </h3>
+                <p className="text-[11px] text-[#86868B] dark:text-[#A1A1A6] mt-0.5">Formal vetting, CFO endorsement & MD sign-off schedule</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleExportBudgetsPdf}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-black/[0.08] dark:border-white/[0.1] hover:bg-black/[0.03] dark:hover:bg-white/[0.05] text-[11px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] transition-all cursor-pointer active:scale-[0.97]"
+                >
+                  <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>PDF</span>
+                </button>
+                <button
+                  onClick={handleExportBudgetsXls}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-black/[0.08] dark:border-white/[0.1] hover:bg-black/[0.03] dark:hover:bg-white/[0.05] text-[11px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] transition-all cursor-pointer active:scale-[0.97]"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>XLS</span>
+                </button>
+              </div>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="bg-black/[0.02] dark:bg-white/[0.02] border-b border-black/[0.06] dark:border-white/[0.08] text-[#86868B] dark:text-[#A1A1A6] font-medium text-[11px]">
@@ -897,16 +1188,37 @@ export default function FinancePage() {
 
               <div className="pt-3 border-t border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between text-xs">
                 <span className="text-[#86868B] dark:text-[#A1A1A6] text-[11px]">Allocated by: <strong className="text-[#1D1D1F] dark:text-[#F5F5F7]">Dr. Kaine Edike</strong></span>
-                <button
-                  onClick={() => {
-                    setActiveCustodianForExpense('GIFT');
-                    setIsPettyExpenseOpen(true);
-                    haptics.selection();
-                  }}
-                  className="px-3 py-1.5 bg-[#1D1D1F] hover:bg-[#333336] dark:bg-white dark:hover:bg-[#E5E5E7] text-white dark:text-[#1D1D1F] rounded-xl text-xs font-medium shadow-xs active:scale-[0.97] transition-all"
-                >
-                  Log Voucher (Gift)
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setActiveCustodianForTopUp('GIFT');
+                      setIsTopUpOpen(true);
+                      haptics.selection();
+                    }}
+                    disabled={isMarvelous && !isSuperadmin && !isErica}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-xs active:scale-[0.97] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
+                  >
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                    <span>Top Up Fund</span>
+                  </button>
+
+                  {isMarvelous && !isSuperadmin && !isErica ? (
+                    <span className="text-[11px] text-[#86868B] dark:text-[#A1A1A6] italic flex items-center gap-1 px-2.5 py-1 bg-black/[0.03] dark:bg-white/[0.05] rounded-xl font-medium">
+                      <Lock className="w-3 h-3 text-[#86868B]" /> Restricted to Gift
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setActiveCustodianForExpense('GIFT');
+                        setIsPettyExpenseOpen(true);
+                        haptics.selection();
+                      }}
+                      className="px-3 py-1.5 bg-[#1D1D1F] hover:bg-[#333336] dark:bg-white dark:hover:bg-[#E5E5E7] text-white dark:text-[#1D1D1F] rounded-xl text-xs font-medium shadow-xs active:scale-[0.97] transition-all cursor-pointer"
+                    >
+                      Log Voucher (Gift)
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -952,16 +1264,37 @@ export default function FinancePage() {
 
               <div className="pt-3 border-t border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between text-xs">
                 <span className="text-[#86868B] dark:text-[#A1A1A6] text-[11px]">Allocated by: <strong className="text-[#1D1D1F] dark:text-[#F5F5F7]">Dr. Kaine Edike</strong></span>
-                <button
-                  onClick={() => {
-                    setActiveCustodianForExpense('MARVELOUS');
-                    setIsPettyExpenseOpen(true);
-                    haptics.selection();
-                  }}
-                  className="px-3 py-1.5 bg-[#1D1D1F] hover:bg-[#333336] dark:bg-white dark:hover:bg-[#E5E5E7] text-white dark:text-[#1D1D1F] rounded-xl text-xs font-medium shadow-xs active:scale-[0.97] transition-all"
-                >
-                  Log Voucher (Marvelous)
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setActiveCustodianForTopUp('MARVELOUS');
+                      setIsTopUpOpen(true);
+                      haptics.selection();
+                    }}
+                    disabled={isGift && !isSuperadmin && !isErica}
+                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-xs active:scale-[0.97] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
+                  >
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                    <span>Top Up Fund</span>
+                  </button>
+
+                  {isGift && !isSuperadmin && !isErica ? (
+                    <span className="text-[11px] text-rose-600 dark:text-rose-400 italic flex items-center gap-1 px-2.5 py-1 bg-rose-500/10 rounded-xl font-medium">
+                      <Lock className="w-3 h-3 text-rose-600 dark:text-rose-400" /> Restricted to Marvelous
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setActiveCustodianForExpense('MARVELOUS');
+                        setIsPettyExpenseOpen(true);
+                        haptics.selection();
+                      }}
+                      className="px-3 py-1.5 bg-[#1D1D1F] hover:bg-[#333336] dark:bg-white dark:hover:bg-[#E5E5E7] text-white dark:text-[#1D1D1F] rounded-xl text-xs font-medium shadow-xs active:scale-[0.97] transition-all cursor-pointer"
+                    >
+                      Log Voucher (Marvelous)
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -978,14 +1311,29 @@ export default function FinancePage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
+              <button
+                onClick={handleExportAnalysisPdf}
+                className="px-3 py-2 bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] dark:hover:bg-white/[0.1] text-[#1D1D1F] dark:text-white rounded-xl text-xs font-semibold shadow-xs active:scale-[0.97] transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>PDF</span>
+              </button>
+              <button
+                onClick={handleExportAnalysisXls}
+                className="px-3 py-2 bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] dark:hover:bg-white/[0.1] text-[#1D1D1F] dark:text-white rounded-xl text-xs font-semibold shadow-xs active:scale-[0.97] transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>XLS</span>
+              </button>
+
               <button
                 onClick={() => {
                   const currentMonth = new Date().toISOString().substring(0, 7);
                   generatePettyCashMonthlyAnalysis(currentMonth);
                   haptics.success();
                 }}
-                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-xs active:scale-[0.97] transition-all"
+                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-xs active:scale-[0.97] transition-all cursor-pointer"
               >
                 Compile Monthly Analysis
               </button>
@@ -1001,7 +1349,7 @@ export default function FinancePage() {
                       alert('Please compile monthly analysis first.');
                     }
                   }}
-                  className="px-3.5 py-2 bg-[#1D1D1F] hover:bg-[#333336] dark:bg-white dark:hover:bg-[#E5E5E7] text-white dark:text-[#1D1D1F] rounded-xl text-xs font-semibold shadow-xs active:scale-[0.97] transition-all flex items-center gap-1.5"
+                  className="px-3.5 py-2 bg-[#1D1D1F] hover:bg-[#333336] dark:bg-white dark:hover:bg-[#E5E5E7] text-white dark:text-[#1D1D1F] rounded-xl text-xs font-semibold shadow-xs active:scale-[0.97] transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <DollarSign className="w-3.5 h-3.5" />
                   <span>Approve ₦600k Replenishment</span>
@@ -1012,11 +1360,29 @@ export default function FinancePage() {
 
           {/* Imprest Transaction Vouchers Table */}
           <div className="rounded-3xl overflow-hidden bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
-            <div className="p-5 border-b border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between">
-              <h3 className="font-semibold text-xs text-[#1D1D1F] dark:text-[#F5F5F7]">
-                Imprest Expense Ledger ({pettyCashTransactions.length} Vouchers)
-              </h3>
-              <span className="text-[11px] text-[#86868B] dark:text-[#A1A1A6] font-medium tnum">Total Spent This Month: ₦{totalPettyCashSpent.toLocaleString()}</span>
+            <div className="p-5 border-b border-black/[0.04] dark:border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="font-semibold text-xs text-[#1D1D1F] dark:text-[#F5F5F7]">
+                  Imprest Expense Ledger ({pettyCashTransactions.length} Vouchers)
+                </h3>
+                <span className="text-[11px] text-[#86868B] dark:text-[#A1A1A6] font-medium tnum">Total Spent This Month: ₦{totalPettyCashSpent.toLocaleString()}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleExportPettyCashPdf}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-black/[0.08] dark:border-white/[0.1] hover:bg-black/[0.03] dark:hover:bg-white/[0.05] text-[11px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] transition-all cursor-pointer active:scale-[0.97]"
+                >
+                  <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>PDF</span>
+                </button>
+                <button
+                  onClick={handleExportPettyCashXls}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-black/[0.08] dark:border-white/[0.1] hover:bg-black/[0.03] dark:hover:bg-white/[0.05] text-[11px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] transition-all cursor-pointer active:scale-[0.97]"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>XLS</span>
+                </button>
+              </div>
             </div>
 
             <div className="overflow-x-auto">
@@ -1147,6 +1513,30 @@ export default function FinancePage() {
 
           {/* Invoices List Table */}
           <div className="rounded-3xl overflow-hidden bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
+            <div className="p-4 sm:p-5 border-b border-black/[0.04] dark:border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="font-semibold text-xs text-[#1D1D1F] dark:text-[#F5F5F7]">
+                  Accounts Receivable & Milestone Invoices ({filteredInvoices.length} Invoices)
+                </h3>
+                <p className="text-[11px] text-[#86868B] dark:text-[#A1A1A6] mt-0.5">Client milestone billing, 7.5% VAT and 5% WHT deductions ledger</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleExportInvoicesPdf}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-black/[0.08] dark:border-white/[0.1] hover:bg-black/[0.03] dark:hover:bg-white/[0.05] text-[11px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] transition-all cursor-pointer active:scale-[0.97]"
+                >
+                  <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>PDF</span>
+                </button>
+                <button
+                  onClick={handleExportInvoicesXls}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-black/[0.08] dark:border-white/[0.1] hover:bg-black/[0.03] dark:hover:bg-white/[0.05] text-[11px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] transition-all cursor-pointer active:scale-[0.97]"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>XLS</span>
+                </button>
+              </div>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="bg-black/[0.02] dark:bg-white/[0.02] border-b border-black/[0.06] dark:border-white/[0.08] text-[#86868B] dark:text-[#A1A1A6] font-medium text-[11px]">
@@ -1286,6 +1676,12 @@ export default function FinancePage() {
         isOpen={isPettyExpenseOpen}
         defaultCustodian={activeCustodianForExpense}
         onClose={() => setIsPettyExpenseOpen(false)}
+      />
+
+      <TopUpPettyCashModal
+        isOpen={isTopUpOpen}
+        defaultCustodian={activeCustodianForTopUp}
+        onClose={() => setIsTopUpOpen(false)}
       />
 
       {/* Record Payment Modal */}

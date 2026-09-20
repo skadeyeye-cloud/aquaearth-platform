@@ -13,7 +13,8 @@ import {
   Droplets,
   Wrench,
   FileSpreadsheet,
-  Flame
+  Flame,
+  Lock
 } from 'lucide-react';
 import { PettyCashCustodian, PettyCashCategory } from '@/lib/types';
 import { haptics } from '@/lib/haptics';
@@ -33,13 +34,32 @@ export function PettyCashExpenseModal({
 }: PettyCashExpenseModalProps) {
   const { currentUser, pettyCashFunds, logPettyCashExpense } = useAuth();
 
-  const [fundCustodian, setFundCustodian] = useState<PettyCashCustodian>(defaultCustodian);
+  const isGift = currentUser.id === 'usr-13' || currentUser.name.toLowerCase().includes('gift');
+  const isMarvelous = currentUser.id === 'usr-14' || currentUser.name.toLowerCase().includes('marvelous');
+
+  // Enforce initial custodian per logged in user
+  const effectiveDefault: PettyCashCustodian = isGift ? 'GIFT' : isMarvelous ? 'MARVELOUS' : defaultCustodian;
+
+  const [fundCustodian, setFundCustodian] = useState<PettyCashCustodian>(effectiveDefault);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [amountNgn, setAmountNgn] = useState<number>(15000);
   const [category, setCategory] = useState<PettyCashCategory>('WATER_PURCHASE');
   const [description, setDescription] = useState('');
   const [receiptUrl, setReceiptUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Sync effective custodian when modal opens or user context changes
+  React.useEffect(() => {
+    if (isGift) {
+      setFundCustodian('GIFT');
+    } else if (isMarvelous) {
+      setFundCustodian('MARVELOUS');
+    } else {
+      setFundCustodian(defaultCustodian);
+    }
+    setErrorMessage(null);
+  }, [isOpen, isGift, isMarvelous, defaultCustodian]);
 
   if (!isOpen) return null;
 
@@ -49,27 +69,44 @@ export function PettyCashExpenseModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
+
+    // Strict validation
+    if (isGift && fundCustodian === 'MARVELOUS') {
+      setErrorMessage('Access Denied: Gift is not authorized to log vouchers for Marvelous\'s imprest fund per SOP Section 4.');
+      return;
+    }
+    if (isMarvelous && fundCustodian === 'GIFT') {
+      setErrorMessage('Access Denied: Marvelous is not authorized to log vouchers for Gift\'s imprest fund per SOP Section 4.');
+      return;
+    }
+
     if (!description.trim() || amountNgn <= 0 || isOverdraft) return;
 
     setIsSubmitting(true);
     haptics.impact();
 
-    logPettyCashExpense({
-      fundCustodian,
-      date,
-      amountNgn: Number(amountNgn),
-      category,
-      description: description.trim(),
-      receiptUrl: receiptUrl.trim() || undefined,
-      approvedByName: currentUser.name
-    });
+    try {
+      logPettyCashExpense({
+        fundCustodian,
+        date,
+        amountNgn: Number(amountNgn),
+        category,
+        description: description.trim(),
+        receiptUrl: receiptUrl.trim() || undefined,
+        approvedByName: currentUser.name
+      });
 
-    haptics.success();
-    setIsSubmitting(false);
-    setDescription('');
-    setReceiptUrl('');
-    if (onSuccess) onSuccess();
-    onClose();
+      haptics.success();
+      setIsSubmitting(false);
+      setDescription('');
+      setReceiptUrl('');
+      if (onSuccess) onSuccess();
+      onClose();
+    } catch (err: any) {
+      setIsSubmitting(false);
+      setErrorMessage(err?.message || 'Failed to log expense voucher.');
+    }
   };
 
   return (
@@ -101,45 +138,91 @@ export function PettyCashExpenseModal({
             </button>
           </div>
 
+          {/* Error Banner */}
+          {errorMessage && (
+            <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border-b border-rose-200 dark:border-rose-900/50 flex items-start gap-2 text-rose-700 dark:text-rose-300 text-xs">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <div className="flex-1">{errorMessage}</div>
+            </div>
+          )}
+
           {/* Custodian Fund Selector */}
           <div className="p-3 bg-slate-100/70 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 shrink-0">
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => setFundCustodian('GIFT')}
+                disabled={isMarvelous}
+                onClick={() => {
+                  if (!isMarvelous) {
+                    setFundCustodian('GIFT');
+                    setErrorMessage(null);
+                  }
+                }}
                 className={`p-3 rounded-xl border text-left transition-all ${
+                  isMarvelous ? 'opacity-40 cursor-not-allowed border-slate-200 dark:border-slate-800' : ''
+                } ${
                   fundCustodian === 'GIFT'
                     ? 'border-emerald-500 bg-white dark:bg-slate-900 shadow-xs ring-2 ring-emerald-500/20'
                     : 'border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-900/60 hover:border-slate-300'
                 }`}
               >
                 <div className="text-[11px] font-bold text-slate-900 dark:text-white flex items-center justify-between">
-                  <span>Gift's Fund</span>
+                  <span className="flex items-center gap-1">
+                    Gift's Fund
+                    {isMarvelous && <Lock className="w-3 h-3 text-slate-400" />}
+                  </span>
                   <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">
                     ₦{(pettyCashFunds.find(f => f.custodian === 'GIFT')?.currentBalanceNgn || 0).toLocaleString()}
                   </span>
                 </div>
-                <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Collation & HQ Operations</div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  {isMarvelous ? 'Restricted to Gift' : 'Collation & HQ Operations'}
+                </div>
               </button>
 
               <button
                 type="button"
-                onClick={() => setFundCustodian('MARVELOUS')}
+                disabled={isGift}
+                onClick={() => {
+                  if (!isGift) {
+                    setFundCustodian('MARVELOUS');
+                    setErrorMessage(null);
+                  }
+                }}
                 className={`p-3 rounded-xl border text-left transition-all ${
+                  isGift ? 'opacity-40 cursor-not-allowed border-slate-200 dark:border-slate-800' : ''
+                } ${
                   fundCustodian === 'MARVELOUS'
                     ? 'border-emerald-500 bg-white dark:bg-slate-900 shadow-xs ring-2 ring-emerald-500/20'
                     : 'border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-900/60 hover:border-slate-300'
                 }`}
               >
                 <div className="text-[11px] font-bold text-slate-900 dark:text-white flex items-center justify-between">
-                  <span>Marvelous's Fund</span>
+                  <span className="flex items-center gap-1">
+                    Marvelous's Fund
+                    {isGift && <Lock className="w-3 h-3 text-rose-500" />}
+                  </span>
                   <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">
                     ₦{(pettyCashFunds.find(f => f.custodian === 'MARVELOUS')?.currentBalanceNgn || 0).toLocaleString()}
                   </span>
                 </div>
-                <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Invoicing & Field Logistics</div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  {isGift ? 'Restricted to Marvelous' : 'Invoicing & Field Logistics'}
+                </div>
               </button>
             </div>
+            {isGift && (
+              <div className="mt-2 flex items-center gap-1.5 text-[10px] font-medium text-amber-700 dark:text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-lg">
+                <Lock className="w-3 h-3 shrink-0" />
+                <span>Custodian Segregation: You are authenticated as Gift. Marvelous's fund is locked.</span>
+              </div>
+            )}
+            {isMarvelous && (
+              <div className="mt-2 flex items-center gap-1.5 text-[10px] font-medium text-amber-700 dark:text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-lg">
+                <Lock className="w-3 h-3 shrink-0" />
+                <span>Custodian Segregation: You are authenticated as Marvelous. Gift's fund is locked.</span>
+              </div>
+            )}
           </div>
 
           {/* Form */}

@@ -24,13 +24,16 @@ import {
   Users,
   Search,
   Filter,
-  Check
+  Check,
+  Download,
+  FileSpreadsheet
 } from 'lucide-react';
 import { OpportunityItem, OpportunityStage } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { haptics } from '@/lib/haptics';
 import { NewClientModal } from '@/components/bd/NewClientModal';
 import { LogBdActivityModal } from '@/components/bd/LogBdActivityModal';
+import { exportToXls, exportToPdf } from '@/lib/export-utils';
 
 const PIPELINE_STEPS: { id: OpportunityStage; label: string; stepNumber: number }[] = [
   { id: 'IDENTIFIED', label: 'Identified', stepNumber: 1 },
@@ -153,6 +156,64 @@ export default function BdPipelinePage() {
       opp.serviceLines.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesStage && matchesSearch;
   });
+
+  const handleExportPipelinePdf = () => {
+    exportToPdf({
+      filename: `AquaEarth_BD_Pipeline_${new Date().toISOString().split('T')[0]}`,
+      title: 'Commercial Tenders, Bids & Opportunity Pipeline',
+      subtitle: `AquaEarth Consulting Limited — Stage Filter: ${selectedStageFilter}`,
+      category: 'COMMERCIAL PIPELINE',
+      summaryMetrics: [
+        { label: 'Active Deals', value: String(filteredOpps.length) },
+        { label: 'Pipeline Gross Value', value: `₦${filteredOpps.reduce((a, b) => a + (b.estimatedValue || 0), 0).toLocaleString()}` },
+        { label: 'Won Contracts', value: String(filteredOpps.filter(o => o.stage === 'WON').length) }
+      ],
+      columns: [
+        { header: 'Opportunity / Bid Title', key: 'title' },
+        { header: 'Client', key: 'clientName' },
+        { header: 'Stage', key: 'stage', format: (val) => String(val).replace(/_/g, ' ') },
+        { header: 'Value', key: 'estimatedValue', align: 'right', format: (val, row) => `${row.currency === 'USD' ? '$' : '₦'}${Number(val).toLocaleString()}` },
+        { header: 'Deal Lead', key: 'bdOwnerName' },
+        { header: 'Submission Deadline', key: 'submissionDeadline' }
+      ],
+      data: filteredOpps,
+      signatories: [
+        { role: 'BD MANAGER', name: currentUser.name, title: `${currentUser.jobTitle || 'Commercial Lead'}` },
+        { role: 'HEAD OF STRATEGY', name: 'Engr. Chidi Okafor', title: 'Business Development Director' },
+        { role: 'MANAGING CONSULTANT', name: 'Dr. Kaine Edike', title: 'Managing Consultant (MD / FNEC)' }
+      ]
+    });
+    haptics.success();
+  };
+
+  const handleExportPipelineXls = () => {
+    exportToXls({
+      filename: `AquaEarth_BD_Pipeline_${new Date().toISOString().split('T')[0]}`,
+      title: 'COMMERCIAL OPPORTUNITY & TENDER PIPELINE',
+      subtitle: `Stage Filter: ${selectedStageFilter} | Extracted By: ${currentUser.name}`,
+      category: 'BD PIPELINE',
+      metadata: {
+        'Officer': currentUser.name,
+        'Stage Filter': selectedStageFilter,
+        'Deals Count': String(filteredOpps.length)
+      },
+      summaryMetrics: [
+        { label: 'Total Deals', value: filteredOpps.length },
+        { label: 'Total Value', value: `₦${filteredOpps.reduce((a, b) => a + (b.estimatedValue || 0), 0).toLocaleString()}` }
+      ],
+      columns: [
+        { header: 'Opportunity Title', key: 'title' },
+        { header: 'Client Name', key: 'clientName' },
+        { header: 'Stage', key: 'stage' },
+        { header: 'Currency', key: 'currency' },
+        { header: 'Estimated Value', key: 'estimatedValue', format: (v) => Number(v || 0).toLocaleString() },
+        { header: 'Deal Lead', key: 'bdOwnerName' },
+        { header: 'Submission Deadline', key: 'submissionDeadline' }
+      ],
+      data: filteredOpps
+    });
+    haptics.success();
+  };
 
   return (
     <div className="space-y-6">
@@ -278,16 +339,30 @@ export default function BdPipelinePage() {
 
       {/* Pipeline List View with Inline Interactive Status Bars */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
-        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
+        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-800/40">
           <div className="flex items-center gap-2">
             <Briefcase className="w-4 h-4 text-slate-500" />
             <h2 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
               Commercial Deal Pipeline List ({filteredOpps.length})
             </h2>
           </div>
-          <span className="text-[11px] text-slate-500 dark:text-slate-400">
-            Click on any milestone in a deal's status bar to advance or update its stage inline
-          </span>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleExportPipelinePdf}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 text-[11px] font-semibold text-slate-900 dark:text-white transition-all cursor-pointer active:scale-[0.97]"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>PDF</span>
+            </button>
+            <button
+              onClick={handleExportPipelineXls}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 text-[11px] font-semibold text-slate-900 dark:text-white transition-all cursor-pointer active:scale-[0.97]"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>XLS</span>
+            </button>
+          </div>
         </div>
 
         <div className="divide-y divide-slate-200 dark:divide-slate-800">
