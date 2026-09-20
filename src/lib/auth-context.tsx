@@ -48,7 +48,11 @@ import {
   BudgetDeclineOutcome,
   PettyCashCustodian,
   PettyCashCategory,
-  PettyCashTopUpRecord
+  PettyCashTopUpRecord,
+  ProjectType,
+  TaskDueDateChangeRequest,
+  ProjectPauseEvent,
+  KpiBonusAward
 } from './types';
 import { 
   INITIAL_USERS, 
@@ -58,6 +62,7 @@ import {
   INITIAL_LEAVE, 
   INITIAL_CERTIFICATIONS, 
   INITIAL_KPI_LEADERBOARD,
+  generateStarterTasks,
   INITIAL_AUDIT_LOGS,
   INITIAL_OPPORTUNITIES,
   INITIAL_CLIENTS,
@@ -255,6 +260,21 @@ interface AuthContextType {
   addClientCommunication: (clientId: string, log: { author: string; channel: string; summary: string; projectTag?: string }) => void;
   createProject: (project: Omit<ProjectRecord, 'id' | 'createdAt'>) => ProjectRecord;
   closeOutAndArchiveProject: (projectId: string) => void;
+  // Slate Labs V1.2 Project Milestone additions
+  taskDateChangeRequests: TaskDueDateChangeRequest[];
+  projectPauseEvents: ProjectPauseEvent[];
+  kpiBonusAwards: KpiBonusAward[];
+  confirmSuggestedTask: (taskId: string) => void;
+  confirmAllSuggestedTasks: (projectId: string) => void;
+  deleteSuggestedTask: (taskId: string) => void;
+  updateSuggestedTask: (taskId: string, updates: Partial<TaskItem>) => void;
+  requestDueDateChange: (taskId: string, newDate: string, reason: string) => void;
+  approveDueDateChange: (requestId: string) => void;
+  rejectDueDateChange: (requestId: string, reason?: string) => void;
+  pauseProject: (projectId: string, reason: string) => void;
+  resumeProject: (projectId: string) => void;
+  selectDecisionRoute: (projectId: string, route: 'ROUTE_1_PERA' | 'ROUTE_2_DETAILED_EIA') => void;
+  awardProjectBonus: (projectId: string, userId: string, points: number, note: string) => { success: boolean; message: string };
   createFieldRecord: (record: Omit<FieldRecordItem, 'id' | 'timestamp' | 'watermarkText'>) => void;
   uploadDocument: (doc: Omit<DocumentItem, 'id' | 'documentNumber' | 'uploadedAt'>) => void;
   submitForQa: (docId: string, peerReviewerId: string, qaLeadId: string) => void;
@@ -311,6 +331,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [pettyCashTransactions, setPettyCashTransactions] = useState<PettyCashTransaction[]>(INITIAL_PETTY_CASH_TRANSACTIONS);
   const [pettyCashTopUps, setPettyCashTopUps] = useState<PettyCashTopUpRecord[]>(INITIAL_PETTY_CASH_TOPUPS);
   const [pettyCashAnalyses, setPettyCashAnalyses] = useState<PettyCashAnalysis[]>(INITIAL_PETTY_CASH_ANALYSES);
+  
+  // Slate Labs V1.2 Project Milestone States
+  const [taskDateChangeRequests, setTaskDateChangeRequests] = useState<TaskDueDateChangeRequest[]>([]);
+  const [projectPauseEvents, setProjectPauseEvents] = useState<ProjectPauseEvent[]>([]);
+  const [kpiBonusAwards, setKpiBonusAwards] = useState<KpiBonusAward[]>([]);
+  
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   const isHydrated = useRef(false);
@@ -318,6 +344,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Safe Hydration from Persistent Storage with Defensive Data Repair
   useEffect(() => {
     try {
+      const storedDateChanges = getStoredData<TaskDueDateChangeRequest[]>('task_date_changes', []);
+      setTaskDateChangeRequests(storedDateChanges || []);
+
+      const storedPauseEvents = getStoredData<ProjectPauseEvent[]>('project_pause_events', []);
+      setProjectPauseEvents(storedPauseEvents || []);
+
+      const storedBonusAwards = getStoredData<KpiBonusAward[]>('kpi_bonus_awards', []);
+      setKpiBonusAwards(storedBonusAwards || []);
       const storedTasks = getStoredData<TaskItem[]>('tasks', INITIAL_TASKS);
       const sanitizedTasks = (storedTasks || []).map(t => ({
         ...t,
@@ -611,6 +645,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isHydrated.current) setStoredData('petty_cash_analyses', pettyCashAnalyses);
   }, [pettyCashAnalyses]);
+
+  useEffect(() => {
+    if (isHydrated.current) setStoredData('task_date_changes', taskDateChangeRequests);
+  }, [taskDateChangeRequests]);
+
+  useEffect(() => {
+    if (isHydrated.current) setStoredData('project_pause_events', projectPauseEvents);
+  }, [projectPauseEvents]);
+
+  useEffect(() => {
+    if (isHydrated.current) setStoredData('kpi_bonus_awards', kpiBonusAwards);
+  }, [kpiBonusAwards]);
 
   const toggleTheme = () => {
     setTheme(prev => {
@@ -1168,8 +1214,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
         // IMMUTABILITY DIRECTIVE: Once a task is marked as DONE, it cannot be undone, reopened, or modified
-        if (t.status === 'DONE') {
+        if (t.status === 'DONE' || t.status === 'COMPLETED') {
           return t;
+        }
+
+        // Hard Block check: Cannot complete or advance a gate-blocked task until cleared
+        if (t.isBlockedByGate && (isNowDone || newStatus === 'IN_PROGRESS')) {
+          console.warn('[AquaEarth] Task is blocked by prerequisite Approval Gate (ToR/SOW).');
+          return t;
+        }
+
+        // Slate Labs Core Rule 4: Only the Project Manager marks a task complete
+        const isSuperadmin = currentUser.accessTier === 'SUPERADMIN' || 
+                             currentUser.functionalRole === 'SUPERADMIN' || 
+                             currentUser.functionalRole === 'MANAGING_CONSULTANT' ||
+                             currentUser.id === 'usr-1';
+        const projectObj = t.projectId ? projects.find(p => p.id === t.projectId) : undefined;
+        const isProjectManager = isSuperadmin || 
+                                 (projectObj && (projectObj.leadPmId === currentUser.id || projectObj.projectManagerId === currentUser.id));
+
+        if (isNowDone && t.projectId && !isProjectManager) {
+          console.warn('[AquaEarth] Core Rule 4: Only the Project Manager marks a task complete.');
+          return t;
+        }
+
+        // Approval Gate unblock check
+        if (isNowDone && (t.taskType === 'APPROVAL_GATE' || t.title.toLowerCase().includes('tor approval') || t.title.toLowerCase().includes('sow / tor'))) {
+          setTimeout(() => {
+            setTasks(prevTasks => prevTasks.map(other => {
+              if (other.projectId === t.projectId && other.isBlockedByGate) {
+                return {
+                  ...other,
+                  isBlockedByGate: false
+                };
+              }
+              return other;
+            }));
+          }, 0);
         }
 
         const taskStatus = finalStatus || t.status;
@@ -1682,12 +1763,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const createProject = (projectData: Omit<ProjectRecord, 'id' | 'createdAt'>): ProjectRecord => {
+    const newProjId = `prj-${Date.now()}`;
     const newProj: ProjectRecord = {
       ...projectData,
-      id: `prj-${Date.now()}`,
+      id: newProjId,
+      status: projectData.status || 'ACTIVE',
+      isPaused: false,
+      totalPausedDays: 0,
       createdAt: new Date().toISOString().split('T')[0]
     };
     setProjects(prev => [newProj, ...prev]);
+
+    // If project has a projectType, generate starter tasks from the template as SUGGESTED (unconfirmed)
+    if (projectData.projectType) {
+      const pmId = newProj.leadPmId || newProj.projectManagerId || currentUser.id;
+      const pmUser = allUsers.find(u => u.id === pmId);
+      const pmName = pmUser?.name || newProj.leadPmName || currentUser.name;
+
+      const starterTasks = generateStarterTasks(
+        newProjId,
+        newProj.title,
+        projectData.projectType,
+        newProj.startDate,
+        pmId,
+        pmName
+      );
+
+      if (starterTasks.length > 0) {
+        setTasks(prev => [...starterTasks, ...prev]);
+      }
+    }
 
     const audit: AuditRecord = {
       id: `aud-${Date.now()}`,
@@ -1708,7 +1813,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (p.id === projectId) {
         return {
           ...p,
-          status: 'CLOSED_OUT',
+          status: 'CLOSED',
           vaultStorageTier: 'COLD_ARCHIVE',
           progressPercent: 100,
           health: 'ON_TRACK',
@@ -1716,6 +1821,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
       }
       return p;
+    }));
+
+    // Auto-close any ongoing tasks for this project
+    setTasks(prev => prev.map(t => {
+      if (t.projectId === projectId && t.isOngoing && t.status !== 'DONE' && t.status !== 'COMPLETED') {
+        return {
+          ...t,
+          status: 'COMPLETED',
+          completedAt: new Date().toISOString().split('T')[0]
+        };
+      }
+      return t;
     }));
 
     const proj = projects.find(p => p.id === projectId);
@@ -1726,10 +1843,382 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       action: 'PROJECT_ARCHIVED_TO_COLD_VAULT',
       targetType: 'AquaEarth Vault Storage',
       targetId: proj?.projectCode,
-      details: `Project "${proj?.title}" compressed and migrated from Active Vault to 50% Cold Archive tier.`,
+      details: `Project "${proj?.title}" marked Closed and migrated from Active Vault to 50% Cold Archive tier.`,
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
     };
     setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  // Slate Labs V1.2 Project Milestone Methods
+
+  const confirmSuggestedTask = (taskId: string) => {
+    setTasks(prev => prev.map(t => {
+      if (t.id === taskId) {
+        return {
+          ...t,
+          confirmed: true,
+          status: 'NOT_STARTED'
+        };
+      }
+      return t;
+    }));
+
+    const task = tasks.find(t => t.id === taskId);
+    if (task) {
+      const notif: NotificationItem = {
+        id: `notif-${Date.now()}`,
+        category: 'TASK',
+        title: 'New Milestone Task Released',
+        message: `Task "${task.title}" has been confirmed and scheduled on your project calendar.`,
+        priority: 'NORMAL',
+        isRead: false,
+        timestamp: 'Just now'
+      };
+      setNotifications(prev => [notif, ...prev]);
+    }
+  };
+
+  const confirmAllSuggestedTasks = (projectId: string) => {
+    setTasks(prev => prev.map(t => {
+      if (t.projectId === projectId && t.status === 'SUGGESTED') {
+        return {
+          ...t,
+          confirmed: true,
+          status: 'NOT_STARTED'
+        };
+      }
+      return t;
+    }));
+
+    const proj = projects.find(p => p.id === projectId);
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'STARTER_TASKS_CONFIRMED',
+      targetType: 'Project Record',
+      targetId: proj?.projectCode || projectId,
+      details: `Project Manager confirmed all starter template tasks for project "${proj?.title}".`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const deleteSuggestedTask = (taskId: string) => {
+    setTasks(prev => prev.filter(t => t.id !== taskId));
+  };
+
+  const updateSuggestedTask = (taskId: string, updates: Partial<TaskItem>) => {
+    setTasks(prev => prev.map(t => {
+      if (t.id === taskId) {
+        return {
+          ...t,
+          ...updates
+        };
+      }
+      return t;
+    }));
+  };
+
+  const requestDueDateChange = (taskId: string, newDate: string, reason: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const newReq: TaskDueDateChangeRequest = {
+      id: `dcr-${Date.now()}`,
+      taskId,
+      taskTitle: task.title,
+      projectId: task.projectId || '',
+      projectName: task.projectName,
+      oldDate: task.currentDueDate || task.dueDate,
+      newDate,
+      reason,
+      requestedById: currentUser.id,
+      requestedByName: currentUser.name,
+      status: 'PENDING',
+      createdAt: new Date().toISOString().split('T')[0]
+    };
+
+    setTaskDateChangeRequests(prev => [newReq, ...prev]);
+
+    // Send high priority notification to Admins / Managing Consultant
+    const adminNotif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      category: 'APPROVAL',
+      title: 'Due-Date Extension Request',
+      message: `${currentUser.name} requested extending deadline for "${task.title}" to ${newDate}. Reason: "${reason}"`,
+      priority: 'HIGH',
+      isRead: false,
+      timestamp: 'Just now'
+    };
+    setNotifications(prev => [adminNotif, ...prev]);
+  };
+
+  const approveDueDateChange = (requestId: string) => {
+    const req = taskDateChangeRequests.find(r => r.id === requestId);
+    if (!req) return;
+
+    setTaskDateChangeRequests(prev => prev.map(r => {
+      if (r.id === requestId) {
+        return {
+          ...r,
+          status: 'APPROVED',
+          approvedById: currentUser.id,
+          approvedByName: currentUser.name,
+          decidedAt: new Date().toISOString().split('T')[0]
+        };
+      }
+      return r;
+    }));
+
+    // Update the task's current due date
+    setTasks(prev => prev.map(t => {
+      if (t.id === req.taskId) {
+        return {
+          ...t,
+          currentDueDate: req.newDate,
+          dueDate: req.newDate
+        };
+      }
+      return t;
+    }));
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'DUE_DATE_CHANGE_APPROVED',
+      targetType: 'Task',
+      targetId: req.taskId,
+      details: `Approved due-date change for "${req.taskTitle}" from ${req.oldDate} to ${req.newDate}. Reason: "${req.reason}"`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const rejectDueDateChange = (requestId: string, reason?: string) => {
+    const req = taskDateChangeRequests.find(r => r.id === requestId);
+    if (!req) return;
+
+    setTaskDateChangeRequests(prev => prev.map(r => {
+      if (r.id === requestId) {
+        return {
+          ...r,
+          status: 'REJECTED',
+          rejectionReason: reason || 'Not aligned with delivery milestone',
+          approvedById: currentUser.id,
+          approvedByName: currentUser.name,
+          decidedAt: new Date().toISOString().split('T')[0]
+        };
+      }
+      return r;
+    }));
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'DUE_DATE_CHANGE_REJECTED',
+      targetType: 'Task',
+      targetId: req.taskId,
+      details: `Rejected due-date change for "${req.taskTitle}". Reason: "${reason || 'Declined by Admin'}"`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const pauseProject = (projectId: string, reason: string) => {
+    const nowStr = new Date().toISOString().split('T')[0];
+    setProjects(prev => prev.map(p => {
+      if (p.id === projectId) {
+        return {
+          ...p,
+          status: 'PAUSED',
+          isPaused: true,
+          pausedAt: nowStr,
+          pauseReason: reason
+        };
+      }
+      return p;
+    }));
+
+    const proj = projects.find(p => p.id === projectId);
+    const pauseEvent: ProjectPauseEvent = {
+      id: `pse-${Date.now()}`,
+      projectId,
+      projectName: proj?.title,
+      pausedAt: nowStr,
+      reason,
+      pausedById: currentUser.id,
+      pausedByName: currentUser.name
+    };
+    setProjectPauseEvents(prev => [pauseEvent, ...prev]);
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'PROJECT_PAUSED',
+      targetType: 'Project Record',
+      targetId: proj?.projectCode || projectId,
+      details: `Project "${proj?.title}" paused by ${currentUser.name}. Clocks frozen. Reason: "${reason}"`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const resumeProject = (projectId: string) => {
+    const now = new Date();
+    const proj = projects.find(p => p.id === projectId);
+    if (!proj) return;
+
+    const pausedDate = proj.pausedAt ? new Date(proj.pausedAt) : now;
+    const diffMs = Math.max(0, now.getTime() - pausedDate.getTime());
+    const pausedDays = Math.max(1, Math.round(diffMs / (1000 * 60 * 60 * 24)));
+
+    // Shift all remaining open tasks forward by pausedDays automatically
+    setTasks(prev => prev.map(t => {
+      if (t.projectId === projectId && t.status !== 'DONE' && t.status !== 'COMPLETED') {
+        const currentTarget = new Date(t.currentDueDate || t.dueDate);
+        const shiftedTarget = new Date(currentTarget.getTime() + pausedDays * 86400000);
+        const shiftedStr = shiftedTarget.toISOString().split('T')[0];
+        return {
+          ...t,
+          currentDueDate: shiftedStr,
+          dueDate: shiftedStr
+        };
+      }
+      return t;
+    }));
+
+    // Update project state
+    setProjects(prev => prev.map(p => {
+      if (p.id === projectId) {
+        return {
+          ...p,
+          status: 'ACTIVE',
+          isPaused: false,
+          pausedAt: undefined,
+          pauseReason: undefined,
+          totalPausedDays: (p.totalPausedDays || 0) + pausedDays
+        };
+      }
+      return p;
+    }));
+
+    // Update pause event record
+    setProjectPauseEvents(prev => prev.map(e => {
+      if (e.projectId === projectId && !e.resumedAt) {
+        return {
+          ...e,
+          resumedAt: now.toISOString().split('T')[0],
+          resumedById: currentUser.id,
+          resumedByName: currentUser.name,
+          durationDays: pausedDays
+        };
+      }
+      return e;
+    }));
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'PROJECT_RESUMED',
+      targetType: 'Project Record',
+      targetId: proj.projectCode,
+      details: `Project "${proj.title}" resumed. Remaining task schedules shifted forward automatically by ${pausedDays} days.`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const selectDecisionRoute = (projectId: string, route: 'ROUTE_1_PERA' | 'ROUTE_2_DETAILED_EIA') => {
+    setProjects(prev => prev.map(p => {
+      if (p.id === projectId) {
+        return {
+          ...p,
+          selectedRoute: route
+        };
+      }
+      return p;
+    }));
+
+    // Generate Route tasks if not already present
+    const proj = projects.find(p => p.id === projectId);
+    const existingRouteTasks = tasks.filter(t => t.projectId === projectId && t.route === route);
+    if (existingRouteTasks.length === 0 && proj) {
+      const pmId = proj.leadPmId || proj.projectManagerId || currentUser.id;
+      const pmName = proj.leadPmName || currentUser.name;
+      const starterTasks = generateStarterTasks(projectId, proj.title, 'PERA_EIA_ROUTE', new Date().toISOString().split('T')[0], pmId, pmName);
+      const filteredByRoute = starterTasks.filter(t => t.route === route);
+      setTasks(prev => [...filteredByRoute, ...prev]);
+    }
+  };
+
+  const awardProjectBonus = (projectId: string, userId: string, points: number, note: string): { success: boolean; message: string } => {
+    const cappedPoints = Math.min(10, Math.max(1, points));
+    const recipient = allUsers.find(u => u.id === userId);
+    const proj = projects.find(p => p.id === projectId);
+
+    if (!recipient) {
+      return { success: false, message: 'Recipient not found' };
+    }
+    if (!note || note.trim().length === 0) {
+      return { success: false, message: 'A justification note is required for manual bonus awards' };
+    }
+
+    const newBonus: KpiBonusAward = {
+      id: `bon-${Date.now()}`,
+      projectId,
+      projectName: proj?.title,
+      userId,
+      userName: recipient.name,
+      points: cappedPoints,
+      note,
+      awardedById: currentUser.id,
+      awardedByName: currentUser.name,
+      createdAt: new Date().toISOString().split('T')[0]
+    };
+
+    setKpiBonusAwards(prev => [newBonus, ...prev]);
+
+    // Update user's leaderboard score
+    setLeaderboard(prev => prev.map(entry => {
+      if (entry.userId === userId) {
+        return {
+          ...entry,
+          totalScore: entry.totalScore + cappedPoints
+        };
+      }
+      return entry;
+    }).sort((a, b) => b.totalScore - a.totalScore).map((item, idx) => ({ ...item, rankPosition: idx + 1 })));
+
+    // Send notification
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      category: 'KPI_ALERT',
+      title: '🌟 Project Performance Bonus Awarded!',
+      message: `${currentUser.name} awarded you +${cappedPoints} bonus points on ${proj?.title || 'project'}: "${note}"`,
+      priority: 'HIGH',
+      isRead: false,
+      timestamp: 'Just now'
+    };
+    setNotifications(prev => [notif, ...prev]);
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'KPI_BONUS_AWARDED',
+      targetType: 'KPI Scorecard',
+      targetId: userId,
+      details: `Awarded +${cappedPoints} bonus points to ${recipient.name} on project "${proj?.title}". Note: "${note}"`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+
+    return { success: true, message: `Successfully awarded +${cappedPoints} bonus points to ${recipient.name}` };
   };
 
   const createFieldRecord = (recordData: Omit<FieldRecordItem, 'id' | 'timestamp' | 'watermarkText'>) => {
@@ -3824,6 +4313,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       addClientCommunication,
       createProject,
       closeOutAndArchiveProject,
+      taskDateChangeRequests,
+      projectPauseEvents,
+      kpiBonusAwards,
+      confirmSuggestedTask,
+      confirmAllSuggestedTasks,
+      deleteSuggestedTask,
+      updateSuggestedTask,
+      requestDueDateChange,
+      approveDueDateChange,
+      rejectDueDateChange,
+      pauseProject,
+      resumeProject,
+      selectDecisionRoute,
+      awardProjectBonus,
       createFieldRecord,
       uploadDocument,
       submitForQa,

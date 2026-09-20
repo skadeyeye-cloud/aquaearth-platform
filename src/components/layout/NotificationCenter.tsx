@@ -153,6 +153,20 @@ const CATEGORY_THEMES: Record<NotificationCategory, {
     iconColor: 'text-purple-600 dark:text-purple-400',
     actionText: 'text-purple-700 dark:text-purple-400 hover:text-purple-800',
     icon: ShieldAlert
+  },
+  TASK: {
+    label: 'Milestone Task',
+    dotColor: 'bg-blue-500',
+    pillBg: 'bg-blue-500/10 dark:bg-blue-500/20',
+    pillText: 'text-blue-700 dark:text-blue-300',
+    pillBorder: 'border-blue-500/30',
+    cardBorderUnread: 'border-blue-500/40 dark:border-blue-400/40',
+    cardRingUnread: 'ring-1 ring-blue-500/20',
+    cardBgUnread: 'bg-blue-500/[0.03] dark:bg-blue-500/[0.05]',
+    iconBg: 'bg-blue-500/15 text-blue-600 dark:text-blue-400',
+    iconColor: 'text-blue-600 dark:text-blue-400',
+    actionText: 'text-blue-700 dark:text-blue-400 hover:text-blue-800',
+    icon: Layers
   }
 };
 

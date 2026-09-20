@@ -59,14 +59,71 @@ export interface TaskComment {
   timestamp: string;
 }
 
+export type ProjectTaskType = 'STANDARD' | 'REPORT' | 'APPROVAL_GATE' | 'DECISION_GATE' | 'ONGOING';
+export type TaskAssigneeRole = 'LEAD' | 'CONTRIBUTOR' | 'WRITER' | 'DESIGNER';
+
+export interface TaskAssignee {
+  userId: string;
+  userName: string;
+  role: TaskAssigneeRole;
+}
+
+export interface TaskDueDateChangeRequest {
+  id: string;
+  taskId: string;
+  taskTitle: string;
+  projectId: string;
+  projectName?: string;
+  oldDate: string;
+  newDate: string;
+  reason: string;
+  requestedById: string;
+  requestedByName: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  approvedById?: string;
+  approvedByName?: string;
+  decidedAt?: string;
+  rejectionReason?: string;
+  createdAt: string;
+}
+
+export interface ProjectPauseEvent {
+  id: string;
+  projectId: string;
+  projectName?: string;
+  pausedAt: string;
+  resumedAt?: string;
+  reason: string;
+  pausedById: string;
+  pausedByName: string;
+  resumedById?: string;
+  resumedByName?: string;
+  durationDays?: number;
+}
+
+export interface KpiBonusAward {
+  id: string;
+  projectId: string;
+  projectName?: string;
+  userId: string;
+  userName: string;
+  points: number; // Capped at 10
+  note: string;
+  awardedById: string;
+  awardedByName: string;
+  createdAt: string;
+}
+
 export interface TaskItem {
   id: string;
   title: string;
   description?: string;
   moduleOrigin: 'PROJECT' | 'FIELD' | 'IT' | 'DESIGN' | 'QA' | 'BD' | 'COMPLIANCE';
-  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'BLOCKED' | 'DONE';
+  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'BLOCKED' | 'DONE' | 'SUGGESTED' | 'COMPLETED' | 'OVERDUE';
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
   dueDate: string;
+  originalDueDate?: string;
+  currentDueDate?: string;
   completedAt?: string;
   blockedReason?: string;
   assigneeId: string;
@@ -98,6 +155,17 @@ export interface TaskItem {
     departmentPoints?: number;
   };
   comments?: TaskComment[];
+
+  // Slate Labs V1.2 Project Milestone Module Fields
+  confirmed?: boolean; // false for Suggested starter tasks, true for confirmed tasks
+  taskType?: ProjectTaskType;
+  stage?: string; // e.g. "01 Contracting / kick-off", "02 Preliminary / pre-mobilisation", etc.
+  gateBlocks?: string[]; // e.g. ["04 Data gathering"]
+  isBlockedByGate?: boolean;
+  taskAssignees?: TaskAssignee[];
+  isOngoing?: boolean; // For ongoing tasks with no due date (e.g. EBS Consultation)
+  route?: 'ROUTE_1_PERA' | 'ROUTE_2_DETAILED_EIA'; // For Template C branching
+  suggestedRole?: string;
 }
 
 export interface SupportTicket {
@@ -284,7 +352,30 @@ export interface ClientAccount {
 
 // Module 4: Project Management Types
 export type ProjectHealth = 'ON_TRACK' | 'AT_RISK' | 'DELAYED';
-export type ProjectStatus = 'MOBILIZATION' | 'ACTIVE' | 'IN_REVIEW' | 'COMPLETED' | 'CLOSED_OUT' | 'ON_HOLD';
+export type ProjectStatus = 'MOBILIZATION' | 'ACTIVE' | 'IN_REVIEW' | 'COMPLETED' | 'CLOSED_OUT' | 'ON_HOLD' | 'PAUSED' | 'CLOSED';
+export type ProjectType = 'EIA' | 'ESIA' | 'PIAR' | 'EBS' | 'PERA_EIA_ROUTE';
+
+export interface TemplateTaskDefinition {
+  title: string;
+  stage: string;
+  taskType: ProjectTaskType;
+  suggestedRole: TaskAssigneeRole;
+  dueOffsetDays: number;
+  gateBlocks?: string[];
+  isApprovalGate?: boolean;
+  isDecisionGate?: boolean;
+  isOngoing?: boolean;
+  route?: 'ROUTE_1_PERA' | 'ROUTE_2_DETAILED_EIA';
+}
+
+export interface ProjectTemplateDefinition {
+  id: string;
+  projectType: ProjectType;
+  version: string;
+  name: string;
+  description: string;
+  tasks: TemplateTaskDefinition[];
+}
 
 export interface ProjectMilestone {
   id: string;
@@ -327,6 +418,18 @@ export interface ProjectRecord {
   storageSizeGb: number;
   workstreams: ProjectWorkstream[];
   createdAt: string;
+
+  // Slate Labs V1.2 Project Milestone Extensions
+  projectType?: ProjectType;
+  projectManagerId?: string;
+  projectManagerName?: string;
+  teamMemberIds?: string[];
+  isPaused?: boolean;
+  pausedAt?: string;
+  pauseReason?: string;
+  totalPausedDays?: number;
+  templateId?: string;
+  selectedRoute?: 'ROUTE_1_PERA' | 'ROUTE_2_DETAILED_EIA';
 }
 
 // Module 5: Field Data Capture Types
@@ -534,7 +637,7 @@ export interface AccessRequestItem {
   createdAt: string;
 }
 
-export type NotificationCategory = 'APPROVAL' | 'DEADLINE' | 'QA_REVIEW' | 'COMPLIANCE' | 'KPI_ALERT' | 'SYSTEM' | 'FINANCE' | 'EXECUTIVE';
+export type NotificationCategory = 'APPROVAL' | 'DEADLINE' | 'QA_REVIEW' | 'COMPLIANCE' | 'KPI_ALERT' | 'SYSTEM' | 'FINANCE' | 'EXECUTIVE' | 'TASK';
 
 export interface NotificationItem {
   id: string;

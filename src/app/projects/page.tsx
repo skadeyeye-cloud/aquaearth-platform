@@ -17,15 +17,35 @@ import {
   UploadCloud, 
   Check, 
   X, 
-  Archive,
-  ChevronDown,
-  Lock,
-  Users,
-  CheckSquare,
-  Download,
-  FileSpreadsheet
+  Archive, 
+  ChevronDown, 
+  Lock, 
+  Unlock, 
+  Users, 
+  CheckSquare, 
+  Download, 
+  FileSpreadsheet, 
+  Pause, 
+  Play, 
+  Award, 
+  ShieldCheck, 
+  CheckCheck, 
+  Trash2, 
+  Edit3, 
+  GitBranch, 
+  CalendarClock, 
+  HelpCircle, 
+  Briefcase 
 } from 'lucide-react';
-import { ProjectRecord, ProjectHealth, ProjectStatus, TaskItem } from '@/lib/types';
+import { 
+  ProjectRecord, 
+  ProjectHealth, 
+  ProjectStatus, 
+  TaskItem, 
+  ProjectType, 
+  TaskAssigneeRole 
+} from '@/lib/types';
+import { PROJECT_TEMPLATES } from '@/lib/mock-data';
 import { motion, AnimatePresence } from 'framer-motion';
 import { haptics } from '@/lib/haptics';
 import { exportToXls, exportToPdf } from '@/lib/export-utils';
@@ -36,19 +56,36 @@ export default function ProjectsPage() {
     projects, 
     clients, 
     allUsers, 
-    tasks,
+    tasks, 
     createProject, 
-    createTaskForApproval,
-    closeOutAndArchiveProject 
+    createTaskForApproval, 
+    closeOutAndArchiveProject, 
+    confirmSuggestedTask, 
+    confirmAllSuggestedTasks, 
+    deleteSuggestedTask, 
+    updateSuggestedTask, 
+    requestDueDateChange, 
+    approveDueDateChange, 
+    rejectDueDateChange, 
+    pauseProject, 
+    resumeProject, 
+    selectDecisionRoute, 
+    awardProjectBonus, 
+    taskDateChangeRequests, 
+    projectPauseEvents, 
+    kpiBonusAwards, 
+    updateTaskProgress 
   } = useAuth();
 
   const [healthFilter, setHealthFilter] = useState<'ALL' | 'ON_TRACK' | 'AT_RISK' | 'DELAYED'>('ALL');
-  const [selectedProject, setSelectedProject] = useState<ProjectRecord | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+
+  const activeProject = selectedProjectId ? projects.find(p => p.id === selectedProjectId) || null : null;
 
   const isSuperadmin = currentUser.accessTier === 'SUPERADMIN' || 
                        currentUser.functionalRole === 'SUPERADMIN' || 
-                       currentUser.functionalRole === 'MANAGING_CONSULTANT' ||
-                       currentUser.id === 'usr-1' ||
+                       currentUser.functionalRole === 'MANAGING_CONSULTANT' || 
+                       currentUser.id === 'usr-1' || 
                        currentUser.name.toLowerCase().includes('kaine');
 
   const isProjectManager = isSuperadmin || 
@@ -62,6 +99,7 @@ export default function ProjectsPage() {
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
   const [newProjTitle, setNewProjTitle] = useState('');
   const [newProjCode, setNewProjCode] = useState(`PRJ-2026-${Math.floor(100 + Math.random() * 900)}`);
+  const [newProjType, setNewProjType] = useState<ProjectType | 'CUSTOM'>('EIA');
   const [newProjClientId, setNewProjClientId] = useState(clients[0]?.id || '');
   const [newProjValue, setNewProjValue] = useState(65000000);
   const [newProjCurrency, setNewProjCurrency] = useState<'NGN' | 'USD' | 'EUR' | 'GBP'>('NGN');
@@ -70,7 +108,7 @@ export default function ProjectsPage() {
   const [newProjLeadPmId, setNewProjLeadPmId] = useState(allUsers.find(u => u.managementTier === 'LINE_MANAGER')?.id || allUsers[0]?.id || '');
   const [newProjServiceLines, setNewProjServiceLines] = useState<string[]>(['Geotechnical Investigations', 'Environmental & Social (ESIA)']);
   
-  // Initial tasks within new project
+  // Custom manual tasks (used if newProjType === 'CUSTOM')
   const [initialTasks, setInitialTasks] = useState<Array<{ title: string; assigneeId: string; dueDate: string; priority: 'HIGH' | 'MEDIUM' | 'LOW' }>>([
     { title: 'Inception Report & Mobilization Plan', assigneeId: allUsers[0]?.id || '', dueDate: '2026-09-30', priority: 'HIGH' }
   ]);
@@ -82,6 +120,30 @@ export default function ProjectsPage() {
   const [drawerTaskDueDate, setDrawerTaskDueDate] = useState('2026-10-15');
   const [drawerTaskPriority, setDrawerTaskPriority] = useState<TaskItem['priority']>('MEDIUM');
   const [drawerTaskHours, setDrawerTaskHours] = useState(16);
+
+  // Pause Modal State
+  const [isPauseModalOpen, setIsPauseModalOpen] = useState(false);
+  const [pauseReasonInput, setPauseReasonInput] = useState('');
+
+  // Bonus Award Modal State (Rule 8)
+  const [isBonusModalOpen, setIsBonusModalOpen] = useState(false);
+  const [bonusRecipientId, setBonusRecipientId] = useState(allUsers[0]?.id || '');
+  const [bonusPoints, setBonusPoints] = useState(5);
+  const [bonusNote, setBonusNote] = useState('');
+
+  // Due Date Change Request Modal State
+  const [isDueDateModalOpen, setIsDueDateModalOpen] = useState(false);
+  const [dueDateTaskId, setDueDateTaskId] = useState('');
+  const [dueDateNewDate, setDueDateNewDate] = useState('');
+  const [dueDateReason, setDueDateReason] = useState('');
+
+  // Edit Suggested Task Modal State
+  const [editingSuggestedTask, setEditingSuggestedTask] = useState<TaskItem | null>(null);
+  const [editTaskTitle, setEditTaskTitle] = useState('');
+  const [editTaskAssigneeId, setEditTaskAssigneeId] = useState('');
+  const [editTaskDueDate, setEditTaskDueDate] = useState('');
+  const [editTaskPriority, setEditTaskPriority] = useState<TaskItem['priority']>('MEDIUM');
+  const [editTaskHours, setEditTaskHours] = useState(16);
 
   // AI Scope Parser State
   const [isAiParserOpen, setIsAiParserOpen] = useState(false);
@@ -131,6 +193,7 @@ export default function ProjectsPage() {
     createProject({
       projectCode: newCode,
       title: parsedTitle,
+      projectType: 'ESIA',
       clientId: 'cli-4',
       clientName: parsedClient,
       serviceLines: parsedServiceLines,
@@ -143,6 +206,8 @@ export default function ProjectsPage() {
       targetEndDate: '2026-12-31',
       leadPmId: 'usr-4',
       leadPmName: parsedLeadPm,
+      projectManagerId: 'usr-4',
+      projectManagerName: parsedLeadPm,
       progressPercent: 0,
       budgetSpent: 0,
       vaultStorageTier: 'ACTIVE_VAULT',
@@ -175,6 +240,8 @@ export default function ProjectsPage() {
     const projectCreated = createProject({
       projectCode: newProjCode.trim(),
       title: newProjTitle.trim(),
+      projectType: newProjType !== 'CUSTOM' ? newProjType : undefined,
+      templateId: newProjType !== 'CUSTOM' ? PROJECT_TEMPLATES[newProjType]?.id : undefined,
       clientId: newProjClientId,
       clientName: client?.name || 'Direct Client Account',
       serviceLines: newProjServiceLines.length > 0 ? newProjServiceLines : ['Integrated Consulting'],
@@ -182,11 +249,13 @@ export default function ProjectsPage() {
       currency: newProjCurrency,
       status: 'ACTIVE',
       health: 'ON_TRACK',
-      healthReason: 'Project newly initialized by leadership.',
+      healthReason: 'Project initialized with Slate Labs starter milestone framework.',
       startDate: newProjStartDate,
       targetEndDate: newProjEndDate,
       leadPmId: leadPm?.id || currentUser.id,
       leadPmName: leadPm?.name || currentUser.name,
+      projectManagerId: leadPm?.id || currentUser.id,
+      projectManagerName: leadPm?.name || currentUser.name,
       progressPercent: 0,
       budgetSpent: 0,
       vaultStorageTier: 'ACTIVE_VAULT',
@@ -203,23 +272,25 @@ export default function ProjectsPage() {
       }))
     });
 
-    // Create and assign initial tasks
-    initialTasks.forEach(task => {
-      if (task.title.trim()) {
-        const assignedUser = allUsers.find(u => u.id === task.assigneeId) || currentUser;
-        createTaskForApproval({
-          title: task.title.trim(),
-          description: `Deliverable milestone task for project ${newProjTitle.trim()}`,
-          moduleOrigin: 'PROJECT',
-          priority: task.priority,
-          dueDate: task.dueDate,
-          assigneeId: assignedUser.id,
-          projectId: projectCreated.id,
-          projectName: projectCreated.title,
-          estimatedHours: 20
-        });
-      }
-    });
+    // Create and assign initial manual tasks if custom type was selected
+    if (newProjType === 'CUSTOM') {
+      initialTasks.forEach(task => {
+        if (task.title.trim()) {
+          const assignedUser = allUsers.find(u => u.id === task.assigneeId) || currentUser;
+          createTaskForApproval({
+            title: task.title.trim(),
+            description: `Deliverable milestone task for project ${newProjTitle.trim()}`,
+            moduleOrigin: 'PROJECT',
+            priority: task.priority,
+            dueDate: task.dueDate,
+            assigneeId: assignedUser.id,
+            projectId: projectCreated.id,
+            projectName: projectCreated.title,
+            estimatedHours: 20
+          });
+        }
+      });
+    }
 
     setIsCreateProjectOpen(false);
     setNewProjTitle('');
@@ -229,19 +300,19 @@ export default function ProjectsPage() {
 
   const handleAddDrawerTask = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedProject || !drawerTaskTitle.trim()) return;
+    if (!activeProject || !drawerTaskTitle.trim()) return;
 
     const assignedUser = allUsers.find(u => u.id === drawerTaskAssigneeId) || currentUser;
 
     createTaskForApproval({
       title: drawerTaskTitle.trim(),
-      description: `Assigned task for project: ${selectedProject.title}`,
+      description: `Assigned task for project: ${activeProject.title}`,
       moduleOrigin: 'PROJECT',
       priority: drawerTaskPriority,
       dueDate: drawerTaskDueDate,
       assigneeId: assignedUser.id,
-      projectId: selectedProject.id,
-      projectName: selectedProject.title,
+      projectId: activeProject.id,
+      projectName: activeProject.title,
       estimatedHours: Number(drawerTaskHours)
     });
 
@@ -250,7 +321,98 @@ export default function ProjectsPage() {
     haptics.success();
   };
 
-  const projectTasks = selectedProject ? tasks.filter(t => t.projectId === selectedProject.id) : [];
+  // Check if current user is PM of active project
+  const isCurrentProjectPM = isSuperadmin || 
+                             (activeProject ? (activeProject.leadPmId === currentUser.id || activeProject.projectManagerId === currentUser.id) : false);
+
+  // Filter tasks for active project
+  const allProjectTasks = activeProject ? tasks.filter(t => t.projectId === activeProject.id) : [];
+  const suggestedTasks = allProjectTasks.filter(t => t.confirmed === false);
+  const activeTasks = allProjectTasks.filter(t => t.confirmed !== false);
+
+  // Pending date change requests for active project
+  const activeProjectDateRequests = activeProject ? taskDateChangeRequests.filter(r => r.projectId === activeProject.id) : [];
+
+  // KPI bonus awards for active project
+  const activeProjectBonuses = activeProject ? kpiBonusAwards.filter(b => b.projectId === activeProject.id) : [];
+
+  const handleOpenPauseModal = () => {
+    setPauseReasonInput('');
+    setIsPauseModalOpen(true);
+  };
+
+  const handleConfirmPause = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeProject || !pauseReasonInput.trim()) return;
+    pauseProject(activeProject.id, pauseReasonInput.trim());
+    setIsPauseModalOpen(false);
+    haptics.success();
+  };
+
+  const handleConfirmResume = () => {
+    if (!activeProject) return;
+    resumeProject(activeProject.id);
+    haptics.success();
+  };
+
+  const handleOpenBonusModal = () => {
+    setBonusRecipientId(allUsers[0]?.id || '');
+    setBonusPoints(5);
+    setBonusNote('');
+    setIsBonusModalOpen(true);
+  };
+
+  const handleConfirmBonus = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeProject || !bonusRecipientId || !bonusNote.trim()) return;
+    const res = awardProjectBonus(activeProject.id, bonusRecipientId, bonusPoints, bonusNote.trim());
+    if (res.success) {
+      setIsBonusModalOpen(false);
+      haptics.success();
+    } else {
+      alert(res.message);
+    }
+  };
+
+  const handleOpenDueDateModal = (task: TaskItem) => {
+    setDueDateTaskId(task.id);
+    setDueDateNewDate(task.dueDate);
+    setDueDateReason('');
+    setIsDueDateModalOpen(true);
+  };
+
+  const handleConfirmDueDateRequest = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dueDateTaskId || !dueDateNewDate || !dueDateReason.trim()) return;
+    requestDueDateChange(dueDateTaskId, dueDateNewDate, dueDateReason.trim());
+    setIsDueDateModalOpen(false);
+    haptics.success();
+  };
+
+  const handleOpenEditSuggested = (st: TaskItem) => {
+    setEditingSuggestedTask(st);
+    setEditTaskTitle(st.title);
+    setEditTaskAssigneeId(st.assigneeId || allUsers[0]?.id || '');
+    setEditTaskDueDate(st.dueDate);
+    setEditTaskPriority(st.priority);
+    setEditTaskHours(st.estimatedHours || 16);
+  };
+
+  const handleSaveEditSuggested = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingSuggestedTask) return;
+    const assignee = allUsers.find(u => u.id === editTaskAssigneeId);
+    updateSuggestedTask(editingSuggestedTask.id, {
+      title: editTaskTitle.trim(),
+      assigneeId: editTaskAssigneeId,
+      assigneeName: assignee?.name || editingSuggestedTask.assigneeName,
+      dueDate: editTaskDueDate,
+      priority: editTaskPriority,
+      estimatedHours: Number(editTaskHours)
+    });
+    setEditingSuggestedTask(null);
+    haptics.success();
+  };
 
   const handleExportProjectsPdf = () => {
     exportToPdf({
@@ -267,12 +429,12 @@ export default function ProjectsPage() {
       columns: [
         { header: 'Code', key: 'projectCode', width: '90px' },
         { header: 'Project Title', key: 'title' },
+        { header: 'Type', key: 'projectType' },
         { header: 'Client', key: 'clientName' },
-        { header: 'Lead Consultant', key: 'leadConsultantName' },
+        { header: 'Lead PM', key: 'leadPmName' },
         { header: 'Health', key: 'health', format: (val) => val === 'ON_TRACK' ? 'On Track' : val === 'AT_RISK' ? 'At Risk' : 'Delayed' },
         { header: 'Progress', key: 'progressPercent', align: 'center', format: (val) => `${val}%` },
-        { header: 'Status', key: 'status' },
-        { header: 'Due Date', key: 'dueDate' }
+        { header: 'Status', key: 'status' }
       ],
       data: filteredProjects,
       signatories: [
@@ -302,13 +464,14 @@ export default function ProjectsPage() {
       columns: [
         { header: 'Project Code', key: 'projectCode' },
         { header: 'Project Title', key: 'title' },
+        { header: 'Project Type', key: 'projectType' },
         { header: 'Client Name', key: 'clientName' },
-        { header: 'Lead Consultant', key: 'leadConsultantName' },
+        { header: 'Lead PM', key: 'leadPmName' },
         { header: 'Health', key: 'health' },
         { header: 'Progress (%)', key: 'progressPercent' },
         { header: 'Contract Value (₦)', key: 'contractValue', format: (v) => Number(v || 0).toLocaleString() },
         { header: 'Status', key: 'status' },
-        { header: 'Due Date', key: 'dueDate' }
+        { header: 'Due Date', key: 'targetEndDate' }
       ],
       data: filteredProjects
     });
@@ -320,9 +483,15 @@ export default function ProjectsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-[#1D1D1F] dark:text-[#F6F4F0] tracking-tight">
-            Projects & Milestones
+          <h1 className="text-2xl font-semibold text-[#1D1D1F] dark:text-[#F6F4F0] tracking-tight flex items-center gap-2.5">
+            <span>Projects & Milestones</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              Slate Labs V1.2 Framework
+            </span>
           </h1>
+          <p className="text-xs text-[#86868B] mt-0.5">
+            Manage multi-disciplinary engagements, starter milestone templates, approval gating, and PM performance bonuses.
+          </p>
         </div>
 
         {/* Action Buttons */}
@@ -366,11 +535,11 @@ export default function ProjectsPage() {
         </div>
 
         <div className="bg-white dark:bg-[#0C0C0D] border border-black/[0.06] dark:border-white/[0.08] rounded-2xl p-4 space-y-1 shadow-xs">
-          <div className="text-[10px] uppercase font-bold text-[#86868B]">🟡 At Risk</div>
+          <div className="text-[10px] uppercase font-bold text-[#86868B]">🟡 At Risk / Paused</div>
           <div className="text-xl font-semibold text-amber-600 dark:text-amber-400 font-mono tnum">
-            {projects.filter(p => p.health === 'AT_RISK').length}
+            {projects.filter(p => p.health === 'AT_RISK' || p.isPaused).length}
           </div>
-          <div className="text-[10px] text-[#86868B] font-medium">Weather / field buffer slip</div>
+          <div className="text-[10px] text-[#86868B] font-medium">Weather / field buffer slip or hold</div>
         </div>
 
         <div className="bg-white dark:bg-[#0C0C0D] border border-black/[0.06] dark:border-white/[0.08] rounded-2xl p-4 space-y-1 shadow-xs">
@@ -422,13 +591,15 @@ export default function ProjectsPage() {
       {/* Projects List */}
       <div className="space-y-3">
         {filteredProjects.map((p) => {
-          const isClosedOut = p.status === 'CLOSED_OUT';
-          const isArchived = p.vaultStorageTier === 'COLD_ARCHIVE';
+          const isPaused = p.isPaused || p.status === 'PAUSED';
+          const pType = p.projectType || 'EIA';
+          const projectTasksCount = tasks.filter(t => t.projectId === p.id && t.confirmed !== false).length;
+          const pendingSuggestedCount = tasks.filter(t => t.projectId === p.id && t.confirmed === false).length;
 
           return (
             <div
               key={p.id}
-              onClick={() => setSelectedProject(p)}
+              onClick={() => setSelectedProjectId(p.id)}
               className="bg-white dark:bg-[#0C0C0D] border border-black/[0.06] dark:border-white/[0.08] rounded-3xl p-5 hover:border-black/[0.12] dark:hover:border-white/[0.15] cursor-pointer transition-all shadow-xs group space-y-3"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -436,16 +607,30 @@ export default function ProjectsPage() {
                   <span className="font-mono text-[11px] font-semibold px-2 py-0.5 rounded-lg bg-black/[0.04] dark:bg-white/[0.06] text-[#86868B] tnum">
                     {p.projectCode}
                   </span>
+
+                  {/* Project Type Badge */}
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-500/20">
+                    {pType === 'PERA_EIA_ROUTE' ? 'PERA & EIA Route' : pType}
+                  </span>
+
                   <h3 className="font-semibold text-sm text-[#1D1D1F] dark:text-[#F6F4F0] group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
                     {p.title}
                   </h3>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    p.health === 'ON_TRACK' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
-                    p.health === 'AT_RISK' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' :
-                    'bg-rose-500/10 text-rose-600 dark:text-rose-400'
-                  }`}>
-                    {p.health.replace('_', ' ')}
-                  </span>
+
+                  {isPaused ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                      <Pause className="w-2.5 h-2.5" />
+                      PAUSED
+                    </span>
+                  ) : (
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      p.health === 'ON_TRACK' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+                      p.health === 'AT_RISK' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' :
+                      'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                    }`}>
+                      {p.health.replace('_', ' ')}
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-3 text-xs">
@@ -461,16 +646,22 @@ export default function ProjectsPage() {
 
               <div className="flex flex-wrap items-center gap-4 text-xs text-[#86868B] pt-2 border-t border-black/[0.04] dark:border-white/[0.06]">
                 <span>Client: <b className="text-[#1D1D1F] dark:text-[#F6F4F0]">{p.clientName}</b></span>
-                <span>Lead PM: <b className="text-[#1D1D1F] dark:text-[#F6F4F0]">{p.leadPmName}</b></span>
+                <span>Lead PM: <b className="text-[#1D1D1F] dark:text-[#F6F4F0]">{p.leadPmName || p.projectManagerName}</b></span>
                 <span>Timeline: <b className="text-[#1D1D1F] dark:text-[#F6F4F0]">{p.startDate} → {p.targetEndDate}</b></span>
-                <span>Workstreams: <b className="text-emerald-600 dark:text-emerald-400">{p.workstreams?.length || 0} active</b></span>
+                <span>Active Deliverables: <b className="text-emerald-600 dark:text-emerald-400">{projectTasksCount}</b></span>
+                {pendingSuggestedCount > 0 && isProjectManager && (
+                  <span className="text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1">
+                    <Layers className="w-3 h-3" />
+                    {pendingSuggestedCount} Suggested Staged
+                  </span>
+                )}
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Create Project Modal */}
+      {/* Create Project Modal with Starter Templates */}
       <AnimatePresence>
         {isCreateProjectOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -479,12 +670,56 @@ export default function ProjectsPage() {
               <div className="flex items-center justify-between border-b border-black/[0.05] dark:border-white/[0.08] pb-3">
                 <div>
                   <h3 className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F6F4F0]">Initialize New Commercial Project</h3>
-                  <p className="text-[11px] text-[#86868B]">Configure project scope, budget, timeline, and assign initial employee tasks.</p>
+                  <p className="text-[11px] text-[#86868B]">Select regulatory project type to load official Slate Labs starter milestone templates.</p>
                 </div>
                 <button onClick={() => setIsCreateProjectOpen(false)} className="text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white">&times;</button>
               </div>
 
               <form onSubmit={handleCreateCustomProject} className="space-y-4">
+                {/* Project Type & Starter Template Selector */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1.5">
+                    Regulatory Project Type & Starter Template *
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {[
+                      { type: 'EIA', label: 'EIA Study', desc: 'Template A: 6-step study process (24 tasks)' },
+                      { type: 'ESIA', label: 'ESIA Study', desc: 'Template A: Social & Environmental baseline (24 tasks)' },
+                      { type: 'PIAR', label: 'PIAR Study', desc: 'Template A: Post-Impact remediation focus (24 tasks)' },
+                      { type: 'EBS', label: 'EBS Baseline', desc: 'Template B: 6 Stages + Consultation (15 tasks)' },
+                      { type: 'PERA_EIA_ROUTE', label: 'PERA & EIA Route', desc: 'Template C: Screening + Decision Gate' },
+                      { type: 'CUSTOM', label: 'Custom Workspace', desc: 'Empty workspace with manual tasks' }
+                    ].map(tmpl => (
+                      <div
+                        key={tmpl.type}
+                        onClick={() => setNewProjType(tmpl.type as any)}
+                        className={`p-3 rounded-2xl border cursor-pointer transition-all ${
+                          newProjType === tmpl.type
+                            ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-500 ring-1 ring-emerald-500 text-emerald-950 dark:text-emerald-200'
+                            : 'bg-black/[0.02] dark:bg-white/[0.03] border-black/[0.06] dark:border-white/[0.08] hover:border-black/[0.15] text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        <div className="font-bold text-xs flex items-center justify-between">
+                          <span>{tmpl.label}</span>
+                          {newProjType === tmpl.type && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
+                        </div>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">
+                          {tmpl.desc}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {newProjType !== 'CUSTOM' && (
+                    <div className="mt-2 p-2.5 bg-indigo-50/80 dark:bg-indigo-950/20 rounded-xl border border-indigo-200/60 dark:border-indigo-800/40 text-[10px] text-indigo-900 dark:text-indigo-300 flex items-center gap-2">
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                      <span>
+                        Starter tasks will be initialized in <b>SUGGESTED</b> staging mode (hidden from team) for PM review. Includes SOW/ToR Approval Gate, Field Blocking, and IT & Design Final Report task.
+                      </span>
+                    </div>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-3 gap-3">
                   <div className="col-span-2">
                     <label className="block text-[11px] font-medium text-[#86868B] mb-1">Project Title *</label>
@@ -589,84 +824,88 @@ export default function ProjectsPage() {
                   </div>
                 </div>
 
-                {/* Initial Project Tasks Builder */}
-                <div className="p-4 bg-black/[0.02] dark:bg-white/[0.03] rounded-2xl border border-black/[0.04] dark:border-white/[0.06] space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-semibold text-xs text-[#1D1D1F] dark:text-[#F6F4F0]">Initial Project Tasks & Employee Assignments</h4>
-                      <p className="text-[10px] text-[#86868B]">These tasks will be immediately scheduled, pre-approved, and assigned to team members.</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setInitialTasks(prev => [...prev, { title: '', assigneeId: allUsers[0]?.id || '', dueDate: newProjEndDate, priority: 'MEDIUM' }])}
-                      className="px-2.5 py-1 bg-black/[0.05] dark:bg-white/[0.1] hover:bg-black/[0.1] text-[#1D1D1F] dark:text-[#F6F4F0] rounded-lg text-[11px] font-semibold"
-                    >
-                      + Add Another Task
-                    </button>
-                  </div>
-
-                  <div className="space-y-2">
-                    {initialTasks.map((t, idx) => (
-                      <div key={idx} className="grid grid-cols-12 gap-2 items-center bg-white dark:bg-[#0C0C0D] p-2.5 rounded-xl border border-black/[0.06] dark:border-white/[0.08]">
-                        <div className="col-span-5">
-                          <input
-                            type="text"
-                            placeholder="Deliverable task name..."
-                            value={t.title}
-                            onChange={(e) => {
-                              const updated = [...initialTasks];
-                              updated[idx].title = e.target.value;
-                              setInitialTasks(updated);
-                            }}
-                            className="w-full p-1.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.08] rounded-lg text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
-                          />
-                        </div>
-                        <div className="col-span-4">
-                          <select
-                            value={t.assigneeId}
-                            onChange={(e) => {
-                              const updated = [...initialTasks];
-                              updated[idx].assigneeId = e.target.value;
-                              setInitialTasks(updated);
-                            }}
-                            className="w-full p-1.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.08] rounded-lg text-[11px] text-[#1D1D1F] dark:text-[#F6F4F0]"
-                          >
-                            {allUsers.map(u => (
-                              <option key={u.id} value={u.id}>{u.name} ({u.departmentName})</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="col-span-2">
-                          <input
-                            type="date"
-                            value={t.dueDate}
-                            onChange={(e) => {
-                              const updated = [...initialTasks];
-                              updated[idx].dueDate = e.target.value;
-                              setInitialTasks(updated);
-                            }}
-                            className="w-full p-1.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.08] rounded-lg text-[11px] text-[#1D1D1F] dark:text-[#F6F4F0]"
-                          />
-                        </div>
-                        <div className="col-span-1 text-right">
-                          {initialTasks.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => setInitialTasks(initialTasks.filter((_, i) => i !== idx))}
-                              className="text-rose-500 hover:text-rose-700"
-                            >
-                              &times;
-                            </button>
-                          )}
-                        </div>
+                {/* Initial Tasks Builder for Custom Type */}
+                {newProjType === 'CUSTOM' && (
+                  <div className="p-4 bg-black/[0.02] dark:bg-white/[0.03] rounded-2xl border border-black/[0.04] dark:border-white/[0.06] space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-semibold text-xs text-[#1D1D1F] dark:text-[#F6F4F0]">Custom Manual Tasks</h4>
+                        <p className="text-[10px] text-[#86868B]">Manually configure initial tasks for this project.</p>
                       </div>
-                    ))}
+                      <button
+                        type="button"
+                        onClick={() => setInitialTasks(prev => [...prev, { title: '', assigneeId: allUsers[0]?.id || '', dueDate: newProjEndDate, priority: 'MEDIUM' }])}
+                        className="px-2.5 py-1 bg-black/[0.05] dark:bg-white/[0.1] hover:bg-black/[0.1] text-[#1D1D1F] dark:text-[#F6F4F0] rounded-lg text-[11px] font-semibold"
+                      >
+                        + Add Task
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {initialTasks.map((t, idx) => (
+                        <div key={idx} className="grid grid-cols-12 gap-2 items-center bg-white dark:bg-[#0C0C0D] p-2.5 rounded-xl border border-black/[0.06] dark:border-white/[0.08]">
+                          <div className="col-span-5">
+                            <input
+                              type="text"
+                              placeholder="Deliverable task name..."
+                              value={t.title}
+                              onChange={(e) => {
+                                const updated = [...initialTasks];
+                                updated[idx].title = e.target.value;
+                                setInitialTasks(updated);
+                              }}
+                              className="w-full p-1.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.08] rounded-lg text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
+                            />
+                          </div>
+                          <div className="col-span-4">
+                            <select
+                              value={t.assigneeId}
+                              onChange={(e) => {
+                                const updated = [...initialTasks];
+                                updated[idx].assigneeId = e.target.value;
+                                setInitialTasks(updated);
+                              }}
+                              className="w-full p-1.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.08] rounded-lg text-[11px] text-[#1D1D1F] dark:text-[#F6F4F0]"
+                            >
+                              {allUsers.map(u => (
+                                <option key={u.id} value={u.id}>{u.name} ({u.departmentName})</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="col-span-2">
+                            <input
+                              type="date"
+                              value={t.dueDate}
+                              onChange={(e) => {
+                                const updated = [...initialTasks];
+                                updated[idx].dueDate = e.target.value;
+                                setInitialTasks(updated);
+                              }}
+                              className="w-full p-1.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.08] rounded-lg text-[11px] text-[#1D1D1F] dark:text-[#F6F4F0]"
+                            />
+                          </div>
+                          <div className="col-span-1 text-right">
+                            {initialTasks.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => setInitialTasks(initialTasks.filter((_, i) => i !== idx))}
+                                className="text-rose-500 hover:text-rose-700"
+                              >
+                                &times;
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="flex justify-end gap-2 pt-3 border-t border-black/[0.05] dark:border-white/[0.08]">
                   <button type="button" onClick={() => setIsCreateProjectOpen(false)} className="px-3.5 py-1.5 text-[#86868B] font-medium">Cancel</button>
-                  <button type="submit" className="px-4 py-1.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-semibold shadow-xs active:scale-[0.96]">Launch Project & Assign Tasks</button>
+                  <button type="submit" className="px-4 py-1.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-semibold shadow-xs active:scale-[0.96]">
+                    Launch Project & Stage Template Tasks
+                  </button>
                 </div>
               </form>
             </motion.div>
@@ -676,93 +915,467 @@ export default function ProjectsPage() {
 
       {/* Project Detail Drawer */}
       <AnimatePresence>
-        {selectedProject && (
+        {activeProject && (
           <div className="fixed inset-0 z-50 flex items-center justify-end">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedProject(null)} className="fixed inset-0 bg-black/40 backdrop-blur-xs" />
-            <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }} className="relative w-full max-w-xl h-full bg-white dark:bg-[#0C0C0D] border-l border-black/[0.08] dark:border-white/[0.1] p-6 space-y-6 overflow-y-auto shadow-2xl z-10">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedProjectId(null)} className="fixed inset-0 bg-black/40 backdrop-blur-xs" />
+            <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }} className="relative w-full max-w-2xl h-full bg-white dark:bg-[#0C0C0D] border-l border-black/[0.08] dark:border-white/[0.1] p-6 space-y-6 overflow-y-auto shadow-2xl z-10">
+              {/* Drawer Top Header */}
               <div className="flex items-start justify-between">
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-[#86868B]">{selectedProject.projectCode} • Portfolio Record</span>
-                  <h2 className="text-xl font-semibold text-[#1D1D1F] dark:text-[#F6F4F0]">{selectedProject.title}</h2>
-                  <p className="text-xs text-[#86868B]">{selectedProject.clientName}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] uppercase font-bold text-[#86868B]">{activeProject.projectCode} • Portfolio Record</span>
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">
+                      {activeProject.projectType || 'EIA'}
+                    </span>
+                    {activeProject.isPaused && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                        <Pause className="w-2.5 h-2.5" /> PAUSED
+                      </span>
+                    )}
+                  </div>
+                  <h2 className="text-xl font-semibold text-[#1D1D1F] dark:text-[#F6F4F0] mt-1">{activeProject.title}</h2>
+                  <p className="text-xs text-[#86868B]">{activeProject.clientName}</p>
                 </div>
-                <button onClick={() => setSelectedProject(null)} className="p-1 text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white">
+                <button onClick={() => setSelectedProjectId(null)} className="p-1 text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white">
                   <X className="w-5 h-5" />
                 </button>
               </div>
+
+              {/* PM Actions Command Bar */}
+              {isCurrentProjectPM && (
+                <div className="p-3 bg-slate-50 dark:bg-white/[0.02] border border-black/[0.05] dark:border-white/[0.08] rounded-2xl flex items-center gap-2 flex-wrap">
+                  {activeProject.isPaused ? (
+                    <button
+                      onClick={handleConfirmResume}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs active:scale-[0.96]"
+                    >
+                      <Play className="w-3.5 h-3.5" />
+                      <span>Resume Project</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleOpenPauseModal}
+                      className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs active:scale-[0.96]"
+                    >
+                      <Pause className="w-3.5 h-3.5" />
+                      <span>Pause Project</span>
+                    </button>
+                  )}
+
+                  <button
+                    onClick={handleOpenBonusModal}
+                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs active:scale-[0.96]"
+                  >
+                    <Award className="w-3.5 h-3.5" />
+                    <span>Award Bonus (+KPI)</span>
+                  </button>
+
+                  <button
+                    onClick={() => setIsAddDrawerTaskOpen(true)}
+                    className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs active:scale-[0.96] ml-auto"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Task</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Paused Status Banner */}
+              {activeProject.isPaused && (
+                <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5 text-xs">
+                      <Pause className="w-4 h-4" />
+                      PROJECT CURRENTLY PAUSED (SLA CLOCK FROZEN)
+                    </span>
+                    {activeProject.pausedAt && (
+                      <span className="text-[10px] font-mono text-amber-700 dark:text-amber-400">
+                        Since: {activeProject.pausedAt}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">
+                    Overdue penalties and KPI timers are currently frozen. Reason: <b>{activeProject.pauseReason || 'Operational hold requested by PM.'}</b>
+                    {activeProject.totalPausedDays ? ` • Total accumulated pause duration: ${activeProject.totalPausedDays} days.` : ''}
+                  </p>
+                  <p className="text-[10px] text-amber-700/80 dark:text-amber-400/80">
+                    Resuming will automatically advance remaining task deadlines forward by elapsed pause days.
+                  </p>
+                </div>
+              )}
+
+              {/* PERA Regulatory Decision Gate Route Selector */}
+              {activeProject.projectType === 'PERA_EIA_ROUTE' && (
+                <div className="p-4 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800/40 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <GitBranch className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                      <h4 className="font-bold text-xs text-indigo-950 dark:text-indigo-200 uppercase tracking-wider">
+                        PERA Decision Gate
+                      </h4>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 font-bold">
+                      {activeProject.selectedRoute ? activeProject.selectedRoute.replace(/_/g, ' ') : 'DECISION PENDING'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-indigo-900/80 dark:text-indigo-300/80 leading-relaxed">
+                    Preliminary Environmental Risk Assessment screening determines whether the activity qualifies for immediate PERA Approval (Route 1) or requires a detailed multi-disciplinary EIA (Route 2).
+                  </p>
+                  {isCurrentProjectPM && (
+                    <div className="flex items-center gap-2 pt-1 flex-wrap">
+                      <button
+                        onClick={() => { selectDecisionRoute(activeProject.id, 'ROUTE_1_PERA'); haptics.success(); }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                          activeProject.selectedRoute === 'ROUTE_1_PERA'
+                            ? 'bg-indigo-600 text-white shadow-xs'
+                            : 'bg-white dark:bg-[#1C1C1E] border border-black/[0.08] dark:border-white/[0.1] text-slate-700 dark:text-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        Route 1: Low Risk → Apply for PERA Approval
+                      </button>
+                      <button
+                        onClick={() => { selectDecisionRoute(activeProject.id, 'ROUTE_2_DETAILED_EIA'); haptics.success(); }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                          activeProject.selectedRoute === 'ROUTE_2_DETAILED_EIA'
+                            ? 'bg-indigo-600 text-white shadow-xs'
+                            : 'bg-white dark:bg-[#1C1C1E] border border-black/[0.08] dark:border-white/[0.1] text-slate-700 dark:text-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        Route 2: High Risk → Detailed EIA (6 Steps)
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Project Meta Metrics */}
               <div className="grid grid-cols-3 gap-3 p-3.5 bg-black/[0.02] dark:bg-white/[0.03] rounded-2xl border border-black/[0.04] dark:border-white/[0.06] text-xs">
                 <div>
                   <div className="text-[10px] text-[#86868B]">Contract Value</div>
                   <div className="font-mono font-semibold text-[#1D1D1F] dark:text-[#F6F4F0] tnum">
-                    ₦{(selectedProject.contractValue / 1000000).toFixed(1)}M
+                    ₦{(activeProject.contractValue / 1000000).toFixed(1)}M
                   </div>
                 </div>
                 <div>
                   <div className="text-[10px] text-[#86868B]">Lead PM</div>
-                  <div className="font-medium text-[#1D1D1F] dark:text-[#F6F4F0] truncate">{selectedProject.leadPmName}</div>
+                  <div className="font-medium text-[#1D1D1F] dark:text-[#F6F4F0] truncate">{activeProject.leadPmName || activeProject.projectManagerName}</div>
                 </div>
                 <div>
                   <div className="text-[10px] text-[#86868B]">Progress</div>
-                  <div className="font-mono font-semibold text-emerald-600 dark:text-emerald-400 tnum">{selectedProject.progressPercent}%</div>
+                  <div className="font-mono font-semibold text-emerald-600 dark:text-emerald-400 tnum">{activeProject.progressPercent}%</div>
                 </div>
               </div>
 
-              {/* Tasks in this Project Section */}
+              {/* Suggested Tasks Staging Dock (Visible to PM & Superadmin) */}
+              {isCurrentProjectPM && suggestedTasks.length > 0 && (
+                <div className="p-4 bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/20 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <Layers className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                        <h4 className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider">
+                          Suggested Tasks Staging Dock ({suggestedTasks.length})
+                        </h4>
+                      </div>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        Hidden from team members until confirmed. Review, modify assignees, or activate.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => { confirmAllSuggestedTasks(activeProject.id); haptics.success(); }}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs active:scale-[0.96] flex items-center gap-1"
+                    >
+                      <CheckCheck className="w-3.5 h-3.5" />
+                      <span>Confirm All ({suggestedTasks.length})</span>
+                    </button>
+                  </div>
+
+                  <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                    {suggestedTasks.map(st => (
+                      <div key={st.id} className="p-3 bg-white dark:bg-[#121216] rounded-xl border border-black/[0.06] dark:border-white/[0.08] space-y-2 text-xs">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {st.stage && (
+                                <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 bg-black/[0.05] dark:bg-white/10 text-slate-600 dark:text-slate-300 rounded">
+                                  {st.stage}
+                                </span>
+                              )}
+                              {st.taskType === 'APPROVAL_GATE' && (
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/30 rounded flex items-center gap-0.5">
+                                  <Lock className="w-2.5 h-2.5" /> SOW/ToR Gate
+                                </span>
+                              )}
+                              {st.taskType === 'REPORT' && (
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 bg-purple-500/20 text-purple-800 dark:text-purple-300 border border-purple-500/30 rounded flex items-center gap-0.5">
+                                  <FileText className="w-2.5 h-2.5" /> Final Report (Multi-Role)
+                                </span>
+                              )}
+                              {st.taskType === 'DECISION_GATE' && (
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 bg-indigo-500/20 text-indigo-800 dark:text-indigo-300 border border-indigo-500/30 rounded flex items-center gap-0.5">
+                                  <GitBranch className="w-2.5 h-2.5" /> PERA Gate
+                                </span>
+                              )}
+                              {st.isBlockedByGate && (
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20 rounded flex items-center gap-0.5">
+                                  <Lock className="w-2.5 h-2.5" /> Field Blocked
+                                </span>
+                              )}
+                            </div>
+                            <div className="font-semibold text-slate-900 dark:text-white">{st.title}</div>
+                            <div className="text-[10px] text-slate-400 flex items-center gap-2 flex-wrap">
+                              <span>Due: <b className="font-mono tnum text-slate-700 dark:text-slate-300">{st.dueDate}</b></span>
+                              <span>•</span>
+                              <span>Est: <b className="font-mono tnum text-slate-700 dark:text-slate-300">{st.estimatedHours || 16}h</b></span>
+                              <span>•</span>
+                              <span>Assignee: <b className="text-slate-700 dark:text-slate-300">{st.assigneeName || 'Unassigned'}</b></span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              onClick={() => handleOpenEditSuggested(st)}
+                              className="p-1.5 text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-black/[0.04] rounded-lg cursor-pointer"
+                              title="Edit Suggested Task"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => { deleteSuggestedTask(st.id); haptics.selection(); }}
+                              className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg cursor-pointer"
+                              title="Delete Task"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => { confirmSuggestedTask(st.id); haptics.success(); }}
+                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold shadow-xs flex items-center gap-0.5 cursor-pointer"
+                            >
+                              <Check className="w-3 h-3" />
+                              <span>Confirm</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Active Tasks Section */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <CheckSquare className="w-4 h-4 text-emerald-500" />
                     <h3 className="text-xs font-semibold text-[#1D1D1F] dark:text-[#F6F4F0] uppercase tracking-wider">
-                      Tasks Assigned to Team ({projectTasks.length})
+                      Active Deliverables & Milestones ({activeTasks.length})
                     </h3>
                   </div>
-                  {isProjectManager && (
-                    <button
-                      onClick={() => setIsAddDrawerTaskOpen(true)}
-                      className="px-2.5 py-1 bg-slate-900 text-white dark:bg-white dark:text-slate-900 rounded-lg text-[11px] font-semibold"
-                    >
-                      + Add Task
-                    </button>
-                  )}
                 </div>
 
                 <div className="space-y-2">
-                  {projectTasks.length === 0 ? (
-                    <div className="p-4 text-center text-xs text-[#86868B] bg-black/[0.02] dark:bg-white/[0.02] rounded-2xl">
-                      No tasks assigned yet. Click "+ Add Task" to allocate tasks to staff.
+                  {activeTasks.length === 0 ? (
+                    <div className="p-6 text-center text-xs text-[#86868B] bg-black/[0.02] dark:bg-white/[0.02] rounded-2xl">
+                      {suggestedTasks.length > 0 ? (
+                        <span>Review and confirm staged tasks above to activate them for team execution.</span>
+                      ) : (
+                        <span>No active tasks yet. Click "+ Add Task" to allocate deliverables to staff.</span>
+                      )}
                     </div>
                   ) : (
-                    projectTasks.map(t => (
-                      <div key={t.id} className="p-3 bg-black/[0.02] dark:bg-white/[0.03] rounded-2xl border border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between gap-3 text-xs">
-                        <div className="min-w-0 flex-1">
-                          <div className="font-semibold text-[#1D1D1F] dark:text-[#F6F4F0] truncate">{t.title}</div>
-                          <div className="text-[10px] text-[#86868B] flex items-center gap-2">
-                            <span>Assigned to: <b className="text-[#1D1D1F] dark:text-[#F6F4F0]">{t.assigneeName}</b></span>
-                            <span>•</span>
-                            <span>Due: <b className="font-mono tnum">{t.dueDate}</b></span>
+                    activeTasks.map(t => {
+                      const isDone = t.status === 'DONE';
+                      const isGateBlocked = t.isBlockedByGate;
+
+                      return (
+                        <div 
+                          key={t.id} 
+                          className={`p-3.5 rounded-2xl border transition-all text-xs space-y-2 ${
+                            isDone 
+                              ? 'bg-emerald-500/[0.03] border-emerald-500/20' 
+                              : isGateBlocked 
+                              ? 'bg-rose-500/[0.02] border-rose-500/20' 
+                              : 'bg-black/[0.02] dark:bg-white/[0.03] border-black/[0.04] dark:border-white/[0.06]'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {t.stage && (
+                                  <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 bg-black/[0.05] dark:bg-white/10 text-slate-600 dark:text-slate-300 rounded">
+                                    {t.stage}
+                                  </span>
+                                )}
+                                {t.taskType === 'APPROVAL_GATE' && (
+                                  <span className="text-[9px] font-bold px-1.5 py-0.5 bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/30 rounded flex items-center gap-0.5">
+                                    <Lock className="w-2.5 h-2.5" /> SOW/ToR Gate
+                                  </span>
+                                )}
+                                {t.taskType === 'REPORT' && (
+                                  <span className="text-[9px] font-bold px-1.5 py-0.5 bg-purple-500/20 text-purple-800 dark:text-purple-300 border border-purple-500/30 rounded flex items-center gap-0.5">
+                                    <FileText className="w-2.5 h-2.5" /> Final Report
+                                  </span>
+                                )}
+                                {t.taskType === 'DECISION_GATE' && (
+                                  <span className="text-[9px] font-bold px-1.5 py-0.5 bg-indigo-500/20 text-indigo-800 dark:text-indigo-300 border border-indigo-500/30 rounded flex items-center gap-0.5">
+                                    <GitBranch className="w-2.5 h-2.5" /> PERA Gate
+                                  </span>
+                                )}
+                                {isGateBlocked && (
+                                  <span className="text-[9px] font-bold px-1.5 py-0.5 bg-red-500/20 text-red-800 dark:text-red-300 border border-red-500/30 rounded flex items-center gap-0.5">
+                                    <Lock className="w-2.5 h-2.5" /> Blocked by Gate
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="font-semibold text-[#1D1D1F] dark:text-[#F6F4F0] flex items-center gap-1.5">
+                                <span>{t.title}</span>
+                              </div>
+
+                              <div className="text-[10px] text-[#86868B] flex items-center gap-2 flex-wrap">
+                                <span>Assignee: <b className="text-[#1D1D1F] dark:text-[#F6F4F0]">{t.assigneeName}</b></span>
+                                <span>•</span>
+                                <span>Due: <b className="font-mono tnum text-[#1D1D1F] dark:text-[#F6F4F0]">{t.dueDate}</b></span>
+                                {t.originalDueDate && t.originalDueDate !== t.dueDate && (
+                                  <span className="text-amber-600 dark:text-amber-400 font-mono text-[9px]">(Orig: {t.originalDueDate})</span>
+                                )}
+                              </div>
+
+                              {isGateBlocked && (
+                                <div className="text-[10px] text-rose-600 dark:text-rose-400 font-medium">
+                                  🔒 Blocked: Prerequisite SOW / ToR Approval Gate must be completed by PM before field work can begin.
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex flex-col items-end gap-1.5 shrink-0">
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
+                                t.status === 'DONE' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+                                t.status === 'IN_PROGRESS' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' :
+                                'bg-black/[0.05] dark:bg-white/10 text-[#86868B]'
+                              }`}>
+                                {t.status.replace('_', ' ')}
+                              </span>
+
+                              {/* PM Actions on Active Task */}
+                              {isCurrentProjectPM && !isDone && (
+                                <div className="flex items-center gap-1 pt-1">
+                                  {t.taskType === 'APPROVAL_GATE' && (
+                                    <button
+                                      onClick={() => {
+                                        updateTaskProgress(t.id, 100, 'DONE', t.loggedHours, {
+                                          completedById: currentUser.id,
+                                          completedByName: currentUser.name,
+                                          completionNotes: 'SOW / ToR regulatory client approval granted. Field data gathering unblocked.'
+                                        });
+                                        haptics.success();
+                                      }}
+                                      className="px-2 py-0.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-[10px] font-bold shadow-xs active:scale-[0.96] flex items-center gap-0.5 cursor-pointer"
+                                    >
+                                      <Unlock className="w-2.5 h-2.5" />
+                                      <span>Sign Gate</span>
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => handleOpenDueDateModal(t)}
+                                    className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+                                    title="Request Due-Date Change"
+                                  >
+                                    <CalendarClock className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${
-                          t.status === 'DONE' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
-                          t.status === 'IN_PROGRESS' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' :
-                          'bg-black/[0.05] dark:bg-white/10 text-[#86868B]'
-                        }`}>
-                          {t.status.replace('_', ' ')}
-                        </span>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>
+
+              {/* Due Date Change Requests Panel */}
+              {activeProjectDateRequests.length > 0 && (
+                <div className="p-4 bg-slate-50 dark:bg-white/[0.02] border border-black/[0.05] dark:border-white/[0.08] rounded-2xl space-y-3">
+                  <div className="flex items-center gap-1.5">
+                    <CalendarClock className="w-4 h-4 text-slate-700 dark:text-slate-300" />
+                    <h4 className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider">
+                      Due-Date Change Requests ({activeProjectDateRequests.length})
+                    </h4>
+                  </div>
+                  <div className="space-y-2">
+                    {activeProjectDateRequests.map(req => (
+                      <div key={req.id} className="p-3 bg-white dark:bg-[#121216] rounded-xl border border-black/[0.05] dark:border-white/[0.08] text-xs space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-slate-900 dark:text-white">{req.taskTitle}</span>
+                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                            req.status === 'APPROVED' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' :
+                            req.status === 'REJECTED' ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300' :
+                            'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                          }`}>
+                            {req.status}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                          Timeline Shift: <b className="font-mono text-slate-700 dark:text-slate-300">{req.oldDate}</b> → <b className="font-mono text-indigo-600 dark:text-indigo-400">{req.newDate}</b>
+                        </div>
+                        <p className="text-[10px] text-slate-600 dark:text-slate-300 italic">
+                          "{req.reason}"
+                        </p>
+                        {req.status === 'PENDING' && isProjectManager && (
+                          <div className="flex items-center gap-2 pt-1">
+                            <button
+                              onClick={() => { approveDueDateChange(req.id); haptics.success(); }}
+                              className="px-2.5 py-0.5 bg-emerald-600 text-white rounded text-[10px] font-bold cursor-pointer"
+                            >
+                              Approve Shift
+                            </button>
+                            <button
+                              onClick={() => { rejectDueDateChange(req.id, 'Timeline shift declined by leadership.'); haptics.selection(); }}
+                              className="px-2.5 py-0.5 bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-300 rounded text-[10px] font-bold cursor-pointer"
+                            >
+                              Decline
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* KPI Discretionary Bonuses Awarded Ledger */}
+              {activeProjectBonuses.length > 0 && (
+                <div className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl space-y-3">
+                  <div className="flex items-center gap-1.5">
+                    <Award className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <h4 className="font-bold text-xs text-emerald-950 dark:text-emerald-200 uppercase tracking-wider">
+                      PM Discretionary Bonus Ledger ({activeProjectBonuses.length})
+                    </h4>
+                  </div>
+                  <div className="space-y-1.5">
+                    {activeProjectBonuses.map(b => (
+                      <div key={b.id} className="p-2.5 bg-white dark:bg-[#121216] rounded-xl border border-emerald-500/20 text-xs flex items-center justify-between">
+                        <div>
+                          <span className="font-bold text-slate-900 dark:text-white">{b.userName}</span>
+                          <span className="text-[10px] text-slate-400 ml-2">by {b.awardedByName}</span>
+                          <p className="text-[10px] text-slate-600 dark:text-slate-300 italic mt-0.5">"{b.note}"</p>
+                        </div>
+                        <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 tnum whitespace-nowrap">
+                          +{b.points} KPI pts
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Workstreams & Milestones */}
               <div className="space-y-3">
                 <h3 className="text-xs font-semibold text-[#1D1D1F] dark:text-[#F6F4F0] uppercase tracking-wider">
                   Disciplinary Workstreams & Milestones
                 </h3>
-                {(selectedProject.workstreams || []).map((ws) => (
+                {(activeProject.workstreams || []).map((ws) => (
                   <div key={ws.id} className="p-4 bg-black/[0.02] dark:bg-white/[0.03] rounded-2xl border border-black/[0.04] dark:border-white/[0.06] space-y-2 text-xs">
                     <div className="flex items-center justify-between font-semibold text-[#1D1D1F] dark:text-[#F6F4F0]">
                       <span>{ws.serviceLine}</span>
@@ -782,8 +1395,8 @@ export default function ProjectsPage() {
 
               <div className="flex justify-end pt-3 border-t border-black/[0.05] dark:border-white/[0.08]">
                 <button
-                  onClick={() => setSelectedProject(null)}
-                  className="px-4 py-1.5 bg-slate-900 text-white rounded-xl font-semibold"
+                  onClick={() => setSelectedProjectId(null)}
+                  className="px-4 py-1.5 bg-slate-900 text-white rounded-xl font-semibold cursor-pointer"
                 >
                   Close
                 </button>
@@ -793,15 +1406,266 @@ export default function ProjectsPage() {
         )}
       </AnimatePresence>
 
+      {/* Pause Project Modal */}
+      <AnimatePresence>
+        {isPauseModalOpen && activeProject && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsPauseModalOpen(false)} className="fixed inset-0 bg-black/70 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-white dark:bg-[#0C0C0D] rounded-3xl shadow-2xl max-w-md w-full border border-black/[0.08] dark:border-white/[0.12] p-6 space-y-4 z-10 text-xs">
+              <div className="flex items-center justify-between border-b border-black/[0.05] dark:border-white/[0.08] pb-2">
+                <div className="flex items-center gap-2">
+                  <Pause className="w-4 h-4 text-amber-600" />
+                  <h3 className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F6F4F0]">Pause Project: {activeProject.projectCode}</h3>
+                </div>
+                <button onClick={() => setIsPauseModalOpen(false)} className="text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white">&times;</button>
+              </div>
+
+              <form onSubmit={handleConfirmPause} className="space-y-3">
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Pausing freezes delivery clocks and overdue penalties. When the project is resumed, remaining task due dates will automatically advance forward by the duration of the pause.
+                </p>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">
+                    Mandatory Reason for Pause *
+                  </label>
+                  <textarea
+                    required
+                    rows={3}
+                    value={pauseReasonInput}
+                    onChange={(e) => setPauseReasonInput(e.target.value)}
+                    placeholder="e.g. Host community access restriction / Weather hold / Client regulatory scope amendment."
+                    className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-black/[0.05] dark:border-white/[0.08]">
+                  <button type="button" onClick={() => setIsPauseModalOpen(false)} className="px-3 py-1.5 text-[#86868B]">Cancel</button>
+                  <button type="submit" className="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-semibold cursor-pointer">
+                    Freeze Project & Deadlines
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Discretionary Bonus Modal (Rule 8) */}
+      <AnimatePresence>
+        {isBonusModalOpen && activeProject && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsBonusModalOpen(false)} className="fixed inset-0 bg-black/70 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-white dark:bg-[#0C0C0D] rounded-3xl shadow-2xl max-w-md w-full border border-black/[0.08] dark:border-white/[0.12] p-6 space-y-4 z-10 text-xs">
+              <div className="flex items-center justify-between border-b border-black/[0.05] dark:border-white/[0.08] pb-2">
+                <div className="flex items-center gap-2">
+                  <Award className="w-4 h-4 text-indigo-600" />
+                  <h3 className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F6F4F0]">Award PM Discretionary Bonus</h3>
+                </div>
+                <button onClick={() => setIsBonusModalOpen(false)} className="text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white">&times;</button>
+              </div>
+
+              <form onSubmit={handleConfirmBonus} className="space-y-3">
+                <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/20 rounded-xl border border-indigo-200 dark:border-indigo-800/40 text-[10px] text-indigo-900 dark:text-indigo-300">
+                  PMs can award up to <b>10 bonus points</b> per award to recognize exceptional execution, adverse condition turnaround, or teamwork.
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Recipient *</label>
+                  <select
+                    value={bonusRecipientId}
+                    onChange={(e) => setBonusRecipientId(e.target.value)}
+                    className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
+                  >
+                    {allUsers.map(u => (
+                      <option key={u.id} value={u.id}>{u.name} — {u.jobTitle} ({u.departmentName})</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">
+                    Bonus Points (Max 10) *
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={10}
+                    required
+                    value={bonusPoints}
+                    onChange={(e) => setBonusPoints(Math.min(10, Math.max(1, Number(e.target.value))))}
+                    className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs font-mono tnum text-[#1D1D1F] dark:text-[#F6F4F0]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">
+                    Mandatory Justification Note *
+                  </label>
+                  <textarea
+                    required
+                    rows={3}
+                    value={bonusNote}
+                    onChange={(e) => setBonusNote(e.target.value)}
+                    placeholder="e.g. Exceptional leadership during community stakeholder townhall under tight deadline."
+                    className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-black/[0.05] dark:border-white/[0.08]">
+                  <button type="button" onClick={() => setIsBonusModalOpen(false)} className="px-3 py-1.5 text-[#86868B]">Cancel</button>
+                  <button type="submit" className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold cursor-pointer">
+                    Award +{bonusPoints} KPI Points
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Due Date Extension Request Modal */}
+      <AnimatePresence>
+        {isDueDateModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsDueDateModalOpen(false)} className="fixed inset-0 bg-black/70 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-white dark:bg-[#0C0C0D] rounded-3xl shadow-2xl max-w-md w-full border border-black/[0.08] dark:border-white/[0.12] p-6 space-y-4 z-10 text-xs">
+              <div className="flex items-center justify-between border-b border-black/[0.05] dark:border-white/[0.08] pb-2">
+                <div className="flex items-center gap-2">
+                  <CalendarClock className="w-4 h-4 text-slate-700 dark:text-slate-300" />
+                  <h3 className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F6F4F0]">Request Due-Date Change</h3>
+                </div>
+                <button onClick={() => setIsDueDateModalOpen(false)} className="text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white">&times;</button>
+              </div>
+
+              <form onSubmit={handleConfirmDueDateRequest} className="space-y-3">
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                  Due-date changes require line manager or admin approval. Original due dates remain preserved for audit and performance metrics.
+                </p>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">New Proposed Due Date *</label>
+                  <input
+                    type="date"
+                    required
+                    value={dueDateNewDate}
+                    onChange={(e) => setDueDateNewDate(e.target.value)}
+                    className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">
+                    Mandatory Reason for Extension *
+                  </label>
+                  <textarea
+                    required
+                    rows={3}
+                    value={dueDateReason}
+                    onChange={(e) => setDueDateReason(e.target.value)}
+                    placeholder="e.g. Inclement marine weather delayed vibrocore sampling by 4 days."
+                    className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-black/[0.05] dark:border-white/[0.08]">
+                  <button type="button" onClick={() => setIsDueDateModalOpen(false)} className="px-3 py-1.5 text-[#86868B]">Cancel</button>
+                  <button type="submit" className="px-4 py-1.5 bg-slate-900 text-white rounded-xl font-semibold cursor-pointer">
+                    Submit Request
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Suggested Task Modal */}
+      <AnimatePresence>
+        {editingSuggestedTask && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setEditingSuggestedTask(null)} className="fixed inset-0 bg-black/70 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-white dark:bg-[#0C0C0D] rounded-3xl shadow-2xl max-w-md w-full border border-black/[0.08] dark:border-white/[0.12] p-6 space-y-4 z-10 text-xs">
+              <div className="flex items-center justify-between border-b border-black/[0.05] dark:border-white/[0.08] pb-2">
+                <div className="flex items-center gap-2">
+                  <Edit3 className="w-4 h-4 text-emerald-600" />
+                  <h3 className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F6F4F0]">Edit Suggested Staged Task</h3>
+                </div>
+                <button onClick={() => setEditingSuggestedTask(null)} className="text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white">&times;</button>
+              </div>
+
+              <form onSubmit={handleSaveEditSuggested} className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Task Title *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editTaskTitle}
+                    onChange={(e) => setEditTaskTitle(e.target.value)}
+                    className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Assignee</label>
+                  <select
+                    value={editTaskAssigneeId}
+                    onChange={(e) => setEditTaskAssigneeId(e.target.value)}
+                    className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
+                  >
+                    {allUsers.map(u => (
+                      <option key={u.id} value={u.id}>{u.name} — {u.jobTitle}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Due Date</label>
+                    <input
+                      type="date"
+                      required
+                      value={editTaskDueDate}
+                      onChange={(e) => setEditTaskDueDate(e.target.value)}
+                      className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Priority</label>
+                    <select
+                      value={editTaskPriority}
+                      onChange={(e: any) => setEditTaskPriority(e.target.value)}
+                      className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
+                    >
+                      <option value="LOW">Low</option>
+                      <option value="MEDIUM">Medium</option>
+                      <option value="HIGH">High Priority</option>
+                      <option value="CRITICAL">Critical SLA</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-black/[0.05] dark:border-white/[0.08]">
+                  <button type="button" onClick={() => setEditingSuggestedTask(null)} className="px-3 py-1.5 text-[#86868B]">Cancel</button>
+                  <button type="submit" className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold cursor-pointer">
+                    Save Changes
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Inline Drawer Task Creator Modal */}
       <AnimatePresence>
-        {isAddDrawerTaskOpen && selectedProject && (
+        {isAddDrawerTaskOpen && activeProject && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsAddDrawerTaskOpen(false)} className="fixed inset-0 bg-black/70 backdrop-blur-md" />
             <motion.div initial={{ opacity: 0, scale: 0.95, y: 15 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 15 }} className="relative bg-white dark:bg-[#0C0C0D] rounded-3xl shadow-2xl max-w-md w-full border border-black/[0.08] dark:border-white/[0.12] p-6 space-y-4 z-10 text-xs">
               <div className="flex items-center justify-between border-b border-black/[0.05] dark:border-white/[0.08] pb-2">
                 <div>
-                  <h3 className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F6F4F0]">Add Task to {selectedProject.projectCode}</h3>
+                  <h3 className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F6F4F0]">Add Task to {activeProject.projectCode}</h3>
                   <p className="text-[11px] text-[#86868B]">Assigns task directly to an employee with pre-approval authority.</p>
                 </div>
                 <button onClick={() => setIsAddDrawerTaskOpen(false)} className="text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white">&times;</button>
@@ -912,7 +1776,7 @@ export default function ProjectsPage() {
                     <button
                       type="button"
                       onClick={handleSimulateAiParse}
-                      className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold shadow-xs active:scale-[0.96] flex items-center gap-1.5"
+                      className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold shadow-xs active:scale-[0.96] flex items-center gap-1.5 cursor-pointer"
                     >
                       <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
                       <span>Parse Document with Gemini</span>
@@ -939,7 +1803,7 @@ export default function ProjectsPage() {
                       Scope Successfully Extracted
                     </div>
                     <p className="text-[10px] text-emerald-800/80 dark:text-emerald-400/80">
-                      Identified 3 parallel workstreams (Geotechnical + Metocean + GIS) and 9 deliverable milestones:
+                      Identified 3 parallel workstreams (Geotechnical + Metocean + GIS) and 9 deliverable milestones.
                     </p>
                   </div>
 
@@ -948,7 +1812,7 @@ export default function ProjectsPage() {
                     <button
                       type="button"
                       onClick={handleCommitAiProject}
-                      className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-semibold shadow-xs active:scale-[0.96]"
+                      className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-semibold shadow-xs active:scale-[0.96] cursor-pointer"
                     >
                       Commit & Initialize Project
                     </button>

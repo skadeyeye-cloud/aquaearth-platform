@@ -14,7 +14,10 @@ import {
   PettyCashFund,
   PettyCashTransaction,
   PettyCashAnalysis,
-  PettyCashTopUpRecord
+  PettyCashTopUpRecord,
+  ProjectType,
+  ProjectTemplateDefinition,
+  TemplateTaskDefinition
 } from './types';
 
 export const DEFAULT_CORPORATE_PASSWORD = 'AquaEarth@2026!';
@@ -3101,4 +3104,182 @@ export const INITIAL_CANDIDATE_APPLICATIONS: CandidateApplication[] = [
     createdAt: '2026-08-15'
   }
 ];
+
+// ==========================================
+// Slate Labs V1.2 Project Milestone Templates
+// ==========================================
+
+export const TEMPLATE_A_TASKS: TemplateTaskDefinition[] = [
+  // Step 01 Contracting / kick-off
+  { stage: '01 Contracting / kick-off', title: 'Kick-off meeting with client (scope, timeline, team, responsibilities)', taskType: 'STANDARD', suggestedRole: 'LEAD', dueOffsetDays: 3 },
+  { stage: '01 Contracting / kick-off', title: 'Desktop and literature review', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 7 },
+  // Step 02 Preliminary / pre-mobilisation
+  { stage: '02 Preliminary / pre-mobilisation', title: 'SOW / ToR approval', taskType: 'APPROVAL_GATE', suggestedRole: 'LEAD', dueOffsetDays: 14, isApprovalGate: true, gateBlocks: ['04 Data gathering'] },
+  { stage: '02 Preliminary / pre-mobilisation', title: 'CASHES management plan', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 18 },
+  { stage: '02 Preliminary / pre-mobilisation', title: 'Field Activities Plan (FAP)', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 21 },
+  { stage: '02 Preliminary / pre-mobilisation', title: 'Job Hazard Analysis (JHA)', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 23 },
+  { stage: '02 Preliminary / pre-mobilisation', title: 'Equipment calibration', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 25 },
+  // Step 03 Reconnaissance visit
+  { stage: '03 Reconnaissance visit', title: 'Mobilise to site', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 28 },
+  { stage: '03 Reconnaissance visit', title: 'Site visit', taskType: 'STANDARD', suggestedRole: 'LEAD', dueOffsetDays: 32 },
+  { stage: '03 Reconnaissance visit', title: 'Demobilise', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 35 },
+  { stage: '03 Reconnaissance visit', title: 'Reconnaissance data analysis', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 40 },
+  // Step 04 Data gathering (Blocked until Step 02 SOW / ToR approval is complete)
+  { stage: '04 Data gathering', title: 'Mobilise to site', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 45 },
+  { stage: '04 Data gathering', title: 'Ecological, socio-economic and health data collection', taskType: 'STANDARD', suggestedRole: 'LEAD', dueOffsetDays: 55 },
+  { stage: '04 Data gathering', title: 'Laboratory analysis', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 65 },
+  { stage: '04 Data gathering', title: 'Result QA/QC', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 72 },
+  { stage: '04 Data gathering', title: 'Result analysis', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 78 },
+  // Step 05 Impact evaluation
+  { stage: '05 Impact evaluation', title: 'Existing impact assessment', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 85 },
+  { stage: '05 Impact evaluation', title: 'Cumulative impacts', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 92 },
+  { stage: '05 Impact evaluation', title: 'Mitigation measures', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 98 },
+  { stage: '05 Impact evaluation', title: 'Management plans', taskType: 'STANDARD', suggestedRole: 'LEAD', dueOffsetDays: 105 },
+  // Step 06 Report
+  { stage: '06 Report', title: 'Draft and final report development', taskType: 'REPORT', suggestedRole: 'DESIGNER', dueOffsetDays: 115 },
+  { stage: '06 Report', title: 'Stakeholder review of draft', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 125 },
+  { stage: '06 Report', title: 'Address review comments', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 132 },
+  { stage: '06 Report', title: 'Issue final report', taskType: 'STANDARD', suggestedRole: 'LEAD', dueOffsetDays: 140 },
+];
+
+export const TEMPLATE_B_TASKS: TemplateTaskDefinition[] = [
+  // Stage 1 Proposal / ToR
+  { stage: '1 Proposal / ToR', title: 'Develop project proposal', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 5 },
+  { stage: '1 Proposal / ToR', title: 'Develop EBS ToR', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 10 },
+  { stage: '1 Proposal / ToR', title: 'Submit proposal and ToR for approval', taskType: 'APPROVAL_GATE', suggestedRole: 'LEAD', dueOffsetDays: 16, isApprovalGate: true, gateBlocks: ['3 Field data gathering'] },
+  // Stage 2 Pre-mobilisation
+  { stage: '2 Pre-mobilisation', title: 'Literature review / gap analysis', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 22 },
+  { stage: '2 Pre-mobilisation', title: 'Develop field work plan', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 28 },
+  { stage: '2 Pre-mobilisation', title: 'FTO arrangements with communities', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 35 },
+  // Stage 3 Field data gathering (Blocked until ToR approval)
+  { stage: '3 Field data gathering', title: 'Field sampling and measurement', taskType: 'STANDARD', suggestedRole: 'LEAD', dueOffsetDays: 45 },
+  { stage: '3 Field data gathering', title: 'Observation and documentation', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 52 },
+  // Stage 4 Analysis and interpretation
+  { stage: '4 Analysis and interpretation', title: 'Laboratory analysis of samples', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 62 },
+  { stage: '4 Analysis and interpretation', title: 'Interpretation of data', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 70 },
+  { stage: '4 Analysis and interpretation', title: 'Existing environmental description (the baseline)', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 78 },
+  // Stage 5 Reporting
+  { stage: '5 Reporting', title: 'Draft and final report development', taskType: 'REPORT', suggestedRole: 'DESIGNER', dueOffsetDays: 90 },
+  // Stage 6 Review
+  { stage: '6 Review', title: 'Client, regulator, study team and stakeholder review', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 102 },
+  { stage: '6 Review', title: 'Address review comments', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 110 },
+  // All stages (Ongoing)
+  { stage: 'All stages', title: 'Consultation with regulators, stakeholders and experts', taskType: 'ONGOING', suggestedRole: 'LEAD', dueOffsetDays: 120, isOngoing: true }
+];
+
+export const TEMPLATE_C_TASKS: TemplateTaskDefinition[] = [
+  // Phase: Preliminary activities
+  { stage: 'Preliminary activities', title: 'Project conception', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 5 },
+  { stage: 'Preliminary activities', title: 'Notify the regulator of the EIA', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 10 },
+  { stage: 'Preliminary activities', title: 'Project concept screening', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 15 },
+  { stage: 'Preliminary activities', title: 'Environmental screening', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 20 },
+  { stage: 'Preliminary activities', title: 'Preliminary environmental risk assessment (PERA)', taskType: 'DECISION_GATE', suggestedRole: 'LEAD', dueOffsetDays: 30, isDecisionGate: true },
+  // Route 1: PERA approval (Option A)
+  { stage: 'Route 1: PERA approval', title: 'Obtain PERA approval / environmental permit', taskType: 'STANDARD', suggestedRole: 'LEAD', dueOffsetDays: 45, route: 'ROUTE_1_PERA' },
+  // Route 2: Detailed EIA (Option B)
+  { stage: 'Route 2: Detailed EIA', title: 'ToR and sampling plan', taskType: 'APPROVAL_GATE', suggestedRole: 'LEAD', dueOffsetDays: 45, route: 'ROUTE_2_DETAILED_EIA', isApprovalGate: true, gateBlocks: ['Baseline data gathering'] },
+  { stage: 'Route 2: Detailed EIA', title: 'Baseline data gathering', taskType: 'STANDARD', suggestedRole: 'LEAD', dueOffsetDays: 60, route: 'ROUTE_2_DETAILED_EIA' },
+  { stage: 'Route 2: Detailed EIA', title: 'Laboratory analysis', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 75, route: 'ROUTE_2_DETAILED_EIA' },
+  { stage: 'Route 2: Detailed EIA', title: 'Impact assessment and mitigation', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 90, route: 'ROUTE_2_DETAILED_EIA' },
+  { stage: 'Route 2: Detailed EIA', title: 'Environmental management plan', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 100, route: 'ROUTE_2_DETAILED_EIA' },
+  { stage: 'Route 2: Detailed EIA', title: 'Waste management plan', taskType: 'STANDARD', suggestedRole: 'CONTRIBUTOR', dueOffsetDays: 108, route: 'ROUTE_2_DETAILED_EIA' },
+  { stage: 'Route 2: Detailed EIA', title: 'Draft and final EIA reports', taskType: 'REPORT', suggestedRole: 'DESIGNER', dueOffsetDays: 125, route: 'ROUTE_2_DETAILED_EIA' },
+  { stage: 'Route 2: Detailed EIA', title: 'EIA approval / permit', taskType: 'STANDARD', suggestedRole: 'LEAD', dueOffsetDays: 140, route: 'ROUTE_2_DETAILED_EIA' }
+];
+
+export const PROJECT_TEMPLATES: Record<ProjectType, ProjectTemplateDefinition> = {
+  EIA: {
+    id: 'tmpl-eia',
+    projectType: 'EIA',
+    version: '1.2',
+    name: 'Template A: Six-step study process (EIA)',
+    description: 'EIA workflow with Step 05 carrying primary weight for impact prediction, mitigation and environmental management plans.',
+    tasks: TEMPLATE_A_TASKS
+  },
+  ESIA: {
+    id: 'tmpl-esia',
+    projectType: 'ESIA',
+    version: '1.2',
+    name: 'Template A: Six-step study process (ESIA)',
+    description: 'ESIA workflow with Step 04 adding socio-economic and health data alongside ecological baselines, and Step 05 social management measures.',
+    tasks: TEMPLATE_A_TASKS
+  },
+  PIAR: {
+    id: 'tmpl-piar',
+    projectType: 'PIAR',
+    version: '1.2',
+    name: 'Template A: Six-step study process (PIAR)',
+    description: 'Post-Impact Assessment Report workflow concentrating on impacted vs. reference conditions, recovery time, and site remediation.',
+    tasks: TEMPLATE_A_TASKS
+  },
+  EBS: {
+    id: 'tmpl-ebs',
+    projectType: 'EBS',
+    version: '1.2',
+    name: 'Template B: Environmental Baseline Study (EBS)',
+    description: 'Complete baseline environmental sampling and stakeholder consultation workflow with SOW/ToR approval gating.',
+    tasks: TEMPLATE_B_TASKS
+  },
+  PERA_EIA_ROUTE: {
+    id: 'tmpl-pera',
+    projectType: 'PERA_EIA_ROUTE',
+    version: '1.2',
+    name: 'Template C: PERA and the EIA route',
+    description: 'Regulatory route from project conception through preliminary risk screening with decision gating into PERA Approval or Detailed EIA.',
+    tasks: TEMPLATE_C_TASKS
+  }
+};
+
+export function generateStarterTasks(
+  projectId: string,
+  projectTitle: string,
+  projectType: ProjectType,
+  startDateStr: string,
+  pmId: string,
+  pmName: string
+): TaskItem[] {
+  const template = PROJECT_TEMPLATES[projectType];
+  if (!template) return [];
+
+  const baseDate = new Date(startDateStr || new Date().toISOString().split('T')[0]);
+
+  return template.tasks.map((t, idx) => {
+    const taskDueDate = new Date(baseDate.getTime() + t.dueOffsetDays * 86400000).toISOString().split('T')[0];
+    const isStep4Blocked = t.stage === '04 Data gathering' || t.stage === '3 Field data gathering';
+    const isReport = t.taskType === 'REPORT';
+
+    return {
+      id: `tsk-${projectId}-${idx + 1}`,
+      title: t.title,
+      description: `Stage: ${t.stage} • Template: ${template.name}`,
+      moduleOrigin: 'PROJECT',
+      status: 'SUGGESTED',
+      confirmed: false,
+      priority: t.isApprovalGate || t.isDecisionGate || isReport ? 'HIGH' : 'MEDIUM',
+      dueDate: taskDueDate,
+      originalDueDate: taskDueDate,
+      currentDueDate: taskDueDate,
+      assigneeId: pmId,
+      assigneeName: pmName,
+      projectId: projectId,
+      projectName: projectTitle,
+      taskType: t.taskType,
+      stage: t.stage,
+      gateBlocks: t.gateBlocks,
+      isBlockedByGate: isStep4Blocked,
+      isOngoing: t.isOngoing,
+      route: t.route,
+      suggestedRole: t.suggestedRole,
+      departmentId: isReport ? 'dept-it-design' : undefined,
+      departmentName: isReport ? 'IT & Creative Design' : undefined,
+      taskAssignees: [
+        {
+          userId: pmId,
+          userName: pmName,
+          role: t.suggestedRole
+        }
+      ]
+    };
+  });
+}
 
