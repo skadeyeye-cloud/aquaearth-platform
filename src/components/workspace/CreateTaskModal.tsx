@@ -52,15 +52,35 @@ export default function CreateTaskModal({ isOpen, onClose }: CreateTaskModalProp
     u.departmentName !== currentUser.departmentName
   );
 
+  const AQUAEARTH_DEPARTMENTS = [
+    'Geotechnical & Geophysics',
+    'Environmental & Social (ESIA)',
+    'Geoinformatics & Survey',
+    'Quality Assurance (QA/QC)',
+    'Commercial & BD',
+    'Finance & Accounts',
+    'IT & Digital Operations',
+    'Human Resources',
+    'Project Management & Commercial',
+    'Executive Leadership'
+  ];
+
+  const [assignmentType, setAssignmentType] = useState<'INDIVIDUAL' | 'MULTIPLE' | 'DEPARTMENT'>('INDIVIDUAL');
   const [assigneeId, setAssigneeId] = useState(currentUser.id);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([currentUser.id]);
+  const [targetDepartment, setTargetDepartment] = useState<string>(currentUser.departmentName || 'Geotechnical & Geophysics');
+  const [searchStaff, setSearchStaff] = useState('');
   const [projectId, setProjectId] = useState<string>('');
 
   useEffect(() => {
     if (isOpen) {
+      setAssignmentType('INDIVIDUAL');
       setAssigneeId(currentUser.id);
+      setSelectedUserIds([currentUser.id]);
+      setTargetDepartment(currentUser.departmentName || 'Geotechnical & Geophysics');
       setProjectId('');
     }
-  }, [currentUser.id, isOpen]);
+  }, [currentUser.id, currentUser.departmentName, isOpen]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [moduleOrigin, setModuleOrigin] = useState<TaskItem['moduleOrigin']>('PROJECT');
@@ -73,8 +93,16 @@ export default function CreateTaskModal({ isOpen, onClose }: CreateTaskModalProp
   if (!isOpen) return null;
 
   const selectedAssignee = allUsers.find(u => u.id === assigneeId) || currentUser;
-  const isSelfAssignment = assigneeId === currentUser.id;
+  const isSelfAssignment = assignmentType === 'INDIVIDUAL' && assigneeId === currentUser.id;
   const isPreApproved = isAdmin || (isManagerOrLead && !isSelfAssignment);
+
+  const toggleUserSelection = (userId: string) => {
+    setSelectedUserIds(prev => 
+      prev.includes(userId) 
+        ? prev.filter(id => id !== userId) 
+        : [...prev, userId]
+    );
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,13 +111,35 @@ export default function CreateTaskModal({ isOpen, onClose }: CreateTaskModalProp
     const proj = projectId ? projects.find(p => p.id === projectId) : undefined;
     const scopeTag = proj ? ` (${proj.title})` : ' (General Operations)';
 
+    let finalAssigneeId = assigneeId;
+    let finalAssigneeIds: string[] = [assigneeId];
+    let finalAssigneeNames: string[] = [];
+
+    if (assignmentType === 'MULTIPLE') {
+      finalAssigneeIds = selectedUserIds.length > 0 ? selectedUserIds : [currentUser.id];
+      finalAssigneeId = finalAssigneeIds[0];
+      finalAssigneeNames = finalAssigneeIds.map(id => allUsers.find(u => u.id === id)?.name || id);
+    } else if (assignmentType === 'DEPARTMENT') {
+      const deptMembers = allUsers.filter(u => u.departmentName === targetDepartment);
+      finalAssigneeIds = deptMembers.map(u => u.id);
+      finalAssigneeId = deptMembers[0]?.id || currentUser.id;
+      finalAssigneeNames = deptMembers.map(u => u.name);
+    } else {
+      finalAssigneeNames = [selectedAssignee.name];
+    }
+
     createTaskForApproval({
       title: title.trim(),
       description: description.trim(),
       moduleOrigin,
       priority,
       dueDate,
-      assigneeId,
+      assigneeId: finalAssigneeId,
+      assigneeIds: finalAssigneeIds,
+      assigneeNames: finalAssigneeNames,
+      assignmentType,
+      departmentId: allUsers.find(u => u.departmentName === targetDepartment)?.departmentId,
+      departmentName: assignmentType === 'DEPARTMENT' ? targetDepartment : undefined,
       projectId: proj?.id,
       projectName: proj?.title,
       estimatedHours: Number(estimatedHours),
@@ -98,29 +148,23 @@ export default function CreateTaskModal({ isOpen, onClose }: CreateTaskModalProp
 
     haptics.success();
 
-    // Trigger Apple Dynamic Island / Lockscreen Web Push
+    // Push notification text
+    const targetLabel = assignmentType === 'DEPARTMENT' 
+      ? `the ${targetDepartment} department`
+      : assignmentType === 'MULTIPLE'
+      ? `${finalAssigneeNames.length} team members`
+      : selectedAssignee.name;
+
     if (isPreApproved) {
-      if (!isSelfAssignment) {
-        sendPushNotification({
-          title: 'New Task Assigned to Officer',
-          body: `${currentUser.name} (${currentUser.jobTitle}) assigned "${title.trim()}"${scopeTag} to ${selectedAssignee.name}.`,
-          category: 'SYSTEM',
-          actorName: currentUser.name,
-          actorAvatar: currentUser.avatar,
-          targetUrl: '/tasks',
-          canQuickApprove: false
-        });
-      } else {
-        sendPushNotification({
-          title: 'Executive Task Released',
-          body: `Task "${title.trim()}"${scopeTag} created with instant approval (No approval required).`,
-          category: 'SYSTEM',
-          actorName: currentUser.name,
-          actorAvatar: currentUser.avatar,
-          targetUrl: '/tasks',
-          canQuickApprove: false
-        });
-      }
+      sendPushNotification({
+        title: 'New Task Assigned',
+        body: `${currentUser.name} (${currentUser.jobTitle}) assigned "${title.trim()}"${scopeTag} to ${targetLabel}.`,
+        category: 'SYSTEM',
+        actorName: currentUser.name,
+        actorAvatar: currentUser.avatar,
+        targetUrl: '/tasks',
+        canQuickApprove: false
+      });
     } else {
       sendPushNotification({
         title: 'Task Awaiting Line Manager Sign-Off',
@@ -227,64 +271,223 @@ export default function CreateTaskModal({ isOpen, onClose }: CreateTaskModalProp
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-3.5 overflow-y-auto pr-1 min-h-0 flex-1">
-            {/* Assignee Selection Field (For Admins, Team Leads, and Line Managers) */}
+            {/* 3-Way Assignment Mode Selector */}
             {canAssignToOthers && (
-              <div className="p-3 rounded-2xl bg-indigo-500/5 dark:bg-indigo-500/10 border border-indigo-500/20 space-y-1.5">
+              <div className="p-3.5 rounded-2xl bg-indigo-500/5 dark:bg-indigo-500/10 border border-indigo-500/20 space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] font-bold text-indigo-950 dark:text-indigo-200 flex items-center gap-1.5">
                     <Users className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                    <span>Assign Task To *</span>
+                    <span>Delegation & Assignment Scope *</span>
                   </label>
                   <span className="text-[10px] font-mono text-indigo-600 dark:text-indigo-400 whitespace-nowrap shrink-0">
-                    {isSelfAssignment ? 'Self-assignment' : `Assigned to: ${selectedAssignee.name}`}
+                    {assignmentType === 'DEPARTMENT' 
+                      ? `Department: ${targetDepartment}`
+                      : assignmentType === 'MULTIPLE' 
+                      ? `${selectedUserIds.length} Officers Selected`
+                      : (isSelfAssignment ? 'Self-Assignment' : `Assignee: ${selectedAssignee.name}`)}
                   </span>
                 </div>
-                <select
-                  value={assigneeId}
-                  onChange={(e) => setAssigneeId(e.target.value)}
-                  className="w-full p-2.5 bg-white dark:bg-[#121216] border border-indigo-500/30 rounded-xl text-slate-900 dark:text-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/40 cursor-pointer"
-                >
-                  <option value={currentUser.id}>
-                    👤 Assign to Myself ({currentUser.name} • {currentUser.jobTitle})
-                  </option>
 
-                  {directReports.length > 0 && (
-                    <optgroup label="Supervised Direct Reports (Under Your Command)">
-                      {directReports.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.name} — {u.jobTitle} ({u.departmentName})
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
+                {/* Scope Switcher Tabs */}
+                <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-black/40 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setAssignmentType('INDIVIDUAL')}
+                    className={`py-1.5 px-2 rounded-lg text-[10px] font-bold transition-all text-center ${
+                      assignmentType === 'INDIVIDUAL'
+                        ? 'bg-white dark:bg-[#1c1c1f] text-slate-900 dark:text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    👤 Single Officer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAssignmentType('MULTIPLE')}
+                    className={`py-1.5 px-2 rounded-lg text-[10px] font-bold transition-all text-center ${
+                      assignmentType === 'MULTIPLE'
+                        ? 'bg-white dark:bg-[#1c1c1f] text-slate-900 dark:text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    👥 Multiple Officers
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAssignmentType('DEPARTMENT')}
+                    className={`py-1.5 px-2 rounded-lg text-[10px] font-bold transition-all text-center ${
+                      assignmentType === 'DEPARTMENT'
+                        ? 'bg-white dark:bg-[#1c1c1f] text-slate-900 dark:text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    🏢 Entire Department
+                  </button>
+                </div>
 
-                  {departmentPeers.length > 0 && (
-                    <optgroup label={`${currentUser.departmentName} Team Members`}>
-                      {departmentPeers.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.name} — {u.jobTitle}
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
+                {/* Mode 1: Individual Selection */}
+                {assignmentType === 'INDIVIDUAL' && (
+                  <select
+                    value={assigneeId}
+                    onChange={(e) => setAssigneeId(e.target.value)}
+                    className="w-full p-2.5 bg-white dark:bg-[#121216] border border-indigo-500/30 rounded-xl text-slate-900 dark:text-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/40 cursor-pointer"
+                  >
+                    <option value={currentUser.id}>
+                      👤 Assign to Myself ({currentUser.name} • {currentUser.jobTitle})
+                    </option>
 
-                  {isAdmin && otherStaff.length > 0 && (
-                    <optgroup label="All Enterprise Personnel (Admin Directory)">
-                      {otherStaff.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.name} — {u.jobTitle} ({u.departmentName})
-                        </option>
-                      ))}
-                    </optgroup>
+                    {directReports.length > 0 && (
+                      <optgroup label="Supervised Direct Reports (Under Your Command)">
+                        {directReports.map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.name} — {u.jobTitle} ({u.departmentName})
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+
+                    {departmentPeers.length > 0 && (
+                      <optgroup label={`${currentUser.departmentName} Team Members`}>
+                        {departmentPeers.map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.name} — {u.jobTitle}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+
+                    {isAdmin && otherStaff.length > 0 && (
+                      <optgroup label="All Enterprise Personnel (Admin Directory)">
+                        {otherStaff.map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.name} — {u.jobTitle} ({u.departmentName})
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </select>
+                )}
+
+                {/* Mode 2: Multiple Officers Selection */}
+                {assignmentType === 'MULTIPLE' && (
+                  <div className="space-y-2">
+                    {/* Selected Badges */}
+                    <div className="flex flex-wrap gap-1.5 min-h-[30px] p-2 bg-white dark:bg-[#121216] rounded-xl border border-indigo-500/20">
+                      {selectedUserIds.length === 0 ? (
+                        <span className="text-[10px] text-slate-400">Select officers from list below...</span>
+                      ) : (
+                        selectedUserIds.map((uid) => {
+                          const u = allUsers.find(x => x.id === uid);
+                          if (!u) return null;
+                          return (
+                            <span 
+                              key={uid}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold border border-indigo-500/30"
+                            >
+                              <span>{u.name}</span>
+                              <button
+                                type="button"
+                                onClick={() => toggleUserSelection(uid)}
+                                className="hover:text-red-500 ml-0.5"
+                              >
+                                &times;
+                              </button>
+                            </span>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    {/* Quick Staff Search & Toggle List */}
+                    <input
+                      type="text"
+                      value={searchStaff}
+                      onChange={(e) => setSearchStaff(e.target.value)}
+                      placeholder="Search officers to add..."
+                      className="w-full p-2 bg-white dark:bg-[#121216] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-slate-900 dark:text-white text-[11px]"
+                    />
+
+                    <div className="max-h-36 overflow-y-auto space-y-1 pr-1 bg-white/50 dark:bg-black/20 p-1.5 rounded-xl border border-black/[0.05] dark:border-white/[0.05]">
+                      {allUsers
+                        .filter(u => !searchStaff || u.name.toLowerCase().includes(searchStaff.toLowerCase()) || u.jobTitle.toLowerCase().includes(searchStaff.toLowerCase()))
+                        .map((u) => {
+                          const isSelected = selectedUserIds.includes(u.id);
+                          return (
+                            <div
+                              key={u.id}
+                              onClick={() => toggleUserSelection(u.id)}
+                              className={`p-1.5 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all ${
+                                isSelected 
+                                  ? 'bg-indigo-500/15 border border-indigo-500/30 text-indigo-950 dark:text-indigo-200' 
+                                  : 'hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-slate-300'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className={`w-3.5 h-3.5 rounded flex items-center justify-center border text-[9px] font-bold ${
+                                  isSelected ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-300 dark:border-slate-600'
+                                }`}>
+                                  {isSelected ? '✓' : ''}
+                                </span>
+                                <div className="truncate">
+                                  <span className="font-bold text-[11px]">{u.name}</span>
+                                  <span className="text-[10px] text-slate-400 ml-1.5">({u.departmentName})</span>
+                                </div>
+                              </div>
+                              <span className="text-[10px] text-slate-400 shrink-0">{u.jobTitle}</span>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Mode 3: Entire Department Selection */}
+                {assignmentType === 'DEPARTMENT' && (
+                  <div className="space-y-2">
+                    <select
+                      value={targetDepartment}
+                      onChange={(e) => setTargetDepartment(e.target.value)}
+                      className="w-full p-2.5 bg-white dark:bg-[#121216] border border-indigo-500/30 rounded-xl text-slate-900 dark:text-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/40 cursor-pointer"
+                    >
+                      {AQUAEARTH_DEPARTMENTS.map((dept) => {
+                        const count = allUsers.filter(u => u.departmentName === dept).length;
+                        return (
+                          <option key={dept} value={dept}>
+                            🏢 {dept} ({count} Staff Members)
+                          </option>
+                        );
+                      })}
+                    </select>
+
+                    <div className="p-2 bg-indigo-500/10 rounded-xl text-[10px] text-indigo-700 dark:text-indigo-300">
+                      All personnel in <b>{targetDepartment}</b> will be assigned this task. Any member can pick up and finalize it.
+                    </div>
+                  </div>
+                )}
+
+                {/* Weighted KPI Impact Preview Policy */}
+                <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 space-y-1 text-xs">
+                  <div className="flex items-center gap-1.5 font-bold text-amber-900 dark:text-amber-300 text-[10px]">
+                    <Sparkles className="w-3 h-3 text-amber-500" />
+                    <span>Weighted Appraisal & KPI Policy</span>
+                  </div>
+                  {assignmentType === 'DEPARTMENT' ? (
+                    <p className="text-[10px] text-amber-800/90 dark:text-amber-300/90 leading-relaxed">
+                      🏆 <b>Completing Officer</b>: <b>+20 pts</b> on delivery. <br />
+                      👥 <b>Department Colleagues</b>: <b>+6 pts each</b> shared success bonus. <br />
+                      👔 <b>Dept Head / Manager</b>: <b>+8 pts</b> leadership oversight. <br />
+                      ⚠️ <b>Overdue Penalty</b>: <b>-6 pts</b> deducted across all department staff if deadline lapses.
+                    </p>
+                  ) : assignmentType === 'MULTIPLE' ? (
+                    <p className="text-[10px] text-amber-800/90 dark:text-amber-300/90 leading-relaxed">
+                      👥 <b>Assigned Squad</b>: <b>+15 pts</b> for timely execution (or <b>-12 pts</b> if overdue). <br />
+                      👔 <b>Line Manager</b>: <b>+6 pts</b> oversight credit (or <b>-5 pts</b> if overdue).
+                    </p>
+                  ) : (
+                    <p className="text-[10px] text-amber-800/90 dark:text-amber-300/90 leading-relaxed">
+                      👤 <b>Individual Task</b>: Assignee earns <b>+15 pts</b> on-time (or <b>-12 pts</b> overdue). Line Manager earns <b>+6 pts</b> (or <b>-5 pts</b> overdue).
+                    </p>
                   )}
-                </select>
-                <div className="text-[10px] text-indigo-600/80 dark:text-indigo-300/80 flex items-center gap-1">
-                  <CheckCheck className="w-3 h-3 text-indigo-500" />
-                  <span>
-                    {isSelfAssignment 
-                      ? (isAdmin ? 'Admins require no approval gates.' : 'Self-assigned task.')
-                      : `Tasks assigned to subordinates by leadership are pre-approved.`}
-                  </span>
                 </div>
               </div>
             )}

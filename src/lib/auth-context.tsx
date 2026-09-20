@@ -84,6 +84,7 @@ import {
 } from './mock-data';
 import { 
   calculateEventPoints, 
+  calculateTaskKpiDistribution,
   DEFAULT_KPI_CONFIG, 
   simulateLeaderboardRecalculation,
   getPerformanceTier
@@ -137,6 +138,11 @@ interface AuthContextType {
     priority: TaskItem['priority'];
     dueDate: string;
     assigneeId?: string;
+    assigneeIds?: string[];
+    assigneeNames?: string[];
+    assignmentType?: 'INDIVIDUAL' | 'MULTIPLE' | 'DEPARTMENT';
+    departmentId?: string;
+    departmentName?: string;
     projectId?: string;
     projectName?: string;
     estimatedHours?: number;
@@ -145,7 +151,17 @@ interface AuthContextType {
   approveTask: (taskId: string, comment?: string) => void;
   rejectTask: (taskId: string, reason: string) => void;
   addTaskComment: (taskId: string, text: string) => void;
-  updateTaskProgress: (taskId: string, progressPercent: number, status?: TaskItem['status'], loggedHours?: number) => void;
+  updateTaskProgress: (
+    taskId: string, 
+    progressPercent: number, 
+    status?: TaskItem['status'], 
+    loggedHours?: number,
+    completionDetails?: {
+      completedById?: string;
+      completedByName?: string;
+      completionNotes?: string;
+    }
+  ) => void;
   createSupportTicket: (ticket: Omit<SupportTicket, 'id' | 'ticketNumber' | 'requesterId' | 'requesterName' | 'requesterDept' | 'createdAt'>) => void;
   submitLeaveRequest: (leave: Omit<LeaveItem, 'id' | 'userId' | 'userName' | 'status' | 'createdAt'>) => void;
   updateLeaveStatus: (leaveId: string, status: LeaveItem['status'], comment?: string) => void;
@@ -828,6 +844,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     priority: TaskItem['priority'];
     dueDate: string;
     assigneeId?: string;
+    assigneeIds?: string[];
+    assigneeNames?: string[];
+    assignmentType?: 'INDIVIDUAL' | 'MULTIPLE' | 'DEPARTMENT';
+    departmentId?: string;
+    departmentName?: string;
     projectId?: string;
     projectName?: string;
     estimatedHours?: number;
@@ -847,19 +868,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                             currentUser.managementTier === 'TEAM_LEAD' || 
                             currentUser.managementTier === 'DEPT_HEAD';
 
-    // Resolve target assignee: defaults to currentUser if not specified
-    const targetAssignee = (taskData.assigneeId && allUsers.find(u => u.id === taskData.assigneeId)) || currentUser;
-    const isSelfAssigned = targetAssignee.id === currentUser.id;
+    const assignmentType = taskData.assignmentType || 'INDIVIDUAL';
+    const assigneeIds = taskData.assigneeIds && taskData.assigneeIds.length > 0 
+      ? taskData.assigneeIds 
+      : taskData.assigneeId 
+      ? [taskData.assigneeId] 
+      : [currentUser.id];
+
+    const assigneeNames = taskData.assigneeNames && taskData.assigneeNames.length > 0
+      ? taskData.assigneeNames
+      : assigneeIds.map(id => allUsers.find(u => u.id === id)?.name || id);
+
+    // Resolve primary target assignee
+    const targetAssignee = allUsers.find(u => u.id === assigneeIds[0]) || currentUser;
+    const isSelfAssigned = assigneeIds.length === 1 && targetAssignee.id === currentUser.id;
     const isAssigneeAdmin = targetAssignee.id === 'usr-1' || 
                             targetAssignee.name.toLowerCase().includes('kaine') ||
                             targetAssignee.accessTier === 'SUPERADMIN' ||
                             targetAssignee.functionalRole === 'SUPERADMIN' ||
                             targetAssignee.functionalRole === 'MANAGING_CONSULTANT';
 
-    // Rule 1: Dr. Kaine and Superadmins do NOT need approvals on tasks!
-    // Rule 2: Tasks assigned to Dr. Kaine or Superadmins never need approvals!
-    // Rule 3: Admins, Team Leads, and Line Managers can assign tasks to subordinates, which are pre-approved!
-    // Only non-manager officers creating tasks for themselves require line manager approval.
+    // Approvals rule:
+    // Superadmins and line managers assigning to subordinates are pre-approved
     const needsApproval = !isAdmin && !isAssigneeAdmin && !(isManagerOrLead && !isSelfAssigned);
     const approvalStatus: TaskItem['approvalStatus'] = needsApproval ? 'PENDING_APPROVAL' : 'APPROVED';
 
@@ -882,6 +912,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
     }
 
+    const primaryAssigneeLabel = assignmentType === 'DEPARTMENT'
+      ? `${taskData.departmentName || 'Department'} Team`
+      : assignmentType === 'MULTIPLE' && assigneeNames.length > 1
+      ? `${assigneeNames[0]} +${assigneeNames.length - 1} others`
+      : targetAssignee.name;
+
     const newTask: TaskItem = {
       id: `tsk-${Date.now()}`,
       title: taskData.title,
@@ -891,9 +927,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       priority: taskData.priority,
       dueDate: taskData.dueDate,
       assigneeId: targetAssignee.id,
-      assigneeName: targetAssignee.name,
+      assigneeName: primaryAssigneeLabel,
       assignedById: currentUser.id,
       assignedByName: currentUser.name,
+      assignmentType,
+      assigneeIds,
+      assigneeNames,
+      departmentId: taskData.departmentId,
+      departmentName: taskData.departmentName,
       projectId: taskData.projectId,
       projectName: taskData.projectName,
       estimatedHours: taskData.estimatedHours || 4,
@@ -906,6 +947,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     setTasks(prev => [newTask, ...prev]);
+
+    // Asynchronous Cloud Sync to Neon
+    apiClient.createTask({
+      title: newTask.title,
+      description: newTask.description,
+      moduleOrigin: newTask.moduleOrigin,
+      priority: newTask.priority,
+      dueDate: newTask.dueDate,
+      assigneeId: newTask.assigneeId,
+      assigneeIds: newTask.assigneeIds,
+      assigneeNames: newTask.assigneeNames,
+      assignmentType: newTask.assignmentType,
+      departmentId: newTask.departmentId,
+      departmentName: newTask.departmentName,
+      assignedById: newTask.assignedById,
+      assignedByName: newTask.assignedByName,
+      managerId: newTask.managerId,
+      managerName: newTask.managerName,
+      projectId: newTask.projectId,
+      projectName: newTask.projectName,
+      estimatedHours: newTask.estimatedHours
+    }).catch(err => console.warn('[AquaEarth] Task cloud creation warning:', err));
 
     // Audit Record
     let auditAction = 'TASK_CREATED_FOR_APPROVAL';
@@ -1069,7 +1132,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }));
   };
 
-  const updateTaskProgress = (taskId: string, progressPercent: number, newStatus?: TaskItem['status'], loggedHours?: number) => {
+  const updateTaskProgress = (
+    taskId: string, 
+    progressPercent: number, 
+    newStatus?: TaskItem['status'], 
+    loggedHours?: number,
+    completionDetails?: {
+      completedById?: string;
+      completedByName?: string;
+      completionNotes?: string;
+    }
+  ) => {
+    const isNowDone = progressPercent >= 100 || newStatus === 'DONE';
+    const finalStatus: TaskItem['status'] = isNowDone ? 'DONE' : (newStatus || (progressPercent > 0 ? 'IN_PROGRESS' : undefined));
+
     setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
         // IMMUTABILITY DIRECTIVE: Once a task is marked as DONE, it cannot be undone, reopened, or modified
@@ -1077,30 +1153,88 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return t;
         }
 
-        const isNowDone = progressPercent >= 100 || newStatus === 'DONE';
-        const finalStatus: TaskItem['status'] = isNowDone ? 'DONE' : (newStatus || (progressPercent > 0 ? 'IN_PROGRESS' : t.status));
+        const taskStatus = finalStatus || t.status;
         const updatedTask: TaskItem = {
           ...t,
           progressPercent: isNowDone ? 100 : progressPercent,
-          status: finalStatus,
+          status: taskStatus,
           loggedHours: loggedHours !== undefined ? loggedHours : t.loggedHours,
           completedAt: isNowDone ? (t.completedAt || new Date().toISOString().split('T')[0]) : t.completedAt
         };
 
-        if (isNowDone) {
+        if (isNowDone && !t.kpiAttributed) {
           const nowStr = new Date().toISOString().split('T')[0];
-          const pts = calculateEventPoints('PROJECT_TASK', t.dueDate, nowStr, kpiConfig?.rules?.PROJECT_TASK);
-          
+          const kpiDist = calculateTaskKpiDistribution(t.dueDate, nowStr, t.assignmentType || 'INDIVIDUAL');
+          const isDept = t.assignmentType === 'DEPARTMENT' || !!t.departmentId;
+          const actualCompleterId = completionDetails?.completedById || currentUser.id;
+          const actualCompleterName = completionDetails?.completedByName || currentUser.name;
+
+          updatedTask.completedById = actualCompleterId;
+          updatedTask.completedByName = actualCompleterName;
+          updatedTask.completionNotes = completionDetails?.completionNotes;
+          updatedTask.kpiAttributed = true;
+
+          const pointsMap: Record<string, number> = {};
+
+          if (isDept) {
+            // 1. Completing officer gets highest positive boost
+            pointsMap[actualCompleterId] = (pointsMap[actualCompleterId] || 0) + kpiDist.completerPoints;
+
+            // 2. Department members get collective boost
+            const deptStaff = allUsers.filter(u => 
+              (t.departmentId ? u.departmentId === t.departmentId : u.departmentName === t.departmentName) && 
+              u.id !== actualCompleterId
+            );
+            for (const u of deptStaff) {
+              pointsMap[u.id] = (pointsMap[u.id] || 0) + kpiDist.departmentMemberPoints;
+            }
+
+            // 3. Line Manager / Dept Head gets leadership oversight points
+            const managerId = t.assignedById || t.managerId;
+            if (managerId && managerId !== actualCompleterId) {
+              pointsMap[managerId] = (pointsMap[managerId] || 0) + kpiDist.departmentHeadPoints;
+            }
+
+            updatedTask.kpiBreakdown = {
+              completerPoints: kpiDist.completerPoints,
+              departmentPoints: kpiDist.departmentMemberPoints,
+              managerPoints: kpiDist.departmentHeadPoints
+            };
+          } else {
+            // Individual / Multi-Assignee Task
+            pointsMap[t.assigneeId] = (pointsMap[t.assigneeId] || 0) + kpiDist.assigneePoints;
+
+            if (t.assigneeIds && t.assigneeIds.length > 1) {
+              for (const coId of t.assigneeIds) {
+                if (coId !== t.assigneeId) {
+                  pointsMap[coId] = (pointsMap[coId] || 0) + kpiDist.assigneePoints;
+                }
+              }
+            }
+
+            // Line Manager / Assigner gets oversight points
+            const managerId = t.assignedById || t.managerId;
+            if (managerId && managerId !== t.assigneeId) {
+              pointsMap[managerId] = (pointsMap[managerId] || 0) + kpiDist.managerPoints;
+            }
+
+            updatedTask.kpiBreakdown = {
+              assigneePoints: kpiDist.assigneePoints,
+              managerPoints: kpiDist.managerPoints
+            };
+          }
+
+          // Update Leaderboard in React state
           setLeaderboard(lPrev => {
             const updated = lPrev.map(entry => {
-              if (entry.userId === t.assigneeId) {
-                const newTotal = entry.totalScore + pts.totalPoints;
+              if (pointsMap[entry.userId] !== undefined) {
+                const ptsToAdd = pointsMap[entry.userId];
                 return {
                   ...entry,
-                  totalScore: newTotal,
+                  totalScore: Math.max(0, entry.totalScore + ptsToAdd),
                   completedCount: entry.completedCount + 1,
-                  onTimeCount: pts.breakdown.isOnTime ? entry.onTimeCount + 1 : entry.onTimeCount,
-                  overdueCount: !pts.breakdown.isOnTime ? entry.overdueCount + 1 : entry.overdueCount
+                  onTimeCount: kpiDist.isOnTime ? entry.onTimeCount + 1 : entry.onTimeCount,
+                  overdueCount: !kpiDist.isOnTime ? entry.overdueCount + 1 : entry.overdueCount
                 };
               }
               return entry;
@@ -1115,11 +1249,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }));
 
     // Asynchronous Cloud Database Sync with Neon
-    const isNowDone = progressPercent >= 100 || newStatus === 'DONE';
-    const finalStatus = isNowDone ? 'DONE' : (newStatus || (progressPercent > 0 ? 'IN_PROGRESS' : undefined));
     apiClient.updateTask(taskId, {
       status: finalStatus,
-      loggedHours
+      loggedHours,
+      completedById: completionDetails?.completedById || currentUser.id,
+      completedByName: completionDetails?.completedByName || currentUser.name,
+      completionNotes: completionDetails?.completionNotes
     }).catch(err => console.warn('[AquaEarth] Task cloud sync warning:', err));
   };
 

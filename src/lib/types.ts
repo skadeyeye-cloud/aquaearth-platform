@@ -82,6 +82,21 @@ export interface TaskItem {
   managerId?: string;
   managerName?: string;
   rejectionReason?: string;
+  assignmentType?: 'INDIVIDUAL' | 'MULTIPLE' | 'DEPARTMENT';
+  assigneeIds?: string[];
+  assigneeNames?: string[];
+  departmentId?: string;
+  departmentName?: string;
+  completedById?: string;
+  completedByName?: string;
+  completionNotes?: string;
+  kpiAttributed?: boolean;
+  kpiBreakdown?: {
+    completerPoints?: number;
+    assigneePoints?: number;
+    managerPoints?: number;
+    departmentPoints?: number;
+  };
   comments?: TaskComment[];
 }
 

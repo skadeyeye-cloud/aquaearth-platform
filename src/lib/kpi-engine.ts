@@ -272,3 +272,53 @@ export function simulateLeaderboardRecalculation(
   });
 }
 
+export interface TaskKpiDistributionResult {
+  isOnTime: boolean;
+  daysLate: number;
+  assigneePoints: number;
+  managerPoints: number;
+  completerPoints: number;
+  departmentMemberPoints: number;
+  departmentHeadPoints: number;
+}
+
+export function calculateTaskKpiDistribution(
+  dueDate: string,
+  completionDate: string,
+  assignmentType: 'INDIVIDUAL' | 'MULTIPLE' | 'DEPARTMENT' = 'INDIVIDUAL'
+): TaskKpiDistributionResult {
+  const due = new Date(dueDate).getTime();
+  const completed = new Date(completionDate).getTime();
+  const isOnTime = completed <= due;
+  
+  let daysLate = 0;
+  if (!isOnTime) {
+    const diffMs = completed - due;
+    daysLate = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+  }
+
+  if (isOnTime) {
+    return {
+      isOnTime: true,
+      daysLate: 0,
+      assigneePoints: 15,
+      managerPoints: 6,
+      completerPoints: 20,
+      departmentMemberPoints: 6,
+      departmentHeadPoints: 8,
+    };
+  } else {
+    const lateFactor = Math.min(daysLate, 3);
+    return {
+      isOnTime: false,
+      daysLate,
+      assigneePoints: -(10 + lateFactor), // -11 to -13 pts
+      managerPoints: -(4 + Math.floor(lateFactor / 2)), // -4 to -5 pts
+      completerPoints: -(10 + lateFactor),
+      departmentMemberPoints: -6,
+      departmentHeadPoints: -6,
+    };
+  }
+}
+
+

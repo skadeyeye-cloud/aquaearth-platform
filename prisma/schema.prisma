@@ -104,24 +104,38 @@ model LeaveRequest {
 }
 
 model Task {
-  id             String    @id @default(uuid())
-  title          String
-  description    String?
-  moduleOrigin   String    @default("PROJECT")
-  status         String    @default("NOT_STARTED")
-  priority       String    @default("MEDIUM")
-  dueDate        DateTime
-  completedAt    DateTime?
-  blockedReason  String?
-  estimatedHours Float     @default(0)
-  loggedHours    Float     @default(0)
-  assigneeId     String
-  projectId      String?
-  projectName    String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id                String    @id @default(uuid())
+  title             String
+  description       String?
+  moduleOrigin      String    @default("PROJECT")
+  status            String    @default("NOT_STARTED")
+  priority          String    @default("MEDIUM")
+  dueDate           DateTime
+  completedAt       DateTime?
+  blockedReason     String?
+  estimatedHours    Float     @default(0)
+  loggedHours       Float     @default(0)
+  assigneeId        String
+  assignedById      String?
+  assignedByName    String?
+  managerId         String?
+  managerName       String?
+  assignmentType    String    @default("INDIVIDUAL") // INDIVIDUAL, MULTIPLE, DEPARTMENT
+  assigneeIdsJson   String?   // JSON array of user IDs
+  assigneeNamesJson String?   // JSON array of user names
+  departmentId      String?   // Target department ID
+  departmentName    String?   // Target department name
+  completedById     String?   // Officer who finalized the task
+  completedByName   String?   // Name of officer who finalized
+  completionNotes   String?   // Documentation / resolution notes
+  kpiAttributed     Boolean   @default(false)
+  kpiBreakdownJson  String?   // JSON points breakdown
+  projectId         String?
+  projectName       String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-  assignee       User      @relation("AssignedTasks", fields: [assigneeId], references: [id])
+  assignee          User      @relation("AssignedTasks", fields: [assigneeId], references: [id])
 }
 
 model SupportRequest {

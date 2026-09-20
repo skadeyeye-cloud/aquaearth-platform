@@ -62,9 +62,13 @@ export const apiClient = {
   },
 
   // Tasks
-  async getTasks(assigneeId?: string) {
+  async getTasks(params?: { assigneeId?: string; assignedById?: string; departmentId?: string }) {
     try {
-      const url = assigneeId ? `/api/tasks?assigneeId=${encodeURIComponent(assigneeId)}` : '/api/tasks';
+      const search = new URLSearchParams();
+      if (params?.assigneeId) search.set('assigneeId', params.assigneeId);
+      if (params?.assignedById) search.set('assignedById', params.assignedById);
+      if (params?.departmentId) search.set('departmentId', params.departmentId);
+      const url = search.toString() ? `/api/tasks?${search.toString()}` : '/api/tasks';
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -75,7 +79,48 @@ export const apiClient = {
     }
   },
 
-  async updateTask(id: string, updates: { status?: string; loggedHours?: number; blockedReason?: string }) {
+  async createTask(payload: {
+    title: string;
+    description?: string;
+    moduleOrigin?: string;
+    priority?: string;
+    dueDate: string;
+    assigneeId?: string;
+    assigneeIds?: string[];
+    assigneeNames?: string[];
+    assignmentType?: 'INDIVIDUAL' | 'MULTIPLE' | 'DEPARTMENT';
+    departmentId?: string;
+    departmentName?: string;
+    assignedById?: string;
+    assignedByName?: string;
+    managerId?: string;
+    managerName?: string;
+    projectId?: string;
+    projectName?: string;
+    estimatedHours?: number;
+  }) {
+    try {
+      const res = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      console.warn('[apiClient] createTask failed:', err);
+      return { success: false, error: String(err) };
+    }
+  },
+
+  async updateTask(id: string, updates: { 
+    status?: string; 
+    loggedHours?: number; 
+    blockedReason?: string;
+    completedById?: string;
+    completedByName?: string;
+    completionNotes?: string;
+  }) {
     try {
       const res = await fetch('/api/tasks', {
         method: 'PATCH',
