@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { TaskItem, TaskComment } from '@/lib/types';
+import { TaskItem, TaskComment, TaskAssignee } from '@/lib/types';
 import { 
   CheckCircle2, 
   Clock, 
@@ -34,7 +34,8 @@ import {
   ShieldCheck,
   Briefcase,
   GitBranch,
-  FileText
+  FileText,
+  Pencil
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CreateTaskModal from '@/components/workspace/CreateTaskModal';
@@ -50,7 +51,8 @@ export default function MyTasksPage() {
     approveTask, 
     rejectTask, 
     addTaskComment, 
-    updateTaskProgress 
+    updateTaskProgress,
+    editTask 
   } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'MY_TASKS' | 'MANAGER_BOARD' | 'DEPARTMENT_TASKS' | 'PENDING_APPROVAL' | 'COMPLETED_ARCHIVE'>('MY_TASKS');
@@ -74,6 +76,90 @@ export default function MyTasksPage() {
   const [managerApprovalNote, setManagerApprovalNote] = useState('');
   const [isRejectOpen, setIsRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+
+  // Edit Task & Assignees Modal State
+  const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editStage, setEditStage] = useState('');
+  const [editPriority, setEditPriority] = useState<TaskItem['priority']>('MEDIUM');
+  const [editDueDate, setEditDueDate] = useState('');
+  const [editEstHours, setEditEstHours] = useState(16);
+  const [editTaskType, setEditTaskType] = useState<TaskItem['taskType']>('STANDARD');
+  const [editPrimaryAssigneeId, setEditPrimaryAssigneeId] = useState('');
+  const [editLeadUserId, setEditLeadUserId] = useState('');
+  const [editContributorUserId, setEditContributorUserId] = useState('');
+  const [editWriterUserId, setEditWriterUserId] = useState('');
+  const [editDesignerUserId, setEditDesignerUserId] = useState('');
+
+  const handleOpenEditTaskAndAssignees = (task: TaskItem) => {
+    setEditingTask(task);
+    setEditTitle(task.title);
+    setEditDescription(task.description || '');
+    setEditStage(task.stage || '');
+    setEditPriority(task.priority);
+    setEditDueDate(task.dueDate || '');
+    setEditEstHours(task.estimatedHours || 16);
+    setEditTaskType(task.taskType || 'STANDARD');
+    setEditPrimaryAssigneeId(task.assigneeId || allUsers[0]?.id || '');
+
+    const leadAss = task.taskAssignees?.find(a => a.role === 'LEAD');
+    const contribAss = task.taskAssignees?.find(a => a.role === 'CONTRIBUTOR');
+    const writerAss = task.taskAssignees?.find(a => a.role === 'WRITER');
+    const designerAss = task.taskAssignees?.find(a => a.role === 'DESIGNER');
+
+    setEditLeadUserId(leadAss?.userId || '');
+    setEditContributorUserId(contribAss?.userId || '');
+    setEditWriterUserId(writerAss?.userId || '');
+    setEditDesignerUserId(designerAss?.userId || '');
+  };
+
+  const handleSaveEditTaskAndAssignees = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTask || !editTitle.trim() || !editPrimaryAssigneeId) return;
+
+    const primaryUser = allUsers.find(u => u.id === editPrimaryAssigneeId);
+
+    const newRoles: TaskAssignee[] = [];
+    if (editLeadUserId) {
+      const u = allUsers.find(x => x.id === editLeadUserId);
+      if (u) newRoles.push({ userId: u.id, userName: u.name, role: 'LEAD', weightPercent: 30 });
+    }
+    if (editContributorUserId) {
+      const u = allUsers.find(x => x.id === editContributorUserId);
+      if (u) newRoles.push({ userId: u.id, userName: u.name, role: 'CONTRIBUTOR', weightPercent: 20 });
+    }
+    if (editWriterUserId) {
+      const u = allUsers.find(x => x.id === editWriterUserId);
+      if (u) newRoles.push({ userId: u.id, userName: u.name, role: 'WRITER', weightPercent: 35 });
+    }
+    if (editDesignerUserId) {
+      const u = allUsers.find(x => x.id === editDesignerUserId);
+      if (u) newRoles.push({ userId: u.id, userName: u.name, role: 'DESIGNER', weightPercent: 15 });
+    }
+
+    const updates: Partial<TaskItem> = {
+      title: editTitle.trim(),
+      description: editDescription.trim() || undefined,
+      stage: editStage.trim() || undefined,
+      priority: editPriority,
+      dueDate: editDueDate,
+      estimatedHours: Number(editEstHours),
+      taskType: editTaskType,
+      assigneeId: editPrimaryAssigneeId,
+      assigneeName: primaryUser?.name || editingTask.assigneeName,
+      departmentId: primaryUser?.departmentId || editingTask.departmentId,
+      departmentName: primaryUser?.departmentName || editingTask.departmentName,
+      taskAssignees: newRoles.length > 0 ? newRoles : undefined
+    };
+
+    editTask(editingTask.id, updates);
+    if (selectedTask?.id === editingTask.id) {
+      setSelectedTask(prev => prev ? { ...prev, ...updates } : null);
+    }
+    setEditingTask(null);
+    haptics.success();
+  };
 
   const isSuperadmin = currentUser.accessTier === 'SUPERADMIN' || 
                        currentUser.functionalRole === 'SUPERADMIN' || 
@@ -769,12 +855,30 @@ export default function MyTasksPage() {
                       {activeDetailTask.title}
                     </h2>
                   </div>
-                  <button
-                    onClick={() => setSelectedTask(null)}
-                    className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-white/10"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {(() => {
+                      const proj = activeDetailTask.projectId ? projects.find(p => p.id === activeDetailTask.projectId) : null;
+                      const canEditThisTask = isSuperadmin || isManager || (proj ? (proj.leadPmId === currentUser.id || proj.projectManagerId === currentUser.id) : false) || activeDetailTask.assignedById === currentUser.id;
+                      if (!canEditThisTask) return null;
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditTaskAndAssignees(activeDetailTask)}
+                          className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                          title="Edit Task & Assignees"
+                        >
+                          <Pencil className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                          <span>Edit</span>
+                        </button>
+                      );
+                    })()}
+                    <button
+                      onClick={() => setSelectedTask(null)}
+                      className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 cursor-pointer"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Task Details & Metadata */}
@@ -911,12 +1015,27 @@ export default function MyTasksPage() {
                             <span>Finalize Deliverable (+KPI)</span>
                           </button>
                         ) : (
-                          <div 
-                            title="Under Slate Labs Core Rule 4, only the designated Project Manager can mark deliverables completed."
-                            className="px-3 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 rounded-lg text-[10px] font-bold ml-auto whitespace-nowrap shrink-0 inline-flex items-center gap-1 cursor-not-allowed opacity-90"
-                          >
-                            <Lock className="w-3 h-3 text-amber-600" />
-                            <span>PM Sign-Off Required to Complete (Core Rule 4)</span>
+                          <div className="flex items-center gap-2 ml-auto flex-wrap">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updateTaskProgress(activeDetailTask.id, 90, 'UNDER_REVIEW');
+                                addTaskComment(activeDetailTask.id, `${currentUser.name} marked progress at 90% and requested PM sign-off.`);
+                                haptics.success();
+                              }}
+                              className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold shadow-xs active:scale-[0.96] whitespace-nowrap shrink-0 inline-flex items-center gap-1 cursor-pointer"
+                              title="Set to 90% and request PM sign-off"
+                            >
+                              <Send className="w-3 h-3" />
+                              <span>Submit for Sign-Off (90%)</span>
+                            </button>
+                            <div 
+                              title="Under Slate Labs Core Rule 4, only the designated Project Manager can mark deliverables completed."
+                              className="px-2 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 rounded-lg text-[10px] font-bold whitespace-nowrap shrink-0 inline-flex items-center gap-1 cursor-not-allowed opacity-90"
+                            >
+                              <Lock className="w-3 h-3 text-amber-600" />
+                              <span>PM Sign-Off Required (Rule 4)</span>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -1096,6 +1215,222 @@ export default function MyTasksPage() {
                   <span>Confirm & Lock Deliverable (+KPI)</span>
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Task & Assignees Modal */}
+      <AnimatePresence>
+        {editingTask && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setEditingTask(null)} className="fixed inset-0 bg-black/70 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1 }} className="relative bg-white dark:bg-[#0C0C0D] rounded-3xl shadow-2xl max-w-lg w-full border border-black/[0.08] dark:border-white/[0.12] p-6 space-y-4 z-10 text-xs max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between border-b border-black/[0.05] dark:border-white/[0.08] pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                    <Pencil className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-[#1D1D1F] dark:text-[#F6F4F0]">Edit Task & Assignees</h3>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">Modify deliverable scope, schedule, and team role allocation</p>
+                  </div>
+                </div>
+                <button onClick={() => setEditingTask(null)} className="text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white">&times;</button>
+              </div>
+
+              <form onSubmit={handleSaveEditTaskAndAssignees} className="space-y-3.5">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Task Title *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Description / Scope</label>
+                  <textarea
+                    rows={2}
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    placeholder="Technical scope, requirements, standard specifications..."
+                    className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Stage / Phase</label>
+                    <input
+                      type="text"
+                      value={editStage}
+                      onChange={(e) => setEditStage(e.target.value)}
+                      placeholder="e.g. 3 Field data gathering"
+                      className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Task Type</label>
+                    <select
+                      value={editTaskType}
+                      onChange={(e: any) => setEditTaskType(e.target.value)}
+                      className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
+                    >
+                      <option value="STANDARD">Standard Task</option>
+                      <option value="REPORT">Final Report Deliverable</option>
+                      <option value="APPROVAL_GATE">Approval Gate (Hard-Block)</option>
+                      <option value="DECISION_GATE">Decision Gate (Route Branch)</option>
+                      <option value="ONGOING">Ongoing / Continuous</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Due Date</label>
+                    <input
+                      type="date"
+                      required
+                      value={editDueDate}
+                      onChange={(e) => setEditDueDate(e.target.value)}
+                      className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Priority</label>
+                    <select
+                      value={editPriority}
+                      onChange={(e: any) => setEditPriority(e.target.value)}
+                      className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
+                    >
+                      <option value="LOW">Low</option>
+                      <option value="MEDIUM">Medium</option>
+                      <option value="HIGH">High Priority</option>
+                      <option value="CRITICAL">Critical SLA</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Est. Hours</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={editEstHours}
+                      onChange={(e) => setEditEstHours(Number(e.target.value))}
+                      className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs font-mono tnum text-[#1D1D1F] dark:text-[#F6F4F0]"
+                    />
+                  </div>
+                </div>
+
+                {/* Primary Assignee */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">
+                    Primary Assignee *
+                  </label>
+                  <select
+                    required
+                    value={editPrimaryAssigneeId}
+                    onChange={(e) => setEditPrimaryAssigneeId(e.target.value)}
+                    className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
+                  >
+                    {allUsers.map(u => (
+                      <option key={u.id} value={u.id}>
+                        {u.name} — {u.jobTitle} ({u.departmentName})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Slate Labs Rule 3: Role-Based Assignees */}
+                <div className="p-3.5 bg-black/[0.02] dark:bg-white/[0.03] rounded-2xl border border-black/[0.06] dark:border-white/[0.08] space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5 text-indigo-500" />
+                      <span className="font-bold text-[11px] text-slate-900 dark:text-white">Multi-Role Assignees (Slate Labs Rule 3)</span>
+                    </div>
+                    <span className="text-[10px] text-slate-400">Optional Role Allocation</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Lead Specialist (30% KPI)
+                      </label>
+                      <select
+                        value={editLeadUserId}
+                        onChange={(e) => setEditLeadUserId(e.target.value)}
+                        className="w-full p-2 bg-white dark:bg-[#121216] border border-black/[0.08] dark:border-white/[0.1] rounded-lg text-[11px]"
+                      >
+                        <option value="">(None / Same as Primary)</option>
+                        {allUsers.map(u => (
+                          <option key={u.id} value={u.id}>{u.name} ({u.departmentName})</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Field Contributor (20% KPI)
+                      </label>
+                      <select
+                        value={editContributorUserId}
+                        onChange={(e) => setEditContributorUserId(e.target.value)}
+                        className="w-full p-2 bg-white dark:bg-[#121216] border border-black/[0.08] dark:border-white/[0.1] rounded-lg text-[11px]"
+                      >
+                        <option value="">(None)</option>
+                        {allUsers.map(u => (
+                          <option key={u.id} value={u.id}>{u.name} ({u.departmentName})</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Report Writer (35% KPI)
+                      </label>
+                      <select
+                        value={editWriterUserId}
+                        onChange={(e) => setEditWriterUserId(e.target.value)}
+                        className="w-full p-2 bg-white dark:bg-[#121216] border border-black/[0.08] dark:border-white/[0.1] rounded-lg text-[11px]"
+                      >
+                        <option value="">(None)</option>
+                        {allUsers.map(u => (
+                          <option key={u.id} value={u.id}>{u.name} ({u.departmentName})</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Brand/IT Designer (15% KPI)
+                      </label>
+                      <select
+                        value={editDesignerUserId}
+                        onChange={(e) => setEditDesignerUserId(e.target.value)}
+                        className="w-full p-2 bg-white dark:bg-[#121216] border border-black/[0.08] dark:border-white/[0.1] rounded-lg text-[11px]"
+                      >
+                        <option value="">(None)</option>
+                        {allUsers.map(u => (
+                          <option key={u.id} value={u.id}>{u.name} ({u.departmentName})</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-black/[0.05] dark:border-white/[0.08]">
+                  <button type="button" onClick={() => setEditingTask(null)} className="px-3 py-1.5 text-[#86868B]">Cancel</button>
+                  <button type="submit" className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold cursor-pointer shadow-xs active:scale-[0.98]">
+                    Save Task & Assignees
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </div>
         )}

@@ -66,6 +66,7 @@ export interface TaskAssignee {
   userId: string;
   userName: string;
   role: TaskAssigneeRole;
+  weightPercent?: number;
 }
 
 export interface TaskDueDateChangeRequest {
@@ -119,7 +120,7 @@ export interface TaskItem {
   title: string;
   description?: string;
   moduleOrigin: 'PROJECT' | 'FIELD' | 'IT' | 'DESIGN' | 'QA' | 'BD' | 'COMPLIANCE';
-  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'BLOCKED' | 'DONE' | 'SUGGESTED' | 'COMPLETED' | 'OVERDUE';
+  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'UNDER_REVIEW' | 'BLOCKED' | 'DONE' | 'SUGGESTED' | 'COMPLETED' | 'OVERDUE';
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
   dueDate: string;
   originalDueDate?: string;

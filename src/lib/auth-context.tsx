@@ -268,6 +268,7 @@ interface AuthContextType {
   confirmAllSuggestedTasks: (projectId: string) => void;
   deleteSuggestedTask: (taskId: string) => void;
   updateSuggestedTask: (taskId: string, updates: Partial<TaskItem>) => void;
+  editTask: (taskId: string, updates: Partial<TaskItem>) => void;
   requestDueDateChange: (taskId: string, newDate: string, reason: string) => void;
   approveDueDateChange: (requestId: string) => void;
   rejectDueDateChange: (requestId: string, reason?: string) => void;
@@ -1918,6 +1919,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       return t;
     }));
+  };
+
+  const editTask = (taskId: string, updates: Partial<TaskItem>) => {
+    let updatedAssigneeName = updates.assigneeName;
+    let updatedDeptId = updates.departmentId;
+    let updatedDeptName = updates.departmentName;
+
+    if (updates.assigneeId) {
+      const user = allUsers.find(u => u.id === updates.assigneeId);
+      if (user) {
+        updatedAssigneeName = user.name;
+        updatedDeptId = user.departmentId;
+        updatedDeptName = user.departmentName;
+      }
+    }
+
+    setTasks(prev => prev.map(t => {
+      if (t.id === taskId) {
+        const originalDue = t.originalDueDate || (updates.dueDate && updates.dueDate !== t.dueDate ? t.dueDate : undefined);
+        return {
+          ...t,
+          ...updates,
+          assigneeName: updatedAssigneeName || t.assigneeName,
+          departmentId: updatedDeptId !== undefined ? updatedDeptId : t.departmentId,
+          departmentName: updatedDeptName !== undefined ? updatedDeptName : t.departmentName,
+          originalDueDate: originalDue || t.originalDueDate
+        };
+      }
+      return t;
+    }));
+
+    if (updates.status || updates.loggedHours !== undefined) {
+      apiClient.updateTask(taskId, {
+        status: updates.status,
+        loggedHours: updates.loggedHours
+      }).catch(err => console.warn('[apiClient] editTask sync fallback:', err));
+    }
   };
 
   const requestDueDateChange = (taskId: string, newDate: string, reason: string) => {
@@ -4320,6 +4358,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       confirmAllSuggestedTasks,
       deleteSuggestedTask,
       updateSuggestedTask,
+      editTask,
       requestDueDateChange,
       approveDueDateChange,
       rejectDueDateChange,

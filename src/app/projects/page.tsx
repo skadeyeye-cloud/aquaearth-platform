@@ -32,6 +32,11 @@ import {
   CheckCheck, 
   Trash2, 
   Edit3, 
+  Pencil, 
+  Sliders, 
+  MessageSquare, 
+  Send, 
+  UserCheck, 
   GitBranch, 
   CalendarClock, 
   HelpCircle, 
@@ -43,7 +48,8 @@ import {
   ProjectStatus, 
   TaskItem, 
   ProjectType, 
-  TaskAssigneeRole 
+  TaskAssigneeRole,
+  TaskAssignee 
 } from '@/lib/types';
 import { PROJECT_TEMPLATES } from '@/lib/mock-data';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -64,6 +70,8 @@ export default function ProjectsPage() {
     confirmAllSuggestedTasks, 
     deleteSuggestedTask, 
     updateSuggestedTask, 
+    editTask, 
+    addTaskComment, 
     requestDueDateChange, 
     approveDueDateChange, 
     rejectDueDateChange, 
@@ -137,13 +145,28 @@ export default function ProjectsPage() {
   const [dueDateNewDate, setDueDateNewDate] = useState('');
   const [dueDateReason, setDueDateReason] = useState('');
 
-  // Edit Suggested Task Modal State
-  const [editingSuggestedTask, setEditingSuggestedTask] = useState<TaskItem | null>(null);
-  const [editTaskTitle, setEditTaskTitle] = useState('');
-  const [editTaskAssigneeId, setEditTaskAssigneeId] = useState('');
-  const [editTaskDueDate, setEditTaskDueDate] = useState('');
-  const [editTaskPriority, setEditTaskPriority] = useState<TaskItem['priority']>('MEDIUM');
-  const [editTaskHours, setEditTaskHours] = useState(16);
+  // Update Task Modal State (For Assignees & PMs)
+  const [updatingTask, setUpdatingTask] = useState<TaskItem | null>(null);
+  const [updateProgressVal, setUpdateProgressVal] = useState<number>(0);
+  const [updateStatusVal, setUpdateStatusVal] = useState<TaskItem['status']>('NOT_STARTED');
+  const [updateAdditionalHours, setUpdateAdditionalHours] = useState<number>(0);
+  const [updateCommentText, setUpdateCommentText] = useState<string>('');
+  const [updateCompletionNote, setUpdateCompletionNote] = useState<string>('');
+
+  // Edit Task & Assignees Modal State (For Active & Suggested Tasks)
+  const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editStage, setEditStage] = useState('');
+  const [editPriority, setEditPriority] = useState<TaskItem['priority']>('MEDIUM');
+  const [editDueDate, setEditDueDate] = useState('');
+  const [editEstHours, setEditEstHours] = useState(16);
+  const [editTaskType, setEditTaskType] = useState<TaskItem['taskType']>('STANDARD');
+  const [editPrimaryAssigneeId, setEditPrimaryAssigneeId] = useState('');
+  const [editLeadUserId, setEditLeadUserId] = useState('');
+  const [editContributorUserId, setEditContributorUserId] = useState('');
+  const [editWriterUserId, setEditWriterUserId] = useState('');
+  const [editDesignerUserId, setEditDesignerUserId] = useState('');
 
   // AI Scope Parser State
   const [isAiParserOpen, setIsAiParserOpen] = useState(false);
@@ -389,28 +412,110 @@ export default function ProjectsPage() {
     haptics.success();
   };
 
-  const handleOpenEditSuggested = (st: TaskItem) => {
-    setEditingSuggestedTask(st);
-    setEditTaskTitle(st.title);
-    setEditTaskAssigneeId(st.assigneeId || allUsers[0]?.id || '');
-    setEditTaskDueDate(st.dueDate);
-    setEditTaskPriority(st.priority);
-    setEditTaskHours(st.estimatedHours || 16);
+  const handleOpenEditTaskAndAssignees = (task: TaskItem) => {
+    setEditingTask(task);
+    setEditTitle(task.title);
+    setEditDescription(task.description || '');
+    setEditStage(task.stage || '');
+    setEditPriority(task.priority);
+    setEditDueDate(task.dueDate || '');
+    setEditEstHours(task.estimatedHours || 16);
+    setEditTaskType(task.taskType || 'STANDARD');
+    setEditPrimaryAssigneeId(task.assigneeId || allUsers[0]?.id || '');
+
+    const leadAss = task.taskAssignees?.find(a => a.role === 'LEAD');
+    const contribAss = task.taskAssignees?.find(a => a.role === 'CONTRIBUTOR');
+    const writerAss = task.taskAssignees?.find(a => a.role === 'WRITER');
+    const designerAss = task.taskAssignees?.find(a => a.role === 'DESIGNER');
+
+    setEditLeadUserId(leadAss?.userId || '');
+    setEditContributorUserId(contribAss?.userId || '');
+    setEditWriterUserId(writerAss?.userId || '');
+    setEditDesignerUserId(designerAss?.userId || '');
   };
 
-  const handleSaveEditSuggested = (e: React.FormEvent) => {
+  const handleSaveEditTaskAndAssignees = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingSuggestedTask) return;
-    const assignee = allUsers.find(u => u.id === editTaskAssigneeId);
-    updateSuggestedTask(editingSuggestedTask.id, {
-      title: editTaskTitle.trim(),
-      assigneeId: editTaskAssigneeId,
-      assigneeName: assignee?.name || editingSuggestedTask.assigneeName,
-      dueDate: editTaskDueDate,
-      priority: editTaskPriority,
-      estimatedHours: Number(editTaskHours)
-    });
-    setEditingSuggestedTask(null);
+    if (!editingTask || !editTitle.trim() || !editPrimaryAssigneeId) return;
+
+    const primaryUser = allUsers.find(u => u.id === editPrimaryAssigneeId);
+
+    const newRoles: TaskAssignee[] = [];
+    if (editLeadUserId) {
+      const u = allUsers.find(x => x.id === editLeadUserId);
+      if (u) newRoles.push({ userId: u.id, userName: u.name, role: 'LEAD', weightPercent: 30 });
+    }
+    if (editContributorUserId) {
+      const u = allUsers.find(x => x.id === editContributorUserId);
+      if (u) newRoles.push({ userId: u.id, userName: u.name, role: 'CONTRIBUTOR', weightPercent: 20 });
+    }
+    if (editWriterUserId) {
+      const u = allUsers.find(x => x.id === editWriterUserId);
+      if (u) newRoles.push({ userId: u.id, userName: u.name, role: 'WRITER', weightPercent: 35 });
+    }
+    if (editDesignerUserId) {
+      const u = allUsers.find(x => x.id === editDesignerUserId);
+      if (u) newRoles.push({ userId: u.id, userName: u.name, role: 'DESIGNER', weightPercent: 15 });
+    }
+
+    const updates: Partial<TaskItem> = {
+      title: editTitle.trim(),
+      description: editDescription.trim() || undefined,
+      stage: editStage.trim() || undefined,
+      priority: editPriority,
+      dueDate: editDueDate,
+      estimatedHours: Number(editEstHours),
+      taskType: editTaskType,
+      assigneeId: editPrimaryAssigneeId,
+      assigneeName: primaryUser?.name || editingTask.assigneeName,
+      departmentId: primaryUser?.departmentId || editingTask.departmentId,
+      departmentName: primaryUser?.departmentName || editingTask.departmentName,
+      taskAssignees: newRoles.length > 0 ? newRoles : undefined
+    };
+
+    editTask(editingTask.id, updates);
+    setEditingTask(null);
+    haptics.success();
+  };
+
+  const handleOpenUpdateTask = (task: TaskItem) => {
+    setUpdatingTask(task);
+    setUpdateProgressVal(task.progressPercent || 0);
+    setUpdateStatusVal(task.status);
+    setUpdateAdditionalHours(0);
+    setUpdateCommentText('');
+    setUpdateCompletionNote('');
+  };
+
+  const handleSaveTaskUpdate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!updatingTask) return;
+
+    const totalHours = (updatingTask.loggedHours || 0) + Number(updateAdditionalHours || 0);
+    const isNowDone = updateProgressVal >= 100 || updateStatusVal === 'DONE';
+
+    if (isNowDone && updatingTask.projectId && !isCurrentProjectPM) {
+      alert('Under Slate Labs Core Rule 4, only the designated Project Manager can finalize deliverables.');
+      return;
+    }
+
+    updateTaskProgress(
+      updatingTask.id,
+      updateProgressVal,
+      updateStatusVal,
+      totalHours,
+      isNowDone ? {
+        completedById: currentUser.id,
+        completedByName: currentUser.name,
+        completionNotes: updateCompletionNote || updateCommentText || 'Deliverable finalized by PM.'
+      } : undefined
+    );
+
+    if (updateCommentText.trim()) {
+      addTaskComment(updatingTask.id, updateCommentText.trim());
+    }
+
+    setUpdatingTask(null);
     haptics.success();
   };
 
@@ -1134,11 +1239,11 @@ export default function ProjectsPage() {
 
                           <div className="flex items-center gap-1 shrink-0">
                             <button
-                              onClick={() => handleOpenEditSuggested(st)}
+                              onClick={() => handleOpenEditTaskAndAssignees(st)}
                               className="p-1.5 text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-black/[0.04] rounded-lg cursor-pointer"
-                              title="Edit Suggested Task"
+                              title="Edit Task & Assignees"
                             >
-                              <Edit3 className="w-3.5 h-3.5" />
+                              <Pencil className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => { deleteSuggestedTask(st.id); haptics.selection(); }}
@@ -1171,6 +1276,15 @@ export default function ProjectsPage() {
                       Active Deliverables & Milestones ({activeTasks.length})
                     </h3>
                   </div>
+                  {isCurrentProjectPM && (
+                    <button
+                      onClick={() => setIsAddDrawerTaskOpen(true)}
+                      className="px-2.5 py-1 bg-black/[0.04] dark:bg-white/10 hover:bg-black/[0.08] text-[#1D1D1F] dark:text-[#F6F4F0] rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>Add Task</span>
+                    </button>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -1186,24 +1300,32 @@ export default function ProjectsPage() {
                     activeTasks.map(t => {
                       const isDone = t.status === 'DONE';
                       const isGateBlocked = t.isBlockedByGate;
+                      const isAssignee = t.assigneeId === currentUser.id || t.taskAssignees?.some(a => a.userId === currentUser.id);
+                      const canEditTask = isCurrentProjectPM || isSuperadmin || isProjectManager;
+                      const canUpdateTask = isAssignee || canEditTask;
 
                       return (
                         <div 
                           key={t.id} 
-                          className={`p-3.5 rounded-2xl border transition-all text-xs space-y-2 ${
+                          className={`p-3.5 rounded-2xl border transition-all text-xs space-y-2.5 ${
                             isDone 
                               ? 'bg-emerald-500/[0.03] border-emerald-500/20' 
                               : isGateBlocked 
                               ? 'bg-rose-500/[0.02] border-rose-500/20' 
-                              : 'bg-black/[0.02] dark:bg-white/[0.03] border-black/[0.04] dark:border-white/[0.06]'
+                              : 'bg-white dark:bg-[#121216] border-black/[0.06] dark:border-white/[0.08] shadow-xs'
                           }`}
                         >
                           <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0 flex-1 space-y-1">
+                            <div className="min-w-0 flex-1 space-y-1.5">
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 {t.stage && (
                                   <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 bg-black/[0.05] dark:bg-white/10 text-slate-600 dark:text-slate-300 rounded">
                                     {t.stage}
+                                  </span>
+                                )}
+                                {isAssignee && (
+                                  <span className="text-[9px] font-bold px-1.5 py-0.5 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 rounded flex items-center gap-0.5">
+                                    <UserCheck className="w-2.5 h-2.5" /> Assigned to You
                                   </span>
                                 )}
                                 {t.taskType === 'APPROVAL_GATE' && (
@@ -1232,6 +1354,12 @@ export default function ProjectsPage() {
                                 <span>{t.title}</span>
                               </div>
 
+                              {t.description && (
+                                <p className="text-[11px] text-slate-600 dark:text-slate-400 line-clamp-2">
+                                  {t.description}
+                                </p>
+                              )}
+
                               <div className="text-[10px] text-[#86868B] flex items-center gap-2 flex-wrap">
                                 <span>Assignee: <b className="text-[#1D1D1F] dark:text-[#F6F4F0]">{t.assigneeName}</b></span>
                                 <span>•</span>
@@ -1239,6 +1367,29 @@ export default function ProjectsPage() {
                                 {t.originalDueDate && t.originalDueDate !== t.dueDate && (
                                   <span className="text-amber-600 dark:text-amber-400 font-mono text-[9px]">(Orig: {t.originalDueDate})</span>
                                 )}
+                                <span>•</span>
+                                <span>Logged: <b className="font-mono tnum text-[#1D1D1F] dark:text-[#F6F4F0]">{t.loggedHours || 0}h</b> / {t.estimatedHours || 16}h</span>
+                              </div>
+
+                              {/* Multi-role team members if configured */}
+                              {t.taskAssignees && t.taskAssignees.length > 0 && (
+                                <div className="flex items-center gap-1 flex-wrap pt-0.5">
+                                  {t.taskAssignees.map((ra, idx) => (
+                                    <span key={idx} className="text-[9px] px-1.5 py-0.5 bg-black/[0.04] dark:bg-white/[0.06] rounded text-slate-600 dark:text-slate-400">
+                                      <span className="font-semibold text-slate-800 dark:text-slate-200">{ra.role}:</span> {ra.userName}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Progress bar */}
+                              <div className="w-full bg-black/[0.06] dark:bg-white/10 rounded-full h-1.5 overflow-hidden mt-1">
+                                <div 
+                                  className={`h-full rounded-full transition-all duration-300 ${
+                                    isDone ? 'bg-emerald-500' : 'bg-indigo-600'
+                                  }`}
+                                  style={{ width: `${t.progressPercent || 0}%` }}
+                                />
                               </div>
 
                               {isGateBlocked && (
@@ -1252,39 +1403,60 @@ export default function ProjectsPage() {
                               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
                                 t.status === 'DONE' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
                                 t.status === 'IN_PROGRESS' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' :
+                                t.status === 'UNDER_REVIEW' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' :
                                 'bg-black/[0.05] dark:bg-white/10 text-[#86868B]'
                               }`}>
-                                {t.status.replace('_', ' ')}
+                                {t.status.replace('_', ' ')} ({t.progressPercent || 0}%)
                               </span>
 
-                              {/* PM Actions on Active Task */}
-                              {isCurrentProjectPM && !isDone && (
-                                <div className="flex items-center gap-1 pt-1">
-                                  {t.taskType === 'APPROVAL_GATE' && (
-                                    <button
-                                      onClick={() => {
-                                        updateTaskProgress(t.id, 100, 'DONE', t.loggedHours, {
-                                          completedById: currentUser.id,
-                                          completedByName: currentUser.name,
-                                          completionNotes: 'SOW / ToR regulatory client approval granted. Field data gathering unblocked.'
-                                        });
-                                        haptics.success();
-                                      }}
-                                      className="px-2 py-0.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-[10px] font-bold shadow-xs active:scale-[0.96] flex items-center gap-0.5 cursor-pointer"
-                                    >
-                                      <Unlock className="w-2.5 h-2.5" />
-                                      <span>Sign Gate</span>
-                                    </button>
-                                  )}
+                              {/* Actions on Active Task */}
+                              <div className="flex items-center gap-1 pt-1">
+                                {canUpdateTask && !isDone && !isGateBlocked && (
                                   <button
-                                    onClick={() => handleOpenDueDateModal(t)}
-                                    className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
-                                    title="Request Due-Date Change"
+                                    onClick={() => handleOpenUpdateTask(t)}
+                                    className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold shadow-xs active:scale-[0.96] flex items-center gap-1 cursor-pointer"
+                                    title="Update progress, log hours, or submit for PM sign-off"
                                   >
-                                    <CalendarClock className="w-3.5 h-3.5" />
+                                    <Sliders className="w-3 h-3" />
+                                    <span>Update</span>
                                   </button>
-                                </div>
-                              )}
+                                )}
+
+                                {canEditTask && !isDone && (
+                                  <button
+                                    onClick={() => handleOpenEditTaskAndAssignees(t)}
+                                    className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer rounded-md hover:bg-black/[0.04] dark:hover:bg-white/[0.08]"
+                                    title="Edit task & assignees"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+
+                                {t.taskType === 'APPROVAL_GATE' && isCurrentProjectPM && !isDone && (
+                                  <button
+                                    onClick={() => {
+                                      updateTaskProgress(t.id, 100, 'DONE', t.loggedHours, {
+                                        completedById: currentUser.id,
+                                        completedByName: currentUser.name,
+                                        completionNotes: 'SOW / ToR regulatory client approval granted. Field data gathering unblocked.'
+                                      });
+                                      haptics.success();
+                                    }}
+                                    className="px-2 py-0.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-[10px] font-bold shadow-xs active:scale-[0.96] flex items-center gap-0.5 cursor-pointer"
+                                  >
+                                    <Unlock className="w-2.5 h-2.5" />
+                                    <span>Sign Gate</span>
+                                  </button>
+                                )}
+
+                                <button
+                                  onClick={() => handleOpenDueDateModal(t)}
+                                  className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+                                  title="Request Due-Date Change"
+                                >
+                                  <CalendarClock className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -1580,61 +1752,282 @@ export default function ProjectsPage() {
         )}
       </AnimatePresence>
 
-      {/* Edit Suggested Task Modal */}
+      {/* Update Project Task Modal (For Assignees & PMs) */}
       <AnimatePresence>
-        {editingSuggestedTask && (
+        {updatingTask && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setEditingSuggestedTask(null)} className="fixed inset-0 bg-black/70 backdrop-blur-md" />
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-white dark:bg-[#0C0C0D] rounded-3xl shadow-2xl max-w-md w-full border border-black/[0.08] dark:border-white/[0.12] p-6 space-y-4 z-10 text-xs">
-              <div className="flex items-center justify-between border-b border-black/[0.05] dark:border-white/[0.08] pb-2">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setUpdatingTask(null)} className="fixed inset-0 bg-black/70 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-white dark:bg-[#0C0C0D] rounded-3xl shadow-2xl max-w-lg w-full border border-black/[0.08] dark:border-white/[0.12] p-6 space-y-4 z-10 text-xs max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between border-b border-black/[0.05] dark:border-white/[0.08] pb-3">
                 <div className="flex items-center gap-2">
-                  <Edit3 className="w-4 h-4 text-emerald-600" />
-                  <h3 className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F6F4F0]">Edit Suggested Staged Task</h3>
+                  <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                    <Sliders className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-[#1D1D1F] dark:text-[#F6F4F0]">Update Task Progress</h3>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-xs">{updatingTask.title}</p>
+                  </div>
                 </div>
-                <button onClick={() => setEditingSuggestedTask(null)} className="text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white">&times;</button>
+                <button onClick={() => setUpdatingTask(null)} className="text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white">&times;</button>
               </div>
 
-              <form onSubmit={handleSaveEditSuggested} className="space-y-3">
+              <form onSubmit={handleSaveTaskUpdate} className="space-y-4">
+                {/* Task Context Card */}
+                <div className="p-3 bg-slate-50 dark:bg-white/[0.03] rounded-2xl border border-black/[0.05] dark:border-white/[0.08] text-xs space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-slate-900 dark:text-white">{updatingTask.stage || 'General Deliverable'}</span>
+                    <span className="font-mono text-[10px] text-indigo-600 dark:text-indigo-400 font-bold">Due: {updatingTask.dueDate}</span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Assigned to: <b className="text-slate-800 dark:text-slate-200">{updatingTask.assigneeName}</b> • Current Progress: <b className="text-indigo-600 dark:text-indigo-400 font-mono">{updatingTask.progressPercent || 0}%</b>
+                  </div>
+                </div>
+
+                {/* Core Rule 4 Notice if Non-PM */}
+                {!isCurrentProjectPM && (
+                  <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-[11px] text-amber-900 dark:text-amber-300 flex items-center gap-2">
+                    <Lock className="w-3.5 h-3.5 shrink-0 text-amber-600" />
+                    <span><b>Core Rule 4:</b> Assignees can advance work up to 90% and submit for review. Only the Project Manager marks completion.</span>
+                  </div>
+                )}
+
+                {/* Progress Milestone Slider */}
+                <div className="p-4 bg-black/[0.02] dark:bg-white/[0.03] rounded-2xl border border-black/[0.06] dark:border-white/[0.08] space-y-3">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-900 dark:text-white">
+                    <span>Progress Milestone</span>
+                    <span className="text-sm font-extrabold font-mono text-indigo-600 dark:text-indigo-400 tnum">{updateProgressVal}%</span>
+                  </div>
+
+                  <input
+                    type="range"
+                    min={0}
+                    max={isCurrentProjectPM ? 100 : 90}
+                    step={5}
+                    value={updateProgressVal}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      setUpdateProgressVal(val);
+                      if (val === 0) setUpdateStatusVal('NOT_STARTED');
+                      else if (val >= 100 && isCurrentProjectPM) setUpdateStatusVal('DONE');
+                      else if (val >= 90 && !isCurrentProjectPM) setUpdateStatusVal('UNDER_REVIEW');
+                      else setUpdateStatusVal('IN_PROGRESS');
+                    }}
+                    className="w-full accent-indigo-600 cursor-pointer"
+                  />
+
+                  {/* Quick Preset Buttons */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => { setUpdateProgressVal(25); setUpdateStatusVal('IN_PROGRESS'); }}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-all ${
+                        updateProgressVal === 25 ? 'bg-indigo-600 text-white' : 'bg-black/[0.04] dark:bg-white/10 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      25% Started
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setUpdateProgressVal(50); setUpdateStatusVal('IN_PROGRESS'); }}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-all ${
+                        updateProgressVal === 50 ? 'bg-indigo-600 text-white' : 'bg-black/[0.04] dark:bg-white/10 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      50% Halfway
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setUpdateProgressVal(75); setUpdateStatusVal('IN_PROGRESS'); }}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-all ${
+                        updateProgressVal === 75 ? 'bg-indigo-600 text-white' : 'bg-black/[0.04] dark:bg-white/10 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      75% Advanced
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setUpdateProgressVal(90); setUpdateStatusVal('UNDER_REVIEW'); }}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-all ${
+                        updateProgressVal === 90 ? 'bg-amber-600 text-white' : 'bg-amber-500/15 text-amber-800 dark:text-amber-300'
+                      }`}
+                    >
+                      90% Ready for Sign-Off
+                    </button>
+                    {isCurrentProjectPM && (
+                      <button
+                        type="button"
+                        onClick={() => { setUpdateProgressVal(100); setUpdateStatusVal('DONE'); }}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-all ml-auto ${
+                          updateProgressVal === 100 ? 'bg-emerald-600 text-white' : 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300'
+                        }`}
+                      >
+                        100% Finalize
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Status</label>
+                    <select
+                      value={updateStatusVal}
+                      onChange={(e: any) => setUpdateStatusVal(e.target.value)}
+                      className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
+                    >
+                      <option value="NOT_STARTED">Not Started</option>
+                      <option value="IN_PROGRESS">In Progress</option>
+                      <option value="UNDER_REVIEW">Under Review / Ready for PM Sign-off</option>
+                      {isCurrentProjectPM && <option value="DONE">Completed (100% Signed Off)</option>}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">
+                      + Log Additional Hours (hrs)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.5}
+                      value={updateAdditionalHours}
+                      onChange={(e) => setUpdateAdditionalHours(Number(e.target.value))}
+                      placeholder="e.g. 3.5"
+                      className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs font-mono tnum text-[#1D1D1F] dark:text-[#F6F4F0]"
+                    />
+                    <span className="text-[9px] text-slate-400 mt-0.5 block">Currently logged: {updatingTask.loggedHours || 0} hrs</span>
+                  </div>
+                </div>
+
+                {/* Progress Update / Handover Note */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">
+                    Operational Note / Handover Comment
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={updateCommentText}
+                    onChange={(e) => setUpdateCommentText(e.target.value)}
+                    placeholder="e.g. Field sampling finished at Escravos BH-02. Transferred cores to geotechnical lab."
+                    className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
+                  />
+                </div>
+
+                {/* PM Completion Notes (if marking complete) */}
+                {isCurrentProjectPM && (updateProgressVal === 100 || updateStatusVal === 'DONE') && (
+                  <div>
+                    <label className="block text-[11px] font-bold text-emerald-800 dark:text-emerald-300 mb-1">
+                      PM Final Sign-Off Deliverable Acceptance Note *
+                    </label>
+                    <input
+                      type="text"
+                      value={updateCompletionNote}
+                      onChange={(e) => setUpdateCompletionNote(e.target.value)}
+                      placeholder="e.g. Technical peer review verified; signed off for milestone billing."
+                      className="w-full p-2.5 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-300 dark:border-emerald-800 rounded-xl text-xs text-emerald-950 dark:text-emerald-200"
+                    />
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-black/[0.05] dark:border-white/[0.08]">
+                  <button type="button" onClick={() => setUpdatingTask(null)} className="px-3 py-1.5 text-[#86868B]">Cancel</button>
+                  <button type="submit" className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold cursor-pointer shadow-xs active:scale-[0.98]">
+                    Save Progress Update
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Task & Assignees Modal (For Active & Suggested Tasks) */}
+      <AnimatePresence>
+        {editingTask && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setEditingTask(null)} className="fixed inset-0 bg-black/70 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-white dark:bg-[#0C0C0D] rounded-3xl shadow-2xl max-w-lg w-full border border-black/[0.08] dark:border-white/[0.12] p-6 space-y-4 z-10 text-xs max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between border-b border-black/[0.05] dark:border-white/[0.08] pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                    <Pencil className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-[#1D1D1F] dark:text-[#F6F4F0]">Edit Task & Assignees</h3>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">Modify deliverable scope, schedule, and team role allocation</p>
+                  </div>
+                </div>
+                <button onClick={() => setEditingTask(null)} className="text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white">&times;</button>
+              </div>
+
+              <form onSubmit={handleSaveEditTaskAndAssignees} className="space-y-3.5">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Task Title *</label>
                   <input
                     type="text"
                     required
-                    value={editTaskTitle}
-                    onChange={(e) => setEditTaskTitle(e.target.value)}
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
                     className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Assignee</label>
-                  <select
-                    value={editTaskAssigneeId}
-                    onChange={(e) => setEditTaskAssigneeId(e.target.value)}
+                  <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Description / Scope</label>
+                  <textarea
+                    rows={2}
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    placeholder="Technical scope, requirements, standard specifications..."
                     className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
-                  >
-                    {allUsers.map(u => (
-                      <option key={u.id} value={u.id}>{u.name} — {u.jobTitle}</option>
-                    ))}
-                  </select>
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Stage / Phase</label>
+                    <input
+                      type="text"
+                      value={editStage}
+                      onChange={(e) => setEditStage(e.target.value)}
+                      placeholder="e.g. 3 Field data gathering"
+                      className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Task Type</label>
+                    <select
+                      value={editTaskType}
+                      onChange={(e: any) => setEditTaskType(e.target.value)}
+                      className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
+                    >
+                      <option value="STANDARD">Standard Task</option>
+                      <option value="REPORT">Final Report Deliverable</option>
+                      <option value="APPROVAL_GATE">Approval Gate (Hard-Block)</option>
+                      <option value="DECISION_GATE">Decision Gate (Route Branch)</option>
+                      <option value="ONGOING">Ongoing / Continuous</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Due Date</label>
                     <input
                       type="date"
                       required
-                      value={editTaskDueDate}
-                      onChange={(e) => setEditTaskDueDate(e.target.value)}
+                      value={editDueDate}
+                      onChange={(e) => setEditDueDate(e.target.value)}
                       className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
                     />
                   </div>
+
                   <div>
                     <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Priority</label>
                     <select
-                      value={editTaskPriority}
-                      onChange={(e: any) => setEditTaskPriority(e.target.value)}
+                      value={editPriority}
+                      onChange={(e: any) => setEditPriority(e.target.value)}
                       className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
                     >
                       <option value="LOW">Low</option>
@@ -1643,12 +2036,119 @@ export default function ProjectsPage() {
                       <option value="CRITICAL">Critical SLA</option>
                     </select>
                   </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Est. Hours</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={editEstHours}
+                      onChange={(e) => setEditEstHours(Number(e.target.value))}
+                      className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs font-mono tnum text-[#1D1D1F] dark:text-[#F6F4F0]"
+                    />
+                  </div>
+                </div>
+
+                {/* Primary Assignee */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">
+                    Primary Assignee *
+                  </label>
+                  <select
+                    required
+                    value={editPrimaryAssigneeId}
+                    onChange={(e) => setEditPrimaryAssigneeId(e.target.value)}
+                    className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
+                  >
+                    {allUsers.map(u => (
+                      <option key={u.id} value={u.id}>
+                        {u.name} — {u.jobTitle} ({u.departmentName})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Slate Labs Rule 3: Role-Based Assignees */}
+                <div className="p-3.5 bg-black/[0.02] dark:bg-white/[0.03] rounded-2xl border border-black/[0.06] dark:border-white/[0.08] space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5 text-indigo-500" />
+                      <span className="font-bold text-[11px] text-slate-900 dark:text-white">Multi-Role Assignees (Slate Labs Rule 3)</span>
+                    </div>
+                    <span className="text-[10px] text-slate-400">Optional Role Allocation</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Lead Specialist (30% KPI)
+                      </label>
+                      <select
+                        value={editLeadUserId}
+                        onChange={(e) => setEditLeadUserId(e.target.value)}
+                        className="w-full p-2 bg-white dark:bg-[#121216] border border-black/[0.08] dark:border-white/[0.1] rounded-lg text-[11px]"
+                      >
+                        <option value="">(None / Same as Primary)</option>
+                        {allUsers.map(u => (
+                          <option key={u.id} value={u.id}>{u.name} ({u.departmentName})</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Field Contributor (20% KPI)
+                      </label>
+                      <select
+                        value={editContributorUserId}
+                        onChange={(e) => setEditContributorUserId(e.target.value)}
+                        className="w-full p-2 bg-white dark:bg-[#121216] border border-black/[0.08] dark:border-white/[0.1] rounded-lg text-[11px]"
+                      >
+                        <option value="">(None)</option>
+                        {allUsers.map(u => (
+                          <option key={u.id} value={u.id}>{u.name} ({u.departmentName})</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Report Writer (35% KPI)
+                      </label>
+                      <select
+                        value={editWriterUserId}
+                        onChange={(e) => setEditWriterUserId(e.target.value)}
+                        className="w-full p-2 bg-white dark:bg-[#121216] border border-black/[0.08] dark:border-white/[0.1] rounded-lg text-[11px]"
+                      >
+                        <option value="">(None)</option>
+                        {allUsers.map(u => (
+                          <option key={u.id} value={u.id}>{u.name} ({u.departmentName})</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Brand/IT Designer (15% KPI)
+                      </label>
+                      <select
+                        value={editDesignerUserId}
+                        onChange={(e) => setEditDesignerUserId(e.target.value)}
+                        className="w-full p-2 bg-white dark:bg-[#121216] border border-black/[0.08] dark:border-white/[0.1] rounded-lg text-[11px]"
+                      >
+                        <option value="">(None)</option>
+                        {allUsers.map(u => (
+                          <option key={u.id} value={u.id}>{u.name} ({u.departmentName})</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2 border-t border-black/[0.05] dark:border-white/[0.08]">
-                  <button type="button" onClick={() => setEditingSuggestedTask(null)} className="px-3 py-1.5 text-[#86868B]">Cancel</button>
-                  <button type="submit" className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold cursor-pointer">
-                    Save Changes
+                  <button type="button" onClick={() => setEditingTask(null)} className="px-3 py-1.5 text-[#86868B]">Cancel</button>
+                  <button type="submit" className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold cursor-pointer shadow-xs active:scale-[0.98]">
+                    Save Task & Assignees
                   </button>
                 </div>
               </form>
