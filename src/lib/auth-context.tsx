@@ -1144,7 +1144,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   ) => {
     const isNowDone = progressPercent >= 100 || newStatus === 'DONE';
-    const finalStatus: TaskItem['status'] = isNowDone ? 'DONE' : (newStatus || (progressPercent > 0 ? 'IN_PROGRESS' : undefined));
+    const finalStatus: TaskItem['status'] | undefined = isNowDone ? 'DONE' : (newStatus || (progressPercent > 0 ? 'IN_PROGRESS' : undefined));
 
     setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
