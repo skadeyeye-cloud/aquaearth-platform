@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { 
@@ -66,7 +67,7 @@ import { RecordClientReceiptModal } from '@/components/finance/RecordClientRecei
 import { exportToXls, exportToPdf } from '@/lib/export-utils';
 import { haptics } from '@/lib/haptics';
 
-export default function FinancePage() {
+function FinancePageContent() {
   const { 
     invoices, 
     projects, 
@@ -92,7 +93,34 @@ export default function FinancePage() {
     getProjectFinancials
   } = useAuth();
 
-  const [activeMainTab, setActiveMainTab] = useState<'BUDGETS' | 'PETTY_CASH' | 'INVOICES' | 'EXPENSES'>('BUDGETS');
+  const searchParams = useSearchParams();
+  const tabParam = searchParams?.get('tab');
+  const projectParam = searchParams?.get('projectId') || searchParams?.get('project');
+
+  // Role detection per SOP
+  const isDrK = currentUser.id === 'usr-1' || currentUser.functionalRole === 'MANAGING_CONSULTANT';
+  const isBibi = currentUser.id === 'usr-10' || currentUser.functionalRole === 'DEPUTY_MANAGING_CONSULTANT' || currentUser.name.toLowerCase().includes('bibi');
+  const isErica = currentUser.id === 'usr-11' || currentUser.functionalRole === 'CFO' || currentUser.name.toLowerCase().includes('erica');
+  const isOzioma = currentUser.id === 'usr-12' || currentUser.functionalRole === 'SENIOR_CONSULTANT' || currentUser.name.toLowerCase().includes('ozioma');
+  const isGift = currentUser.id === 'usr-13' || currentUser.name.toLowerCase().includes('gift');
+  const isMarvelous = currentUser.id === 'usr-14' || currentUser.name.toLowerCase().includes('marvelous');
+  const isSuperadmin = currentUser.accessTier === 'SUPERADMIN' || isDrK || isBibi || isErica || isOzioma;
+
+  // Superadmins & Finance Officers have complete unrestricted access across all of finance
+  const isFinanceOfficer = currentUser.functionalRole === 'FINANCE_OFFICER' || currentUser.functionalRole === 'FINANCE_ADMIN' || currentUser.functionalRole === 'CFO' || currentUser.departmentName === 'Finance' || currentUser.departmentName === 'Finance & Accounts' || isGift || isMarvelous || isErica;
+  const canSeeAllFinance = isSuperadmin || isFinanceOfficer;
+
+  // Project Managers & Line Managers (Superadmins, PM functional role, Admin access tier, Line managers, or assigned Project Managers)
+  const isProjectManager = currentUser.functionalRole === 'PROJECT_MANAGER' || currentUser.accessTier === 'ADMIN' || currentUser.managementTier !== 'NONE' || projects.some(p => p.leadPmId === currentUser.id || p.projectManagerId === currentUser.id);
+  const isLineManagerOrAdmin = currentUser.accessTier === 'ADMIN' || currentUser.managementTier !== 'NONE' || currentUser.functionalRole === 'PROJECT_MANAGER';
+  const canAccessProjectExpenses = canSeeAllFinance || isProjectManager;
+
+  const [activeMainTab, setActiveMainTab] = useState<'BUDGETS' | 'PETTY_CASH' | 'INVOICES' | 'EXPENSES'>(() => {
+    if ((tabParam === 'EXPENSES' || projectParam) && canAccessProjectExpenses) return 'EXPENSES';
+    if (tabParam === 'PETTY_CASH' && canSeeAllFinance) return 'PETTY_CASH';
+    if (tabParam === 'INVOICES' && canSeeAllFinance) return 'INVOICES';
+    return 'BUDGETS';
+  });
   const [budgetStageFilter, setBudgetStageFilter] = useState<'ALL' | BudgetApprovalStage>('ALL');
   const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<'ALL' | 'ISSUED' | 'PAID'>('ALL');
   const [invoiceCurrency, setInvoiceCurrency] = useState<'NGN' | 'USD'>('NGN');
@@ -112,9 +140,9 @@ export default function FinancePage() {
   // Tab 4: Project Expenses & Client Collections State
   const [isProjectExpenseModalOpen, setIsProjectExpenseModalOpen] = useState(false);
   const [isClientReceiptModalOpen, setIsClientReceiptModalOpen] = useState(false);
-  const [selectedProjectIdForModal, setSelectedProjectIdForModal] = useState<string | undefined>(undefined);
+  const [selectedProjectIdForModal, setSelectedProjectIdForModal] = useState<string | undefined>(() => projectParam || undefined);
   const [expenseSubTab, setExpenseSubTab] = useState<'EXPENSES' | 'RECEIPTS' | 'PL_MATRIX'>('EXPENSES');
-  const [selectedProjectFilter, setSelectedProjectFilter] = useState<string>('ALL');
+  const [selectedProjectFilter, setSelectedProjectFilter] = useState<string>(() => projectParam || 'ALL');
   const [selectedExpenseCategoryFilter, setSelectedExpenseCategoryFilter] = useState<string>('ALL');
   const [expenseSearchQuery, setExpenseSearchQuery] = useState<string>('');
 
@@ -125,21 +153,26 @@ export default function FinancePage() {
   const [whtRatePercent, setWhtRatePercent] = useState(5.0);
   const [dueDate, setDueDate] = useState('2026-09-25');
 
-  // Role detection per SOP
-  const isDrK = currentUser.id === 'usr-1' || currentUser.functionalRole === 'MANAGING_CONSULTANT';
-  const isBibi = currentUser.id === 'usr-10' || currentUser.functionalRole === 'DEPUTY_MANAGING_CONSULTANT' || currentUser.name.toLowerCase().includes('bibi');
-  const isErica = currentUser.id === 'usr-11' || currentUser.functionalRole === 'CFO' || currentUser.name.toLowerCase().includes('erica');
-  const isOzioma = currentUser.id === 'usr-12' || currentUser.functionalRole === 'SENIOR_CONSULTANT' || currentUser.name.toLowerCase().includes('ozioma');
-  const isGift = currentUser.id === 'usr-13' || currentUser.name.toLowerCase().includes('gift');
-  const isMarvelous = currentUser.id === 'usr-14' || currentUser.name.toLowerCase().includes('marvelous');
-  const isSuperadmin = currentUser.accessTier === 'SUPERADMIN' || isDrK || isBibi || isErica || isOzioma;
+  useEffect(() => {
+    if (tabParam === 'EXPENSES' || projectParam) {
+      if (canAccessProjectExpenses) {
+        setActiveMainTab('EXPENSES');
+      } else {
+        setActiveMainTab('BUDGETS');
+      }
+    } else if (tabParam === 'BUDGETS') {
+      setActiveMainTab('BUDGETS');
+    } else if (tabParam === 'PETTY_CASH' && canSeeAllFinance) {
+      setActiveMainTab('PETTY_CASH');
+    } else if (tabParam === 'INVOICES' && canSeeAllFinance) {
+      setActiveMainTab('INVOICES');
+    }
 
-  // Superadmins & Finance Officers have complete unrestricted access across all of finance
-  const isFinanceOfficer = currentUser.functionalRole === 'FINANCE_OFFICER' || currentUser.functionalRole === 'FINANCE_ADMIN' || currentUser.functionalRole === 'CFO' || currentUser.departmentName === 'Finance' || currentUser.departmentName === 'Finance & Accounts' || isGift || isMarvelous || isErica;
-  const canSeeAllFinance = isSuperadmin || isFinanceOfficer;
-
-  // Line Managers and Admins can only view their own budgets and submit budgets
-  const isLineManagerOrAdmin = currentUser.accessTier === 'ADMIN' || currentUser.managementTier !== 'NONE' || currentUser.functionalRole === 'PROJECT_MANAGER';
+    if (projectParam && canAccessProjectExpenses) {
+      setSelectedProjectFilter(projectParam);
+      setSelectedProjectIdForModal(projectParam);
+    }
+  }, [tabParam, projectParam, canSeeAllFinance, canAccessProjectExpenses]);
 
   // Scoped budgets:
   // Superadmins & Finance Officers see all budgets across the entire company.
@@ -712,7 +745,7 @@ export default function FinancePage() {
             </button>
           )}
 
-          {canSeeAllFinance && activeMainTab === 'EXPENSES' && (
+          {canAccessProjectExpenses && activeMainTab === 'EXPENSES' && (
             <div className="flex items-center gap-2">
               <button
                 onClick={() => {
@@ -723,7 +756,7 @@ export default function FinancePage() {
                 className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-[0.97] cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Log Expense</span>
+                <span>Log Project Expense</span>
               </button>
               <button
                 onClick={() => {
@@ -734,7 +767,7 @@ export default function FinancePage() {
                 className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-[0.97] cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Record Receipt</span>
+                <span>Record Client Receipt</span>
               </button>
             </div>
           )}
@@ -850,6 +883,37 @@ export default function FinancePage() {
             <span>4. Project Expenses & Collections</span>
           </button>
         </div>
+      ) : isProjectManager ? (
+        <div className="flex items-center justify-between p-1.5 bg-black/[0.04] dark:bg-white/[0.04] rounded-2xl border border-black/[0.06] dark:border-white/[0.08] overflow-x-auto gap-2">
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => { setActiveMainTab('BUDGETS'); haptics.selection(); }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap shrink-0 ${
+                activeMainTab === 'BUDGETS'
+                  ? 'bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs font-semibold'
+                  : 'text-[#86868B] dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-white'
+              }`}
+            >
+              <DollarSign className="w-3.5 h-3.5" />
+              <span>1. My Budget Requests</span>
+            </button>
+
+            <button
+              onClick={() => { setActiveMainTab('EXPENSES'); haptics.selection(); }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap shrink-0 ${
+                activeMainTab === 'EXPENSES'
+                  ? 'bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs font-semibold'
+                  : 'text-[#86868B] dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-white'
+              }`}
+            >
+              <TrendingUp className="w-3.5 h-3.5" />
+              <span>2. Project Expenses & Collections</span>
+            </button>
+          </div>
+          <span className="px-2.5 py-1 mr-1 rounded-full text-[10px] font-medium bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 whitespace-nowrap">
+            Project Manager Scoped
+          </span>
+        </div>
       ) : (
         <div className="flex items-center justify-between p-2 rounded-2xl bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs text-xs">
           <div className="flex items-center gap-2">
@@ -861,14 +925,14 @@ export default function FinancePage() {
               Personal & Departmental Submissions Only
             </span>
           </div>
-          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
-            Line Manager Scoped
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-500/10 text-slate-700 dark:text-slate-300 border border-slate-500/20">
+            Employee Scoped
           </span>
         </div>
       )}
 
       {/* TAB 1: BUDGET APPROVAL WORKFLOW */}
-      {(canSeeAllFinance ? activeMainTab === 'BUDGETS' : true) && (
+      {(activeMainTab === 'BUDGETS' || (!canAccessProjectExpenses && !canSeeAllFinance)) && (
         <div className="space-y-6">
           {/* Telemetry Cards */}
           {canSeeAllFinance ? (
@@ -1830,7 +1894,7 @@ export default function FinancePage() {
       )}
 
       {/* TAB 4: PROJECT EXPENSES & CLIENT COLLECTIONS GOVERNANCE */}
-      {canSeeAllFinance && activeMainTab === 'EXPENSES' && (
+      {canAccessProjectExpenses && activeMainTab === 'EXPENSES' && (
         <div className="space-y-6">
           {/* Top KPI Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -2334,6 +2398,27 @@ export default function FinancePage() {
         </div>
       )}
 
+      {/* RESTRICTED ACCESS NOTICE FOR UNAUTHORIZED USERS */}
+      {!canAccessProjectExpenses && activeMainTab === 'EXPENSES' && (
+        <div className="p-12 text-center rounded-3xl bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs space-y-3">
+          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto">
+            <ShieldAlert className="w-6 h-6" />
+          </div>
+          <h3 className="font-semibold text-base text-slate-900 dark:text-white">Access Restricted</h3>
+          <p className="text-xs text-[#86868B] dark:text-[#A1A1A6] max-w-md mx-auto">
+            Project financial governance, direct project expense tracking, and client wire collections are restricted to Superadmins and Project Managers.
+          </p>
+          <div className="pt-2">
+            <button
+              onClick={() => { setActiveMainTab('BUDGETS'); haptics.selection(); }}
+              className="px-4 py-2 bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] text-xs font-semibold rounded-xl cursor-pointer"
+            >
+              Return to Budget Status
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* MODALS */}
       <BudgetRequestModal
         isOpen={isNewBudgetOpen}
@@ -2510,3 +2595,18 @@ export default function FinancePage() {
     </div>
   );
 }
+
+export default function FinancePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="w-8 h-8 rounded-full border-2 border-slate-300 border-t-emerald-600 animate-spin" />
+        </div>
+      }
+    >
+      <FinancePageContent />
+    </Suspense>
+  );
+}
+

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { 
   FolderKanban, 
@@ -41,13 +42,9 @@ import {
   CalendarClock, 
   HelpCircle, 
   Briefcase,
-  Receipt,
   Landmark,
   TrendingUp,
-  CreditCard,
-  PieChart,
-  DollarSign,
-  Wallet
+  DollarSign
 } from 'lucide-react';
 import { 
   ProjectRecord, 
@@ -63,8 +60,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { haptics } from '@/lib/haptics';
 import { exportToXls, exportToPdf } from '@/lib/export-utils';
 import { EditProjectModal } from '@/components/projects/EditProjectModal';
-import { CreateProjectExpenseModal } from '@/components/finance/CreateProjectExpenseModal';
-import { RecordClientReceiptModal } from '@/components/finance/RecordClientReceiptModal';
 
 export default function ProjectsPage() {
   const { 
@@ -75,9 +70,6 @@ export default function ProjectsPage() {
     tasks, 
     createProject, 
     editProject,
-    projectExpenses,
-    clientReceipts,
-    getProjectFinancials,
     createTaskForApproval, 
     closeOutAndArchiveProject, 
     confirmSuggestedTask, 
@@ -194,10 +186,8 @@ export default function ProjectsPage() {
   const [parsedValue, setParsedValue] = useState(165000000);
   const [parsedLeadPm, setParsedLeadPm] = useState('Engr. Femi Adebayo');
 
-  // Project Edit & Financial Tracking Modals
+  // Project Edit Modal
   const [isEditProjectOpen, setIsEditProjectOpen] = useState(false);
-  const [isProjectExpenseModalOpen, setIsProjectExpenseModalOpen] = useState(false);
-  const [isClientReceiptModalOpen, setIsClientReceiptModalOpen] = useState(false);
 
   if (isHR) {
     return (
@@ -719,7 +709,6 @@ export default function ProjectsPage() {
           const pType = p.projectType || 'EIA';
           const projectTasksCount = tasks.filter(t => t.projectId === p.id && t.confirmed !== false).length;
           const pendingSuggestedCount = tasks.filter(t => t.projectId === p.id && t.confirmed === false).length;
-          const pFin = getProjectFinancials(p.id);
 
           return (
             <div
@@ -767,26 +756,6 @@ export default function ProjectsPage() {
                   </div>
                   <span className="text-[11px] font-mono text-[#86868B] tnum">{p.progressPercent}%</span>
                 </div>
-              </div>
-
-              {/* Financial Telemetry Pills */}
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                <span className="text-[10px] font-medium px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 font-mono tnum flex items-center gap-1.5">
-                  <Landmark className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                  <span>Received: <b>₦{(pFin.totalReceivedNgn / 1000000).toFixed(1)}M</b> ({pFin.collectionPercent}%)</span>
-                </span>
-                <span className="text-[10px] font-medium px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-500/20 font-mono tnum flex items-center gap-1.5">
-                  <Receipt className="w-3 h-3 text-rose-600 dark:text-rose-400" />
-                  <span>Expenses: <b>₦{(pFin.totalExpensesNgn / 1000000).toFixed(1)}M</b> ({pFin.burnRatePercent}%)</span>
-                </span>
-                <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg font-mono tnum flex items-center gap-1.5 ${
-                  pFin.netMarginNgn >= 0 
-                    ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-500/20' 
-                    : 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-500/20'
-                }`}>
-                  <TrendingUp className="w-3 h-3" />
-                  <span>Net Margin: <b>₦{(pFin.netMarginNgn / 1000000).toFixed(1)}M</b> ({pFin.marginPercent}%)</span>
-                </span>
               </div>
 
               <div className="flex flex-wrap items-center gap-4 text-xs text-[#86868B] pt-2 border-t border-black/[0.04] dark:border-white/[0.06]">
@@ -1219,166 +1188,30 @@ export default function ProjectsPage() {
                 </div>
               </div>
 
-              {/* Project Financial Telemetry & Cost Accounting */}
-              {(() => {
-                const fin = getProjectFinancials(activeProject.id);
-                const projectExps = projectExpenses.filter(e => e.projectId === activeProject.id);
-                const projectRecs = clientReceipts.filter(r => r.projectId === activeProject.id);
-
-                return (
-                  <div className="p-4 bg-slate-50 dark:bg-white/[0.02] border border-black/[0.06] dark:border-white/[0.08] rounded-2xl space-y-3.5 shadow-xs">
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <div className="flex items-center gap-1.5">
-                        <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                        <h4 className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider">
-                          Financial Telemetry & Cost Accounting
-                        </h4>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => { setIsClientReceiptModalOpen(true); haptics.selection(); }}
-                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-semibold flex items-center gap-1 shadow-xs cursor-pointer active:scale-95"
-                        >
-                          <Landmark className="w-3 h-3" />
-                          <span>+ Record Receipt</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => { setIsProjectExpenseModalOpen(true); haptics.selection(); }}
-                          className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-[11px] font-semibold flex items-center gap-1 shadow-xs cursor-pointer active:scale-95"
-                        >
-                          <Receipt className="w-3 h-3" />
-                          <span>+ Log Expense</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* 4 Financial Metric Cards */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      <div className="p-2.5 bg-white dark:bg-[#121216] rounded-xl border border-black/[0.05] dark:border-white/[0.08]">
-                        <div className="text-[10px] text-[#86868B]">Contract Value</div>
-                        <div className="font-mono font-bold text-xs text-slate-900 dark:text-white tnum mt-0.5">
-                          ₦{(fin.contractValueNgn / 1000000).toFixed(2)}M
-                        </div>
-                      </div>
-                      <div className="p-2.5 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
-                        <div className="text-[10px] text-emerald-800 dark:text-emerald-300">Client Received</div>
-                        <div className="font-mono font-bold text-xs text-emerald-700 dark:text-emerald-300 tnum mt-0.5">
-                          ₦{(fin.totalReceivedNgn / 1000000).toFixed(2)}M
-                        </div>
-                        <div className="text-[9px] text-emerald-600/90 font-mono mt-0.5">{fin.collectionPercent}% collected</div>
-                      </div>
-                      <div className="p-2.5 bg-rose-500/10 rounded-xl border border-rose-500/20">
-                        <div className="text-[10px] text-rose-800 dark:text-rose-300">Direct Incurred</div>
-                        <div className="font-mono font-bold text-xs text-rose-700 dark:text-rose-300 tnum mt-0.5">
-                          ₦{(fin.totalExpensesNgn / 1000000).toFixed(2)}M
-                        </div>
-                        <div className="text-[9px] text-rose-600/90 font-mono mt-0.5">{fin.burnRatePercent}% burn</div>
-                      </div>
-                      <div className={`p-2.5 rounded-xl border ${
-                        fin.netMarginNgn >= 0 
-                          ? 'bg-blue-500/10 border-blue-500/20 text-blue-900 dark:text-blue-300' 
-                          : 'bg-red-500/10 border-red-500/20 text-red-900 dark:text-red-300'
-                      }`}>
-                        <div className="text-[10px] text-[#86868B]">Net Cash Margin</div>
-                        <div className="font-mono font-bold text-xs tnum mt-0.5">
-                          ₦{(fin.netMarginNgn / 1000000).toFixed(2)}M
-                        </div>
-                        <div className="text-[9px] font-mono mt-0.5">{fin.marginPercent}% margin</div>
-                      </div>
-                    </div>
-
-                    {/* Dual Progress Bars: Collections vs Cost Burn */}
-                    <div className="space-y-2 p-3 bg-white dark:bg-[#121216] rounded-xl border border-black/[0.05] dark:border-white/[0.08] text-xs">
-                      <div>
-                        <div className="flex justify-between text-[10px] mb-1">
-                          <span className="text-[#86868B] font-medium flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-                            Client Inflow Collected (₦{(fin.totalReceivedNgn / 1000000).toFixed(2)}M of ₦{(fin.contractValueNgn / 1000000).toFixed(2)}M)
-                          </span>
-                          <span className="font-mono font-bold text-emerald-600">{fin.collectionPercent}%</span>
-                        </div>
-                        <div className="w-full bg-black/[0.06] dark:bg-white/[0.1] rounded-full h-1.5 overflow-hidden">
-                          <div className="bg-emerald-500 h-full rounded-full transition-all" style={{ width: `${Math.min(100, fin.collectionPercent)}%` }} />
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="flex justify-between text-[10px] mb-1">
-                          <span className="text-[#86868B] font-medium flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-rose-500 inline-block" />
-                            Direct Expense Burn (₦{(fin.totalExpensesNgn / 1000000).toFixed(2)}M of ₦{(fin.contractValueNgn / 1000000).toFixed(2)}M)
-                          </span>
-                          <span className="font-mono font-bold text-rose-600">{fin.burnRatePercent}%</span>
-                        </div>
-                        <div className="w-full bg-black/[0.06] dark:bg-white/[0.1] rounded-full h-1.5 overflow-hidden">
-                          <div className="bg-rose-500 h-full rounded-full transition-all" style={{ width: `${Math.min(100, fin.burnRatePercent)}%` }} />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Recent Incurred Expenses & Wire Receipts */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                      {/* Left: Expenses */}
-                      <div className="p-3 bg-white dark:bg-[#121216] rounded-xl border border-black/[0.05] dark:border-white/[0.08] space-y-2">
-                        <div className="flex items-center justify-between text-[11px] font-bold text-slate-800 dark:text-slate-200">
-                          <span className="flex items-center gap-1">
-                            <Receipt className="w-3 h-3 text-rose-500" />
-                            Project Expenses ({projectExps.length})
-                          </span>
-                          <a href="/finance" className="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline">Finance &rarr;</a>
-                        </div>
-                        {projectExps.length === 0 ? (
-                          <p className="text-[10px] text-[#86868B] italic">No direct expenses logged for this project yet.</p>
-                        ) : (
-                          <div className="space-y-1 max-h-36 overflow-y-auto">
-                            {projectExps.slice(0, 3).map(exp => (
-                              <div key={exp.id} className="p-1.5 bg-black/[0.02] dark:bg-white/[0.03] rounded-lg border border-black/[0.04] dark:border-white/[0.06] text-[10px] flex items-center justify-between">
-                                <div className="truncate mr-2">
-                                  <span className="font-medium text-slate-800 dark:text-slate-200 block truncate">{exp.title}</span>
-                                  <span className="text-[#86868B]">{exp.vendor} • {exp.date}</span>
-                                </div>
-                                <span className="font-mono font-bold text-rose-600 dark:text-rose-400 whitespace-nowrap">
-                                  ₦{(exp.amountNgn / 1000000).toFixed(2)}M
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Right: Receipts */}
-                      <div className="p-3 bg-white dark:bg-[#121216] rounded-xl border border-black/[0.05] dark:border-white/[0.08] space-y-2">
-                        <div className="flex items-center justify-between text-[11px] font-bold text-slate-800 dark:text-slate-200">
-                          <span className="flex items-center gap-1">
-                            <Landmark className="w-3 h-3 text-emerald-500" />
-                            Client Wire Receipts ({projectRecs.length})
-                          </span>
-                          <a href="/finance" className="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline">Finance &rarr;</a>
-                        </div>
-                        {projectRecs.length === 0 ? (
-                          <p className="text-[10px] text-[#86868B] italic">No client payment receipts recorded yet.</p>
-                        ) : (
-                          <div className="space-y-1 max-h-36 overflow-y-auto">
-                            {projectRecs.slice(0, 3).map(rec => (
-                              <div key={rec.id} className="p-1.5 bg-black/[0.02] dark:bg-white/[0.03] rounded-lg border border-black/[0.04] dark:border-white/[0.06] text-[10px] flex items-center justify-between">
-                                <div className="truncate mr-2">
-                                  <span className="font-medium text-slate-800 dark:text-slate-200 block truncate">{rec.milestoneDescription}</span>
-                                  <span className="text-[#86868B]">{rec.paymentDate} • {rec.paymentReference}</span>
-                                </div>
-                                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                                  ₦{(rec.amountNgn / 1000000).toFixed(2)}M
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
+              {/* Project Financials Navigation to Finance Module */}
+              <div className="p-4 bg-slate-50 dark:bg-white/[0.02] border border-black/[0.06] dark:border-white/[0.08] rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/10 dark:bg-emerald-400/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                    <Landmark className="w-4 h-4" />
                   </div>
-                );
-              })()}
+                  <div>
+                    <h4 className="font-semibold text-xs text-slate-900 dark:text-white">
+                      Project Financials, Expenses & Payments
+                    </h4>
+                    <p className="text-[11px] text-[#86868B]">
+                      Direct project expenses, client wire receipts, and P&amp;L governance are managed in the Finance module.
+                    </p>
+                  </div>
+                </div>
+
+                <Link
+                  href={`/finance?tab=EXPENSES&projectId=${activeProject.id}`}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-[0.97] whitespace-nowrap self-start sm:self-auto cursor-pointer"
+                >
+                  <span>Open in Finance</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
 
               {/* Suggested Tasks Staging Dock (Visible to PM & Superadmin) */}
               {isCurrentProjectPM && suggestedTasks.length > 0 && (
@@ -2538,20 +2371,6 @@ export default function ProjectsPage() {
         isOpen={isEditProjectOpen}
         project={activeProject}
         onClose={() => setIsEditProjectOpen(false)}
-      />
-
-      {/* Log Project Expense Modal */}
-      <CreateProjectExpenseModal
-        isOpen={isProjectExpenseModalOpen}
-        defaultProjectId={activeProject?.id}
-        onClose={() => setIsProjectExpenseModalOpen(false)}
-      />
-
-      {/* Record Client Wire Receipt Modal */}
-      <RecordClientReceiptModal
-        isOpen={isClientReceiptModalOpen}
-        defaultProjectId={activeProject?.id}
-        onClose={() => setIsClientReceiptModalOpen(false)}
       />
     </div>
   );
