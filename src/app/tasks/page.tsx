@@ -956,7 +956,14 @@ export default function MyTasksPage() {
 
                 {/* Progress Meter & Quick Action */}
                 <div className="flex items-center gap-4 shrink-0 justify-between md:justify-end border-t md:border-t-0 pt-2 md:pt-0 border-black/[0.05] dark:border-white/[0.08]">
-                  <div className="w-32 space-y-1">
+                  <div 
+                    onClick={!isDone && !task.isBlockedByGate ? (e) => {
+                      e.stopPropagation();
+                      handleOpenUpdateTask(task);
+                    } : undefined}
+                    className={`w-28 space-y-1 ${!isDone && !task.isBlockedByGate ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+                    title={!isDone && !task.isBlockedByGate ? 'Click to update progress milestone' : undefined}
+                  >
                     <div className="flex items-center justify-between text-[10px] font-bold">
                       <span className="text-slate-500 dark:text-slate-400 inline-flex items-center gap-1">
                         Progress {isDone && <Lock className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />}
@@ -1156,7 +1163,7 @@ export default function MyTasksPage() {
                 )}
 
                 {/* Progress Milestone Slider (If Active and Not Gate Blocked) */}
-                {activeDetailTask.status !== 'DONE' && activeDetailTask.approvalStatus !== 'REJECTED' && activeDetailTask.approvalStatus !== 'PENDING_APPROVAL' && !activeDetailTask.isBlockedByGate && (() => {
+                {activeDetailTask.status !== 'DONE' && activeDetailTask.approvalStatus !== 'REJECTED' && !activeDetailTask.isBlockedByGate && (() => {
                   const activeDetailProject = activeDetailTask.projectId ? projects.find(p => p.id === activeDetailTask.projectId) : null;
                   const canCompleteActiveTask = isSuperadmin || (activeDetailProject ? (activeDetailProject.leadPmId === currentUser.id || activeDetailProject.projectManagerId === currentUser.id) : isManager);
 

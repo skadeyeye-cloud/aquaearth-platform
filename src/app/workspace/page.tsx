@@ -27,12 +27,17 @@ import {
   Download,
   HardDrive,
   Search,
-  Sliders
+  Sliders,
+  X,
+  Send,
+  AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import RequestIntakeModal from '@/components/workspace/RequestIntakeModal';
 import CreateTaskModal from '@/components/workspace/CreateTaskModal';
 import UploadDocumentModal from '@/components/workspace/UploadDocumentModal';
+import { TaskItem } from '@/lib/types';
+import { haptics } from '@/lib/haptics';
 
 export default function MyWorkspacePage() {
   const router = useRouter();
@@ -45,7 +50,9 @@ export default function MyWorkspacePage() {
     attendanceRecords, 
     allUsers, 
     documents,
-    updateTaskStatus, 
+    updateTaskStatus,
+    updateTaskProgress,
+    addTaskComment,
     submitLeaveRequest 
   } = useAuth();
 
@@ -64,6 +71,59 @@ export default function MyWorkspacePage() {
   const [daysCount, setDaysCount] = useState(5);
   const [leaveReason, setLeaveReason] = useState('');
   const [leaveSubmitted, setLeaveSubmitted] = useState(false);
+
+  // Update Task Progress State & Handlers
+  const [updatingTask, setUpdatingTask] = useState<TaskItem | null>(null);
+  const [updateProgressVal, setUpdateProgressVal] = useState<number>(0);
+  const [updateStatusVal, setUpdateStatusVal] = useState<TaskItem['status']>('IN_PROGRESS');
+  const [updateAdditionalHours, setUpdateAdditionalHours] = useState<number>(0);
+  const [updateCommentText, setUpdateCommentText] = useState<string>('');
+  const [updateCompletionNote, setUpdateCompletionNote] = useState<string>('');
+
+  const handleOpenUpdateTask = (task: TaskItem) => {
+    setUpdatingTask(task);
+    setUpdateProgressVal(task.progressPercent || 0);
+    setUpdateStatusVal(task.status);
+    setUpdateAdditionalHours(0);
+    setUpdateCommentText('');
+    setUpdateCompletionNote('');
+  };
+
+  const handleSaveTaskUpdate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!updatingTask) return;
+
+    const totalHours = (updatingTask.loggedHours || 0) + Number(updateAdditionalHours || 0);
+    const isNowDone = updateProgressVal >= 100 || updateStatusVal === 'DONE';
+    const isProjectPM = Boolean(
+      isAdminOrLeadership || 
+      (updatingTask.projectId && projects.find(p => p.id === updatingTask.projectId)?.leadPmId === currentUser.id)
+    );
+
+    if (isNowDone && updatingTask.projectId && !isProjectPM) {
+      alert('Under Slate Labs Core Rule 4, only the designated Project Manager can finalize deliverables.');
+      return;
+    }
+
+    updateTaskProgress(
+      updatingTask.id,
+      updateProgressVal,
+      updateStatusVal,
+      totalHours,
+      isNowDone ? {
+        completedById: currentUser.id,
+        completedByName: currentUser.name,
+        completionNotes: updateCompletionNote || updateCommentText || 'Deliverable finalized by PM.'
+      } : undefined
+    );
+
+    if (updateCommentText.trim()) {
+      addTaskComment(updatingTask.id, updateCommentText.trim());
+    }
+
+    haptics.success();
+    setUpdatingTask(null);
+  };
 
   const myTasks = tasks.filter(t => 
     t.assigneeId === currentUser.id ||
@@ -551,6 +611,26 @@ export default function MyWorkspacePage() {
                           </p>
                         )}
 
+                        {/* Progress Bar & Meter */}
+                        <div className="mt-2 space-y-1">
+                          <div className="flex items-center justify-between text-[10px] font-bold">
+                            <span className="text-slate-500 dark:text-slate-400 inline-flex items-center gap-1">
+                              Progress {isDone && <Lock className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />}
+                            </span>
+                            <span className={`tnum ${isDone ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-indigo-600 dark:text-indigo-400'}`}>
+                              {task.progressPercent || 0}%
+                            </span>
+                          </div>
+                          <div className="w-full h-1.5 bg-black/[0.05] dark:bg-white/10 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full transition-all ${
+                                isDone ? 'bg-emerald-500' : 'bg-indigo-600'
+                              }`}
+                              style={{ width: `${task.progressPercent || 0}%` }}
+                            />
+                          </div>
+                        </div>
+
                         <div className="flex items-center gap-3 mt-2 text-[10px] text-slate-400 dark:text-slate-500 flex-wrap">
                           <div className="flex items-center gap-1 whitespace-nowrap shrink-0">
                             <Calendar className="w-3 h-3" />
@@ -570,13 +650,17 @@ export default function MyWorkspacePage() {
                               Earned +50 pts • <Lock className="w-2.5 h-2.5 ml-0.5 inline" /> Immutable
                             </span>
                           ) : (
-                            <Link
-                              href="/tasks"
-                              className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline ml-auto flex items-center gap-1 whitespace-nowrap shrink-0 text-[10px]"
-                            >
-                              <Sliders className="w-3 h-3" />
-                              <span>Update Progress ({task.progressPercent || 0}%) &rarr;</span>
-                            </Link>
+                            <div className="flex items-center gap-2 ml-auto">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenUpdateTask(task)}
+                                className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-bold shadow-xs active:scale-[0.96] flex items-center gap-1 cursor-pointer transition-all whitespace-nowrap"
+                                title="Update progress milestone, log field hours, or submit for PM sign-off"
+                              >
+                                <Sliders className="w-3 h-3" />
+                                <span>Update Progress ({task.progressPercent || 0}%)</span>
+                              </button>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -910,6 +994,170 @@ export default function MyWorkspacePage() {
           </div>
         </div>
       )}
+
+      {/* Update Task Progress Modal */}
+      <AnimatePresence>
+        {updatingTask && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              onClick={() => setUpdatingTask(null)} 
+              className="fixed inset-0 bg-black/70 backdrop-blur-md" 
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }} 
+              animate={{ opacity: 1, scale: 1 }} 
+              exit={{ opacity: 0, scale: 0.95 }} 
+              className="relative bg-white dark:bg-[#0C0C0D] rounded-3xl shadow-2xl max-w-md w-full border border-black/[0.08] dark:border-white/[0.12] p-6 space-y-4 z-10 text-xs max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between border-b border-black/[0.05] dark:border-white/[0.08] pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                    <Sliders className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-[#1D1D1F] dark:text-[#F6F4F0]">Update Task Progress</h3>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[240px]">{updatingTask.title}</p>
+                  </div>
+                </div>
+                <button onClick={() => setUpdatingTask(null)} className="text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white p-1">&times;</button>
+              </div>
+
+              <div className="p-3 bg-slate-50 dark:bg-white/[0.03] rounded-2xl border border-black/[0.05] dark:border-white/[0.08] space-y-1">
+                <div className="font-bold text-slate-800 dark:text-slate-200 truncate">{updatingTask.projectName || 'Internal Operations'}</div>
+                <div className="text-[10px] text-slate-500 flex items-center gap-2 flex-wrap">
+                  <span>Due: <b>{updatingTask.dueDate}</b></span>
+                  <span>•</span>
+                  <span>Current: <b className="text-indigo-600 dark:text-indigo-400">{updatingTask.progressPercent || 0}%</b></span>
+                  <span>•</span>
+                  <span>Logged: <b>{updatingTask.loggedHours || 0}h</b></span>
+                </div>
+              </div>
+
+              {/* Slate Labs Rule 4 Callout */}
+              {updatingTask.projectId && !isAdminOrLeadership && (
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-start gap-2 text-amber-800 dark:text-amber-300 text-[11px]">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
+                  <p>
+                    <b>Core Rule 4:</b> Assignees can advance work up to 90% and submit for review. Only the Project Manager marks completion.
+                  </p>
+                </div>
+              )}
+
+              <form onSubmit={handleSaveTaskUpdate} className="space-y-4">
+                {/* Progress Milestone Slider */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-800 dark:text-slate-200">
+                    <span>Progress Milestone</span>
+                    <span className="text-sm font-extrabold text-indigo-600 dark:text-indigo-400 tnum">{updateProgressVal}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={isAdminOrLeadership || (updatingTask.projectId && projects.find(p => p.id === updatingTask.projectId)?.leadPmId === currentUser.id) ? 100 : 90}
+                    step={5}
+                    value={updateProgressVal}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      setUpdateProgressVal(val);
+                      if (val >= 90 && updateStatusVal === 'NOT_STARTED') {
+                        setUpdateStatusVal('IN_PROGRESS');
+                      }
+                    }}
+                    className="w-full accent-indigo-600 cursor-pointer"
+                  />
+                  <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                    {[
+                      { label: '25% Started', val: 25 },
+                      { label: '50% Halfway', val: 50 },
+                      { label: '75% Advanced', val: 75 },
+                      { label: '90% Ready for Sign-Off', val: 90 }
+                    ].map(chip => (
+                      <button
+                        key={chip.val}
+                        type="button"
+                        onClick={() => {
+                          setUpdateProgressVal(chip.val);
+                          if (chip.val >= 90) setUpdateStatusVal('UNDER_REVIEW');
+                          else setUpdateStatusVal('IN_PROGRESS');
+                        }}
+                        className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
+                          updateProgressVal === chip.val 
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs' 
+                            : 'bg-black/[0.02] dark:bg-white/[0.04] text-slate-600 dark:text-slate-300 border-black/[0.06] dark:border-white/[0.08] hover:bg-black/[0.05]'
+                        }`}
+                      >
+                        {chip.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Status Selector */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Status</label>
+                  <select
+                    value={updateStatusVal}
+                    onChange={(e) => setUpdateStatusVal(e.target.value as TaskItem['status'])}
+                    className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0] font-medium"
+                  >
+                    <option value="NOT_STARTED">Not Started</option>
+                    <option value="IN_PROGRESS">In Progress</option>
+                    <option value="UNDER_REVIEW">Under Review / Ready for PM Sign-off</option>
+                    {(isAdminOrLeadership || (updatingTask.projectId && projects.find(p => p.id === updatingTask.projectId)?.leadPmId === currentUser.id)) && (
+                      <option value="DONE">Completed / Finalized (100%)</option>
+                    )}
+                  </select>
+                </div>
+
+                {/* Log Additional Hours */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">
+                    + Log Additional Hours This Session
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={40}
+                    step={0.5}
+                    value={updateAdditionalHours}
+                    onChange={(e) => setUpdateAdditionalHours(Number(e.target.value))}
+                    className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
+                    placeholder="e.g. 2.5"
+                  />
+                  <span className="text-[10px] text-slate-400">Total logged will become: {(updatingTask.loggedHours || 0) + Number(updateAdditionalHours || 0)} hours</span>
+                </div>
+
+                {/* Update Note / Progress Comment */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">
+                    Notes & Field Updates (Optional)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={updateCommentText}
+                    onChange={(e) => setUpdateCommentText(e.target.value)}
+                    placeholder="e.g. Completed borehole soundings for Escravos Station 3, lab data pending..."
+                    className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-black/[0.05] dark:border-white/[0.08]">
+                  <button type="button" onClick={() => setUpdatingTask(null)} className="px-3.5 py-1.5 text-slate-600 dark:text-slate-400 font-medium cursor-pointer">
+                    Cancel
+                  </button>
+                  <button type="submit" className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-xs active:scale-[0.96] cursor-pointer inline-flex items-center gap-1.5 transition-all">
+                    <Send className="w-3 h-3" />
+                    <span>Save & Update Progress</span>
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
