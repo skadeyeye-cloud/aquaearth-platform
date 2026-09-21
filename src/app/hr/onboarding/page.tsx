@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { 
   CandidateApplication, 
@@ -45,9 +45,10 @@ const STAGES: { id: InterviewStage; label: string; stepNumber: number; color: st
 ];
 
 export default function OnboardingPipelinePage() {
-  const { 
-    candidateApplications, 
-    advanceCandidateStage, 
+  const {
+    candidateApplications,
+    createCandidateApplication,
+    advanceCandidateStage,
     convertCandidateToEmployee,
     currentUser,
     allUsers
@@ -81,17 +82,22 @@ export default function OnboardingPipelinePage() {
     return c.currentStage === filterStage;
   });
 
+  // Keep the selected candidate's detail panel in sync whenever the underlying data changes
+  useEffect(() => {
+    if (!selectedCandidate) return;
+    const updated = candidateApplications.find(c => c.id === selectedCandidate.id);
+    if (updated && updated !== selectedCandidate) {
+      setSelectedCandidate(updated);
+    }
+  }, [candidateApplications, selectedCandidate]);
+
   const handleCreateCandidate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName.trim() || !email.trim()) return;
 
     haptics.impact();
-    const count = candidateApplications.length + 1;
-    const candNum = `CAN-2026-${String(count).padStart(3, '0')}`;
 
-    const newCand: CandidateApplication = {
-      id: `cand-${Date.now()}`,
-      candidateNumber: candNum,
+    createCandidateApplication({
       fullName: fullName.trim(),
       email: email.trim().toLowerCase(),
       phone: phone.trim(),
@@ -100,7 +106,7 @@ export default function OnboardingPipelinePage() {
       currentStage: 'PROSPECTIVE',
       yearsExperience: Number(yearsExperience),
       expectedSalaryNgn: Number(expectedSalaryNgn),
-      vaultFolderId: `vault-can-${candNum.toLowerCase()}`,
+      vaultFolderId: `vault-can-${Date.now()}`,
       notes: [],
       documents: [
         {
@@ -112,11 +118,9 @@ export default function OnboardingPipelinePage() {
           uploadedAt: new Date().toISOString().split('T')[0],
           downloadUrl: '/vault/candidates/cv.pdf'
         }
-      ],
-      createdAt: new Date().toISOString().split('T')[0]
-    };
+      ]
+    });
 
-    candidateApplications.unshift(newCand);
     haptics.success();
     setIsNewCandidateOpen(false);
     setFullName('');
@@ -149,10 +153,6 @@ export default function OnboardingPipelinePage() {
 
     advanceCandidateStage(selectedCandidate.id, targetStage, notePayload, docPayload);
 
-    // Refresh selected candidate reference
-    const updated = candidateApplications.find(c => c.id === selectedCandidate.id);
-    if (updated) setSelectedCandidate(updated);
-
     haptics.success();
     setIsAdvanceModalOpen(false);
     setTechnicalAssessment('');
@@ -166,11 +166,9 @@ export default function OnboardingPipelinePage() {
     if (!confirmConvert) return;
 
     haptics.impact();
-    const newUserId = convertCandidateToEmployee(candidate.id, 'FIELD_STAFF');
+    const newEmployee = convertCandidateToEmployee(candidate.id, 'FIELD_STAFF');
     haptics.success();
-    alert(`🎉 Success! ${candidate.fullName} is now an active AquaEarth employee (Staff ID: ${newUserId}). Baseline payroll and staff directory records have been initialized.`);
-    const updated = candidateApplications.find(c => c.id === candidate.id);
-    if (updated) setSelectedCandidate(updated);
+    alert(`🎉 Success! ${candidate.fullName} is now an active AquaEarth employee (Staff ID: ${newEmployee.id}). Baseline payroll and staff directory records have been initialized.`);
   };
 
   const handleExportOnboardingPdf = () => {

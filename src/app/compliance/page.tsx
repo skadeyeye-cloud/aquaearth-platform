@@ -7,12 +7,12 @@ export default function ComplianceRedirectPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace('/projects');
+    router.replace('/compliance/permits');
   }, [router]);
 
   return (
     <div className="flex items-center justify-center min-h-[50vh] text-xs text-[#86868B]">
-      Redirecting to Projects...
+      Redirecting to Regulatory Compliance & Statutory Permits...
     </div>
   );
 }

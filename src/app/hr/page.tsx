@@ -3,16 +3,16 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function QaRedirectPage() {
+export default function HrRedirectPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace('/qa/reviews');
+    router.replace('/hr/staff');
   }, [router]);
 
   return (
     <div className="flex items-center justify-center min-h-[50vh] text-xs text-[#86868B]">
-      Redirecting to QA & Technical Review Chains...
+      Redirecting to HR & Human Capital...
     </div>
   );
 }

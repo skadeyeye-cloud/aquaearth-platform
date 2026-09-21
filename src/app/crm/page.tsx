@@ -3,16 +3,16 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function QaRedirectPage() {
+export default function CrmRedirectPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace('/qa/reviews');
+    router.replace('/crm/accounts');
   }, [router]);
 
   return (
     <div className="flex items-center justify-center min-h-[50vh] text-xs text-[#86868B]">
-      Redirecting to QA & Technical Review Chains...
+      Redirecting to Client & Stakeholder CRM...
     </div>
   );
 }

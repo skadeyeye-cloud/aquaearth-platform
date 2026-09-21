@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
@@ -47,6 +47,8 @@ interface NavSection {
 export default function Sidebar({ onMobileItemClick }: { onMobileItemClick?: () => void }) {
   const router = useRouter();
   const pathname = usePathname();
+  const navScrollRef = useRef<HTMLDivElement>(null);
+  const [showBottomFade, setShowBottomFade] = useState(false);
   const { currentUser } = useAuth();
 
   const role = currentUser.functionalRole;
@@ -110,6 +112,8 @@ export default function Sidebar({ onMobileItemClick }: { onMobileItemClick?: () 
       title: 'Quality & Governance',
       items: [
         { name: 'Documents & Repository', href: '/documents', icon: FileText, visible: canSeeDocs },
+        { name: 'QA & Technical Review', href: '/qa/reviews', icon: ShieldCheck, visible: canSeeDocs },
+        { name: 'Regulatory Compliance', href: '/compliance/permits', icon: Shield, visible: canSeeDocs },
         { name: 'AquaEarth Vault', href: '/vault', icon: HardDrive, visible: canSeeVault },
       ]
     },
@@ -125,6 +129,25 @@ export default function Sidebar({ onMobileItemClick }: { onMobileItemClick?: () 
       ]
     }
   ];
+
+  useEffect(() => {
+    const el = navScrollRef.current;
+    if (!el) return;
+
+    const updateFade = () => {
+      const hasOverflow = el.scrollHeight > el.clientHeight + 1;
+      const isAtBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+      setShowBottomFade(hasOverflow && !isAtBottom);
+    };
+
+    updateFade();
+    el.addEventListener('scroll', updateFade);
+    window.addEventListener('resize', updateFade);
+    return () => {
+      el.removeEventListener('scroll', updateFade);
+      window.removeEventListener('resize', updateFade);
+    };
+  }, [navSections]);
 
   return (
     <aside className="w-full md:w-64 bg-[#FBFBFD] dark:bg-[#000000] border-r border-black/[0.06] dark:border-white/[0.08] flex flex-col h-full select-none shrink-0 transition-colors">
@@ -145,7 +168,8 @@ export default function Sidebar({ onMobileItemClick }: { onMobileItemClick?: () 
       </div>
 
       {/* Navigation Links */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-4 text-xs">
+      <div className="relative flex-1 min-h-0">
+      <div ref={navScrollRef} className="h-full overflow-y-auto p-3 space-y-4 text-xs">
         {navSections.map((section, sIdx) => {
           const visibleItems = section.items.filter(item => item.visible === undefined || item.visible);
           if (visibleItems.length === 0) return null;
@@ -201,6 +225,13 @@ export default function Sidebar({ onMobileItemClick }: { onMobileItemClick?: () 
             </div>
           );
         })}
+      </div>
+      <div
+        aria-hidden="true"
+        className={`pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-[#FBFBFD] dark:from-black to-transparent transition-opacity duration-200 ${
+          showBottomFade ? 'opacity-100' : 'opacity-0'
+        }`}
+      />
       </div>
 
       {/* User Footer Profile & Settings Pill */}
