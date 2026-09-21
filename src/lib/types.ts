@@ -431,6 +431,7 @@ export interface ProjectRecord {
   totalPausedDays?: number;
   templateId?: string;
   selectedRoute?: 'ROUTE_1_PERA' | 'ROUTE_2_DETAILED_EIA';
+  description?: string;
 }
 
 // Module 5: Field Data Capture Types
@@ -936,5 +937,91 @@ export interface CandidateApplication {
   outcomeDate?: string;
   createdAt: string;
 }
+
+// Project Expense Tracking & Client Collections
+export type ProjectExpenseCategory = 
+  | 'FIELD_OPERATIONS'
+  | 'EQUIPMENT_RENTAL'
+  | 'LAB_TESTING'
+  | 'LOGISTICS_TRAVEL'
+  | 'SUBCONTRACTOR'
+  | 'REGULATORY_PERMITS'
+  | 'MATERIALS_CONSUMABLES'
+  | 'MISCELLANEOUS';
+
+export type ExpensePaymentMethod = 
+  | 'BANK_TRANSFER'
+  | 'PETTY_CASH'
+  | 'CORPORATE_CARD'
+  | 'VENDOR_CREDIT';
+
+export type ExpenseStatus = 
+  | 'PENDING'
+  | 'APPROVED'
+  | 'PAID'
+  | 'RECONCILED';
+
+export interface ProjectExpenseItem {
+  id: string;
+  expenseNumber: string;
+  projectId: string;
+  projectName: string;
+  category: ProjectExpenseCategory;
+  title: string;
+  description?: string;
+  amountNgn: number;
+  currency: 'NGN' | 'USD' | 'EUR' | 'GBP';
+  date: string;
+  vendor: string;
+  receiptNumber?: string;
+  status: ExpenseStatus;
+  paymentMethod: ExpensePaymentMethod;
+  recordedById?: string;
+  recordedByName: string;
+  approvedByName?: string;
+  receiptUrl?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface ClientReceiptItem {
+  id: string;
+  receiptNumber: string;
+  projectId: string;
+  projectName: string;
+  clientId: string;
+  clientName: string;
+  amountNgn: number;
+  currency: 'NGN' | 'USD' | 'EUR' | 'GBP';
+  paymentDate: string;
+  paymentReference: string;
+  milestoneDescription: string;
+  invoiceId?: string;
+  whtDeductedNgn?: number;
+  vatPaidNgn?: number;
+  bankAccount: string;
+  recordedById?: string;
+  recordedByName: string;
+  receiptUrl?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface ProjectFinancialSummary {
+  projectId: string;
+  projectName: string;
+  clientName: string;
+  contractValueNgn: number;
+  totalInvoicedNgn: number;
+  totalReceivedNgn: number;
+  totalExpensesNgn: number;
+  netMarginNgn: number;
+  marginPercent: number;
+  burnRatePercent: number;
+  collectionPercent: number;
+  expensesCount: number;
+  receiptsCount: number;
+}
+
 
 

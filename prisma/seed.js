@@ -644,6 +644,249 @@ async function main() {
   }
   console.log('✔ Attendance records seeded');
 
+  // 10. Initial Project Expenses
+  const projectExpenses = [
+    {
+      id: 'pex-101',
+      expenseNumber: 'EXP-2026-001',
+      projectId: 'prj-1',
+      projectName: 'Chevron Escravos Terminal Expansion - Geotech & Metocean Campaign',
+      category: 'EQUIPMENT_RENTAL',
+      title: 'Offshore Support Vessel Charter (MV Taraba - 14 Days)',
+      description: 'Specialized 45m DP-1 geotechnical survey vessel hire for seabed coring and CPT deployment in Escravos offshore block.',
+      amountNgn: 14500000,
+      currency: 'NGN',
+      date: new Date('2026-08-25'),
+      vendor: 'Oceanic Marine Offshore Logistics Ltd',
+      receiptNumber: 'INV-OML-8921',
+      status: 'PAID',
+      paymentMethod: 'BANK_TRANSFER',
+      recordedById: 'usr-4',
+      recordedByName: 'Bibi Adeyeye',
+      approvedByName: 'Kaine Edike',
+      notes: 'Approved under Master Service Agreement with Chevron Escravos operations.'
+    },
+    {
+      id: 'pex-102',
+      expenseNumber: 'EXP-2026-002',
+      projectId: 'prj-1',
+      projectName: 'Chevron Escravos Terminal Expansion - Geotech & Metocean Campaign',
+      category: 'LAB_TESTING',
+      title: 'Triaxial Shear & Atterberg Limits Subsurface Lab Testing',
+      description: 'Laboratory analysis of 36 deep marine boreholes and seabed sediment core testing according to ASTM D2850 standards.',
+      amountNgn: 4850000,
+      currency: 'NGN',
+      date: new Date('2026-09-02'),
+      vendor: 'Fugro Subsurface Nigeria Ltd',
+      receiptNumber: 'FUG-NG-2026-441',
+      status: 'PAID',
+      paymentMethod: 'BANK_TRANSFER',
+      recordedById: 'usr-4',
+      recordedByName: 'Bibi Adeyeye',
+      approvedByName: 'Engr. Femi Adebayo',
+      notes: 'Standard certified geotechnical laboratory report.'
+    },
+    {
+      id: 'pex-103',
+      expenseNumber: 'EXP-2026-003',
+      projectId: 'prj-1',
+      projectName: 'Chevron Escravos Terminal Expansion - Geotech & Metocean Campaign',
+      category: 'FIELD_OPERATIONS',
+      title: 'Offshore Survival PPE & Marine Safety Consumables',
+      description: 'Inflatable SOLAS lifejackets, immersion suits, and gas detection badges for offshore survey muster crew.',
+      amountNgn: 1850000,
+      currency: 'NGN',
+      date: new Date('2026-08-18'),
+      vendor: 'Marine Safety Systems Nigeria',
+      receiptNumber: 'MSS-REC-1092',
+      status: 'PAID',
+      paymentMethod: 'CORPORATE_CARD',
+      recordedById: 'usr-6',
+      recordedByName: 'Marvelous Ojo',
+      approvedByName: 'Kaine Edike',
+      notes: 'Required for Chevron offshore terminal site access permit.'
+    },
+    {
+      id: 'pex-104',
+      expenseNumber: 'EXP-2026-004',
+      projectId: 'prj-1',
+      projectName: 'Chevron Escravos Terminal Expansion - Geotech & Metocean Campaign',
+      category: 'REGULATORY_PERMITS',
+      title: 'NPA Channel Navigation & Maritime Pilotage Dues',
+      description: 'Nigerian Ports Authority security corridor clearance and pilotage dues for Escravos fairway beacon operations.',
+      amountNgn: 950000,
+      currency: 'NGN',
+      date: new Date('2026-08-14'),
+      vendor: 'Nigerian Ports Authority (NPA)',
+      receiptNumber: 'NPA-ESC-8812',
+      status: 'PAID',
+      paymentMethod: 'BANK_TRANSFER',
+      recordedById: 'usr-4',
+      recordedByName: 'Bibi Adeyeye',
+      approvedByName: 'Kaine Edike',
+      notes: 'Statutory maritime port clearance.'
+    },
+    {
+      id: 'pex-201',
+      expenseNumber: 'EXP-2026-005',
+      projectId: 'prj-2',
+      projectName: 'Bonny Island Channel Navigation Drone Bathymetric Survey',
+      category: 'EQUIPMENT_RENTAL',
+      title: 'Dual-Frequency Multibeam Echo Sounder Calibration & Deployment',
+      description: 'Trimble Marine high-resolution sonar calibration and drone LiDAR survey package for shallow channel navigation.',
+      amountNgn: 2200000,
+      currency: 'NGN',
+      date: new Date('2026-08-28'),
+      vendor: 'Trimble Navigation West Africa',
+      receiptNumber: 'TNW-2026-551',
+      status: 'PAID',
+      paymentMethod: 'BANK_TRANSFER',
+      recordedById: 'usr-4',
+      recordedByName: 'Bibi Adeyeye',
+      approvedByName: 'Engr. Femi Adebayo',
+      notes: 'NLNG Bonny terminal perimeter calibration.'
+    },
+    {
+      id: 'pex-202',
+      expenseNumber: 'EXP-2026-006',
+      projectId: 'prj-2',
+      projectName: 'Bonny Island Channel Navigation Drone Bathymetric Survey',
+      category: 'LOGISTICS_TRAVEL',
+      title: 'Bonny Waterway High-Speed Crew Boat & Escort Logistics',
+      description: 'Marine charter for bathymetry team transit between Port Harcourt Naval Base and Finima creek stations.',
+      amountNgn: 1800000,
+      currency: 'NGN',
+      date: new Date('2026-09-08'),
+      vendor: 'Bonny Marine Transport Cooperative',
+      receiptNumber: 'BMTC-7721',
+      status: 'PAID',
+      paymentMethod: 'PETTY_CASH',
+      recordedById: 'usr-4',
+      recordedByName: 'Bibi Adeyeye',
+      approvedByName: 'Kaine Edike',
+      notes: 'Covers 8 riverine survey days.'
+    },
+    {
+      id: 'pex-301',
+      expenseNumber: 'EXP-2026-007',
+      projectId: 'prj-3',
+      projectName: 'Obite Gas Processing Plant Environmental Audit & Ground Water Modeling',
+      category: 'LAB_TESTING',
+      title: 'Heavy Metals ICP-MS & Dissolved Gas Chromatography Spectrometry',
+      description: 'Analysis of 48 deep aquifer water samples across Obite gas plant monitoring boreholes.',
+      amountNgn: 3600000,
+      currency: 'NGN',
+      date: new Date('2026-07-22'),
+      vendor: 'SGS Analytics Nigeria',
+      receiptNumber: 'SGS-PH-2026-102',
+      status: 'PAID',
+      paymentMethod: 'BANK_TRANSFER',
+      recordedById: 'usr-4',
+      recordedByName: 'Bibi Adeyeye',
+      approvedByName: 'Kaine Edike',
+      notes: 'TotalEnergies quarterly baseline reporting standard.'
+    }
+  ];
+
+  for (const exp of projectExpenses) {
+    await prisma.projectExpense.upsert({
+      where: { expenseNumber: exp.expenseNumber },
+      update: exp,
+      create: exp,
+    });
+  }
+  console.log('✔ Project direct expenses seeded');
+
+  // 11. Initial Client Receipts
+  const clientReceipts = [
+    {
+      id: 'cr-101',
+      receiptNumber: 'REC-2026-001',
+      projectId: 'prj-1',
+      projectName: 'Chevron Escravos Terminal Expansion - Geotech & Metocean Campaign',
+      clientId: 'cli-1',
+      clientName: 'Chevron Nigeria Limited',
+      amountNgn: 37500000,
+      currency: 'NGN',
+      paymentDate: new Date('2026-08-11'),
+      paymentReference: 'NIBSS-CHEV-2026-081192',
+      milestoneDescription: 'Advance Mobilization Payment (30% Contract Value)',
+      whtDeductedNgn: 1875000,
+      vatPaidNgn: 2812500,
+      bankAccount: 'Zenith Bank - 1014882910 (Corporate Operations)',
+      recordedById: 'usr-4',
+      recordedByName: 'Bibi Adeyeye',
+      notes: 'Initial mobilization credit confirmed via corporate treasury.'
+    },
+    {
+      id: 'cr-102',
+      receiptNumber: 'REC-2026-002',
+      projectId: 'prj-1',
+      projectName: 'Chevron Escravos Terminal Expansion - Geotech & Metocean Campaign',
+      clientId: 'cli-1',
+      clientName: 'Chevron Nigeria Limited',
+      amountNgn: 25000000,
+      currency: 'NGN',
+      paymentDate: new Date('2026-09-05'),
+      paymentReference: 'NIBSS-CHEV-2026-090544',
+      milestoneDescription: 'Milestone 1 Settlement: Completion of Seabed Bathymetry & CPT Campaign',
+      whtDeductedNgn: 1250000,
+      vatPaidNgn: 1875000,
+      bankAccount: 'Zenith Bank - 1014882910 (Corporate Operations)',
+      recordedById: 'usr-4',
+      recordedByName: 'Bibi Adeyeye',
+      notes: 'Chevron Joint Venture Accounts confirmation.'
+    },
+    {
+      id: 'cr-201',
+      receiptNumber: 'REC-2026-003',
+      projectId: 'prj-2',
+      projectName: 'Bonny Island Channel Navigation Drone Bathymetric Survey',
+      clientId: 'cli-5',
+      clientName: 'Nigeria LNG Limited (NLNG)',
+      amountNgn: 23200000,
+      currency: 'NGN',
+      paymentDate: new Date('2026-08-20'),
+      paymentReference: 'NLNG-WIRE-2026-082012',
+      milestoneDescription: 'Advance Mobilization Payment (40% Contract Value)',
+      whtDeductedNgn: 1160000,
+      vatPaidNgn: 1740000,
+      bankAccount: 'Zenith Bank - 1014882910 (Corporate Operations)',
+      recordedById: 'usr-4',
+      recordedByName: 'Bibi Adeyeye',
+      notes: 'Direct wire transfer from NLNG Finima treasury account.'
+    },
+    {
+      id: 'cr-301',
+      receiptNumber: 'REC-2026-004',
+      projectId: 'prj-3',
+      projectName: 'Obite Gas Processing Plant Environmental Audit & Ground Water Modeling',
+      clientId: 'cli-2',
+      clientName: 'TotalEnergies EP Nigeria',
+      amountNgn: 24750000,
+      currency: 'NGN',
+      paymentDate: new Date('2026-07-15'),
+      paymentReference: 'TEPNG-WIRE-2026-071533',
+      milestoneDescription: 'Contract Execution & Scoping Mobilization (30%)',
+      whtDeductedNgn: 1237500,
+      vatPaidNgn: 1856250,
+      bankAccount: 'Access Bank - 0029384812 (Treasury)',
+      recordedById: 'usr-4',
+      recordedByName: 'Bibi Adeyeye',
+      notes: 'Advance receipt under SAP contract ref TEPNG-44021.'
+    }
+  ];
+
+  for (const rec of clientReceipts) {
+    await prisma.clientReceipt.upsert({
+      where: { receiptNumber: rec.receiptNumber },
+      update: rec,
+      create: rec,
+    });
+  }
+  console.log('✔ Client receipts & payments seeded');
+
+
   console.log('✨ All 14 Personnel, 11 Departments, 5 Clients, 3 Projects, 3 Tasks, 4 Bids, 3 Leaves & Support Tickets successfully seeded in Neon!');
 }
 

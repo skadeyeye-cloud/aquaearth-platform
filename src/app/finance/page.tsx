@@ -36,14 +36,24 @@ import {
   FileSpreadsheet,
   AlertCircle,
   ArrowUpRight,
-  Lock
+  Lock,
+  Landmark,
+  Search,
+  Trash2,
+  PieChart,
+  BarChart3,
+  Activity
 } from 'lucide-react';
 import { 
   InvoiceItem, 
   BudgetRequest, 
   BudgetApprovalStage, 
   PettyCashCustodian, 
-  PettyCashCategory 
+  PettyCashCategory,
+  ProjectExpenseItem,
+  ClientReceiptItem,
+  ProjectFinancialSummary,
+  ProjectExpenseCategory
 } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BudgetRequestModal } from '@/components/finance/BudgetRequestModal';
@@ -51,6 +61,8 @@ import { CfoVettingModal } from '@/components/finance/CfoVettingModal';
 import { CollateBudgetModal } from '@/components/finance/CollateBudgetModal';
 import { PettyCashExpenseModal } from '@/components/finance/PettyCashExpenseModal';
 import { TopUpPettyCashModal } from '@/components/finance/TopUpPettyCashModal';
+import { CreateProjectExpenseModal } from '@/components/finance/CreateProjectExpenseModal';
+import { RecordClientReceiptModal } from '@/components/finance/RecordClientReceiptModal';
 import { exportToXls, exportToPdf } from '@/lib/export-utils';
 import { haptics } from '@/lib/haptics';
 
@@ -73,7 +85,11 @@ export default function FinancePage() {
     pettyCashAnalyses,
     generatePettyCashMonthlyAnalysis,
     approvePettyCashReplenishment,
-    currentUser
+    currentUser,
+    projectExpenses,
+    clientReceipts,
+    deleteProjectExpense,
+    getProjectFinancials
   } = useAuth();
 
   const [activeMainTab, setActiveMainTab] = useState<'BUDGETS' | 'PETTY_CASH' | 'INVOICES' | 'EXPENSES'>('BUDGETS');
@@ -92,6 +108,15 @@ export default function FinancePage() {
   const [activeCustodianForTopUp, setActiveCustodianForTopUp] = useState<PettyCashCustodian>('GIFT');
   const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<InvoiceItem | null>(null);
   const [whtCreditNo, setWhtCreditNo] = useState('WHT-FIRS-2026-');
+
+  // Tab 4: Project Expenses & Client Collections State
+  const [isProjectExpenseModalOpen, setIsProjectExpenseModalOpen] = useState(false);
+  const [isClientReceiptModalOpen, setIsClientReceiptModalOpen] = useState(false);
+  const [selectedProjectIdForModal, setSelectedProjectIdForModal] = useState<string | undefined>(undefined);
+  const [expenseSubTab, setExpenseSubTab] = useState<'EXPENSES' | 'RECEIPTS' | 'PL_MATRIX'>('EXPENSES');
+  const [selectedProjectFilter, setSelectedProjectFilter] = useState<string>('ALL');
+  const [selectedExpenseCategoryFilter, setSelectedExpenseCategoryFilter] = useState<string>('ALL');
+  const [expenseSearchQuery, setExpenseSearchQuery] = useState<string>('');
 
   // New Invoice Form
   const [projectId, setProjectId] = useState(projects[0]?.id || '');
@@ -492,6 +517,151 @@ export default function FinancePage() {
     setSelectedInvoiceForPayment(null);
   };
 
+  // Tab 4 Computed Telemetry
+  const allProjectSummaries: ProjectFinancialSummary[] = projects.map(p => getProjectFinancials(p.id));
+  const totalClientReceiptsNgn = clientReceipts.reduce((sum, r) => sum + r.amountNgn, 0);
+  const totalProjectExpensesNgn = projectExpenses.reduce((sum, e) => sum + e.amountNgn, 0);
+  const netCashMarginNgn = totalClientReceiptsNgn - totalProjectExpensesNgn;
+  const portfolioMarginPercent = totalClientReceiptsNgn > 0 ? (netCashMarginNgn / totalClientReceiptsNgn) * 100 : 0;
+  const portfolioBurnPercent = totalClientReceiptsNgn > 0 ? (totalProjectExpensesNgn / totalClientReceiptsNgn) * 100 : 0;
+
+  // Filtered expenses
+  const filteredProjectExpenses = projectExpenses.filter(e => {
+    if (selectedProjectFilter !== 'ALL' && e.projectId !== selectedProjectFilter) return false;
+    if (selectedExpenseCategoryFilter !== 'ALL' && e.category !== selectedExpenseCategoryFilter) return false;
+    if (expenseSearchQuery.trim()) {
+      const q = expenseSearchQuery.toLowerCase();
+      const match = e.title.toLowerCase().includes(q) ||
+        e.vendor.toLowerCase().includes(q) ||
+        e.expenseNumber.toLowerCase().includes(q) ||
+        e.projectName.toLowerCase().includes(q) ||
+        (e.receiptNumber && e.receiptNumber.toLowerCase().includes(q));
+      if (!match) return false;
+    }
+    return true;
+  });
+
+  // Filtered receipts
+  const filteredClientReceipts = clientReceipts.filter(r => {
+    if (selectedProjectFilter !== 'ALL' && r.projectId !== selectedProjectFilter) return false;
+    if (expenseSearchQuery.trim()) {
+      const q = expenseSearchQuery.toLowerCase();
+      const match = r.receiptNumber.toLowerCase().includes(q) ||
+        r.projectName.toLowerCase().includes(q) ||
+        r.clientName.toLowerCase().includes(q) ||
+        r.paymentReference.toLowerCase().includes(q) ||
+        r.milestoneDescription.toLowerCase().includes(q) ||
+        r.bankAccount.toLowerCase().includes(q);
+      if (!match) return false;
+    }
+    return true;
+  });
+
+  // Filtered P&L summaries
+  const filteredProjectSummaries = allProjectSummaries.filter(s => {
+    if (selectedProjectFilter !== 'ALL' && s.projectId !== selectedProjectFilter) return false;
+    if (expenseSearchQuery.trim()) {
+      const q = expenseSearchQuery.toLowerCase();
+      const match = s.projectName.toLowerCase().includes(q) || s.clientName.toLowerCase().includes(q);
+      if (!match) return false;
+    }
+    return true;
+  });
+
+  const handleExportExpenses = (format: 'pdf' | 'xls') => {
+    const filename = `AquaEarth_Project_Expenses_${new Date().toISOString().split('T')[0]}`;
+    const columns = [
+      { header: 'Expense #', key: 'expenseNumber' },
+      { header: 'Date', key: 'date' },
+      { header: 'Project', key: 'projectName' },
+      { header: 'Category', key: 'category' },
+      { header: 'Description', key: 'title' },
+      { header: 'Vendor', key: 'vendor' },
+      { header: 'Amount (NGN)', key: 'amountNgn', format: (v: number) => `₦${v.toLocaleString()}` },
+      { header: 'Payment Method', key: 'paymentMethod' },
+      { header: 'Status', key: 'status' },
+      { header: 'Ref/Receipt', key: 'receiptNumber' }
+    ];
+    const exportData = {
+      filename,
+      title: 'Project Direct Expense Ledger',
+      subtitle: 'Certified Direct Cost Ledger per Project',
+      category: 'PROJECT_ACCOUNTING',
+      columns,
+      data: filteredProjectExpenses,
+      summaryMetrics: [
+        { label: 'Total Incurred Expenses', value: `₦${filteredProjectExpenses.reduce((s, e) => s + e.amountNgn, 0).toLocaleString()}` },
+        { label: 'Total Expense Items', value: filteredProjectExpenses.length }
+      ]
+    };
+    if (format === 'xls') exportToXls(exportData);
+    else exportToPdf(exportData);
+    haptics.success();
+  };
+
+  const handleExportReceipts = (format: 'pdf' | 'xls') => {
+    const filename = `AquaEarth_Client_Receipts_${new Date().toISOString().split('T')[0]}`;
+    const columns = [
+      { header: 'Receipt #', key: 'receiptNumber' },
+      { header: 'Payment Date', key: 'paymentDate' },
+      { header: 'Project', key: 'projectName' },
+      { header: 'Client', key: 'clientName' },
+      { header: 'Milestone / Purpose', key: 'milestoneDescription' },
+      { header: 'Amount Received (NGN)', key: 'amountNgn', format: (v: number) => `₦${v.toLocaleString()}` },
+      { header: 'WHT Deducted (NGN)', key: 'whtDeductedNgn', format: (v: number) => `₦${(v || 0).toLocaleString()}` },
+      { header: 'Wire Reference', key: 'paymentReference' },
+      { header: 'Receiving Bank Account', key: 'bankAccount' },
+      { header: 'Recorded By', key: 'recordedByName' }
+    ];
+    const exportData = {
+      filename,
+      title: 'Client Payment Receipts Ledger',
+      subtitle: 'Corporate Treasury Wire Collections by Project',
+      category: 'CLIENT_COLLECTIONS',
+      columns,
+      data: filteredClientReceipts,
+      summaryMetrics: [
+        { label: 'Total Cash Collected', value: `₦${filteredClientReceipts.reduce((s, r) => s + r.amountNgn, 0).toLocaleString()}` },
+        { label: 'Total Receipt Items', value: filteredClientReceipts.length }
+      ]
+    };
+    if (format === 'xls') exportToXls(exportData);
+    else exportToPdf(exportData);
+    haptics.success();
+  };
+
+  const handleExportPlMatrix = (format: 'pdf' | 'xls') => {
+    const filename = `AquaEarth_Project_PL_Matrix_${new Date().toISOString().split('T')[0]}`;
+    const columns = [
+      { header: 'Project Code', key: 'projectId' },
+      { header: 'Project Name', key: 'projectName' },
+      { header: 'Client Name', key: 'clientName' },
+      { header: 'Contract Value (NGN)', key: 'contractValueNgn', format: (v: number) => `₦${v.toLocaleString()}` },
+      { header: 'Amount Received (NGN)', key: 'totalReceivedNgn', format: (v: number) => `₦${v.toLocaleString()}` },
+      { header: 'Collection %', key: 'collectionPercent', format: (v: number) => `${v}%` },
+      { header: 'Direct Expenses (NGN)', key: 'totalExpensesNgn', format: (v: number) => `₦${v.toLocaleString()}` },
+      { header: 'Burn Rate %', key: 'burnRatePercent', format: (v: number) => `${v}%` },
+      { header: 'Net Cash Margin (NGN)', key: 'netMarginNgn', format: (v: number) => `₦${v.toLocaleString()}` },
+      { header: 'Margin %', key: 'marginPercent', format: (v: number) => `${v}%` }
+    ];
+    const exportData = {
+      filename,
+      title: 'Project Profit & Loss Telemetry Matrix',
+      subtitle: 'Direct Profitability, Collections & Cost Burn per Project',
+      category: 'FINANCIAL_GOVERNANCE',
+      columns,
+      data: filteredProjectSummaries,
+      summaryMetrics: [
+        { label: 'Total Client Receipts', value: `₦${totalClientReceiptsNgn.toLocaleString()}` },
+        { label: 'Total Incurred Expenses', value: `₦${totalProjectExpensesNgn.toLocaleString()}` },
+        { label: 'Portfolio Net Margin', value: `₦${netCashMarginNgn.toLocaleString()} (${portfolioMarginPercent.toFixed(1)}%)` }
+      ]
+    };
+    if (format === 'xls') exportToXls(exportData);
+    else exportToPdf(exportData);
+    haptics.success();
+  };
+
   return (
     <div className="space-y-6">
       {/* Header with Active Persona Badge */}
@@ -540,6 +710,33 @@ export default function FinancePage() {
               <Plus className="w-3.5 h-3.5" />
               <span>Prepare Milestone Invoice</span>
             </button>
+          )}
+
+          {canSeeAllFinance && activeMainTab === 'EXPENSES' && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setSelectedProjectIdForModal(selectedProjectFilter !== 'ALL' ? selectedProjectFilter : undefined);
+                  setIsProjectExpenseModalOpen(true);
+                  haptics.selection();
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-[0.97] cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Log Expense</span>
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedProjectIdForModal(selectedProjectFilter !== 'ALL' ? selectedProjectFilter : undefined);
+                  setIsClientReceiptModalOpen(true);
+                  haptics.selection();
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-[0.97] cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Record Receipt</span>
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -650,7 +847,7 @@ export default function FinancePage() {
             }`}
           >
             <TrendingUp className="w-3.5 h-3.5" />
-            <span>4. Fund Retirement</span>
+            <span>4. Project Expenses & Collections</span>
           </button>
         </div>
       ) : (
@@ -1632,25 +1829,508 @@ export default function FinancePage() {
         </div>
       )}
 
-      {/* TAB 4: FUND RETIREMENT & EXPENSE TRACKING */}
+      {/* TAB 4: PROJECT EXPENSES & CLIENT COLLECTIONS GOVERNANCE */}
       {canSeeAllFinance && activeMainTab === 'EXPENSES' && (
         <div className="space-y-6">
-          <div className="p-6 rounded-3xl bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs space-y-2">
-            <h3 className="font-semibold text-sm text-[#1D1D1F] dark:text-[#F5F5F7]">Fund Retirement & Project Expenditure Reconciliation</h3>
-            <p className="text-xs text-[#86868B] dark:text-[#A1A1A6] leading-relaxed max-w-3xl">
-              Per AquaEarth Financial SOP Section 5: All advances granted for field campaigns, soil testing, and bathymetric surveys must be retired within 48 hours of mobilization completion. Unspent balances are refunded back to treasury accounts, backed by physical receipts and miscellaneous justification logs.
-            </p>
-          </div>
+          {/* Top KPI Summary Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Card 1: Total Client Receipts */}
+            <div className="p-5 rounded-3xl bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-wider">
+                  Client Collections (Received)
+                </span>
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 dark:bg-emerald-400/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                  <Landmark className="w-4 h-4" />
+                </div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
+                  ₦{(totalClientReceiptsNgn / 1000000).toFixed(2)}M
+                </div>
+                <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1 mt-0.5">
+                  <CheckCircle2 className="w-3 h-3" />
+                  <span>{clientReceipts.length} cleared wire receipts</span>
+                </p>
+              </div>
+            </div>
 
-          <div className="rounded-3xl overflow-hidden bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs p-8">
-            <div className="text-center py-10 space-y-3">
-              <ShieldCheck className="w-10 h-10 text-emerald-600 dark:text-emerald-400 mx-auto opacity-90" />
-              <h4 className="font-semibold text-sm text-[#1D1D1F] dark:text-[#F5F5F7]">All Active Mobilizations Fully Collated</h4>
-              <p className="text-xs text-[#86868B] dark:text-[#A1A1A6] max-w-md mx-auto">
-                No outstanding unretired cash advances past the 48-hour window. Active projects are within authorized capex thresholds.
-              </p>
+            {/* Card 2: Total Project Expenses */}
+            <div className="p-5 rounded-3xl bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-wider">
+                  Direct Project Expenses
+                </span>
+                <div className="w-8 h-8 rounded-xl bg-amber-500/10 dark:bg-amber-400/20 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                  <Receipt className="w-4 h-4" />
+                </div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
+                  ₦{(totalProjectExpensesNgn / 1000000).toFixed(2)}M
+                </div>
+                <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1 mt-0.5">
+                  <Activity className="w-3 h-3" />
+                  <span>{projectExpenses.length} itemized direct cost lines</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Card 3: Net Cash Operating Margin */}
+            <div className="p-5 rounded-3xl bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-wider">
+                  Net Cash Margin
+                </span>
+                <div className="w-8 h-8 rounded-xl bg-indigo-500/10 dark:bg-indigo-400/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
+              </div>
+              <div>
+                <div className={`text-2xl font-bold tracking-tight ${netCashMarginNgn >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                  {netCashMarginNgn >= 0 ? '+' : ''}₦{(netCashMarginNgn / 1000000).toFixed(2)}M
+                </div>
+                <p className="text-[11px] text-[#86868B] dark:text-[#A1A1A6] font-medium mt-0.5">
+                  {portfolioMarginPercent.toFixed(1)}% operating cash margin
+                </p>
+              </div>
+            </div>
+
+            {/* Card 4: Expense-to-Receipts Burn Rate */}
+            <div className="p-5 rounded-3xl bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-[#86868B] dark:text-[#A1A1A6] uppercase tracking-wider">
+                  Cost Burn Rate
+                </span>
+                <div className="w-8 h-8 rounded-xl bg-blue-500/10 dark:bg-blue-400/20 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                  <PieChart className="w-4 h-4" />
+                </div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
+                  {portfolioBurnPercent.toFixed(1)}%
+                </div>
+                <p className="text-[11px] text-blue-600 dark:text-blue-400 font-medium mt-0.5">
+                  Direct costs vs cash collections
+                </p>
+              </div>
             </div>
           </div>
+
+          {/* Sub-navigation & Controls Bar */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 rounded-3xl bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
+            {/* View Pills */}
+            <div className="flex items-center gap-1 bg-black/[0.03] dark:bg-white/[0.04] p-1 rounded-2xl overflow-x-auto">
+              <button
+                onClick={() => { setExpenseSubTab('EXPENSES'); haptics.selection(); }}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                  expenseSubTab === 'EXPENSES'
+                    ? 'bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs'
+                    : 'text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white'
+                }`}
+              >
+                <Receipt className="w-3.5 h-3.5 text-amber-500" />
+                <span>Project Direct Expenses</span>
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-400 font-mono">
+                  {filteredProjectExpenses.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => { setExpenseSubTab('RECEIPTS'); haptics.selection(); }}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                  expenseSubTab === 'RECEIPTS'
+                    ? 'bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs'
+                    : 'text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white'
+                }`}
+              >
+                <Landmark className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Client Wire Receipts</span>
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-mono">
+                  {filteredClientReceipts.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => { setExpenseSubTab('PL_MATRIX'); haptics.selection(); }}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                  expenseSubTab === 'PL_MATRIX'
+                    ? 'bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs'
+                    : 'text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white'
+                }`}
+              >
+                <BarChart3 className="w-3.5 h-3.5 text-indigo-500" />
+                <span>Project P&L Matrix</span>
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 font-mono">
+                  {filteredProjectSummaries.length}
+                </span>
+              </button>
+            </div>
+
+            {/* Filters & Actions */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Project Filter */}
+              <select
+                value={selectedProjectFilter}
+                onChange={e => setSelectedProjectFilter(e.target.value)}
+                className="px-3 py-1.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/10 dark:border-white/10 rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0] focus:outline-hidden focus:ring-1 focus:ring-indigo-500 font-medium"
+              >
+                <option value="ALL" className="bg-white dark:bg-[#1C1C1E]">All Projects</option>
+                {projects.map(p => (
+                  <option key={p.id} value={p.id} className="bg-white dark:bg-[#1C1C1E]">
+                    {p.projectCode} • {p.title.slice(0, 30)}...
+                  </option>
+                ))}
+              </select>
+
+              {/* Category Filter (only on expenses) */}
+              {expenseSubTab === 'EXPENSES' && (
+                <select
+                  value={selectedExpenseCategoryFilter}
+                  onChange={e => setSelectedExpenseCategoryFilter(e.target.value)}
+                  className="px-3 py-1.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/10 dark:border-white/10 rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0] focus:outline-hidden focus:ring-1 focus:ring-amber-500 font-medium"
+                >
+                  <option value="ALL" className="bg-white dark:bg-[#1C1C1E]">All Categories</option>
+                  <option value="EQUIPMENT_RENTAL" className="bg-white dark:bg-[#1C1C1E]">Equipment & Vessel Rental</option>
+                  <option value="FIELD_OPERATIONS" className="bg-white dark:bg-[#1C1C1E]">Field Operations & Muster</option>
+                  <option value="LAB_TESTING" className="bg-white dark:bg-[#1C1C1E]">Laboratory Testing</option>
+                  <option value="LOGISTICS_TRAVEL" className="bg-white dark:bg-[#1C1C1E]">Logistics & Marine Transit</option>
+                  <option value="REGULATORY_PERMITS" className="bg-white dark:bg-[#1C1C1E]">Regulatory & Port Permits</option>
+                  <option value="SUBCONTRACTOR" className="bg-white dark:bg-[#1C1C1E]">Subcontractor Services</option>
+                  <option value="MATERIALS_CONSUMABLES" className="bg-white dark:bg-[#1C1C1E]">Materials & Consumables</option>
+                </select>
+              )}
+
+              {/* Search Box */}
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-2 text-[#86868B]" />
+                <input
+                  type="text"
+                  value={expenseSearchQuery}
+                  onChange={e => setExpenseSearchQuery(e.target.value)}
+                  placeholder="Search ledger..."
+                  className="pl-8 pr-3 py-1.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/10 dark:border-white/10 rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0] focus:outline-hidden focus:ring-1 focus:ring-indigo-500 w-36 sm:w-44"
+                />
+              </div>
+
+              {/* Export Buttons */}
+              <div className="flex items-center gap-1 border-l border-black/10 dark:border-white/10 pl-2">
+                <button
+                  onClick={() => {
+                    if (expenseSubTab === 'EXPENSES') handleExportExpenses('pdf');
+                    else if (expenseSubTab === 'RECEIPTS') handleExportReceipts('pdf');
+                    else handleExportPlMatrix('pdf');
+                  }}
+                  title="Export PDF"
+                  className="px-2.5 py-1.5 rounded-xl border border-black/10 dark:border-white/10 text-xs font-semibold hover:bg-black/5 dark:hover:bg-white/5 text-[#1D1D1F] dark:text-[#F6F4F0] flex items-center gap-1 cursor-pointer"
+                >
+                  <Download className="w-3 h-3" />
+                  <span>PDF</span>
+                </button>
+                <button
+                  onClick={() => {
+                    if (expenseSubTab === 'EXPENSES') handleExportExpenses('xls');
+                    else if (expenseSubTab === 'RECEIPTS') handleExportReceipts('xls');
+                    else handleExportPlMatrix('xls');
+                  }}
+                  title="Export Excel (XLS)"
+                  className="px-2.5 py-1.5 rounded-xl border border-black/10 dark:border-white/10 text-xs font-semibold hover:bg-black/5 dark:hover:bg-white/5 text-[#1D1D1F] dark:text-[#F6F4F0] flex items-center gap-1 cursor-pointer"
+                >
+                  <FileSpreadsheet className="w-3 h-3" />
+                  <span>XLS</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Sub-view 1: Direct Project Expenses Ledger */}
+          {expenseSubTab === 'EXPENSES' && (
+            <div className="rounded-3xl overflow-hidden bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-black/[0.02] dark:bg-white/[0.02] text-[#86868B] dark:text-[#A1A1A6] font-semibold border-b border-black/[0.06] dark:border-white/[0.08]">
+                    <tr>
+                      <th className="py-3 px-4">Expense # & Date</th>
+                      <th className="py-3 px-4">Project & Client</th>
+                      <th className="py-3 px-4">Category</th>
+                      <th className="py-3 px-4">Item & Technical Scope</th>
+                      <th className="py-3 px-4">Vendor / Payee</th>
+                      <th className="py-3 px-4 text-right">Amount (NGN)</th>
+                      <th className="py-3 px-4">Payment Method</th>
+                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4 text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-black/[0.04] dark:divide-white/[0.04]">
+                    {filteredProjectExpenses.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} className="py-12 text-center text-[#86868B]">
+                          <Receipt className="w-8 h-8 mx-auto mb-2 opacity-40 text-amber-500" />
+                          <p className="font-semibold text-sm text-[#1D1D1F] dark:text-[#F6F4F0]">No Direct Project Expenses Found</p>
+                          <p className="text-xs text-[#86868B] mt-1">Log equipment hire, vessel charters, or lab analysis to track costs.</p>
+                          <button
+                            onClick={() => {
+                              setSelectedProjectIdForModal(selectedProjectFilter !== 'ALL' ? selectedProjectFilter : undefined);
+                              setIsProjectExpenseModalOpen(true);
+                            }}
+                            className="mt-4 px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-semibold cursor-pointer"
+                          >
+                            + Log First Project Expense
+                          </button>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredProjectExpenses.map(exp => (
+                        <tr key={exp.id} className="hover:bg-black/[0.01] dark:hover:bg-white/[0.01] transition-colors">
+                          <td className="py-3 px-4">
+                            <div className="font-mono font-semibold text-[#1D1D1F] dark:text-[#F6F4F0]">{exp.expenseNumber}</div>
+                            <div className="text-[10px] text-[#86868B]">{exp.date}</div>
+                          </td>
+                          <td className="py-3 px-4 max-w-xs">
+                            <div className="font-semibold text-[#1D1D1F] dark:text-[#F6F4F0] truncate">{exp.projectName}</div>
+                            <div className="text-[10px] text-[#86868B] truncate">Logged by: {exp.recordedByName}</div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-400 whitespace-nowrap">
+                              {exp.category.replace(/_/g, ' ')}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 max-w-sm">
+                            <div className="font-medium text-[#1D1D1F] dark:text-[#F6F4F0] truncate">{exp.title}</div>
+                            {exp.description && (
+                              <div className="text-[10px] text-[#86868B] truncate">{exp.description}</div>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="font-medium text-[#1D1D1F] dark:text-[#F6F4F0]">{exp.vendor}</div>
+                            {exp.receiptNumber && (
+                              <div className="text-[10px] font-mono text-[#86868B]">Ref: {exp.receiptNumber}</div>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-right font-mono font-bold text-[#1D1D1F] dark:text-[#F6F4F0]">
+                            ₦{exp.amountNgn.toLocaleString()}
+                          </td>
+                          <td className="py-3 px-4 text-[11px] text-[#86868B]">
+                            {exp.paymentMethod.replace(/_/g, ' ')}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              exp.status === 'PAID' 
+                                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                                : 'bg-blue-500/10 text-blue-700 dark:text-blue-400'
+                            }`}>
+                              {exp.status}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <button
+                              onClick={() => {
+                                if (confirm(`Delete project expense line "${exp.title}" (₦${exp.amountNgn.toLocaleString()})?`)) {
+                                  deleteProjectExpense(exp.id);
+                                  haptics.impact();
+                                }
+                              }}
+                              title="Delete Expense"
+                              className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Sub-view 2: Client Wire Receipts Ledger */}
+          {expenseSubTab === 'RECEIPTS' && (
+            <div className="rounded-3xl overflow-hidden bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-black/[0.02] dark:bg-white/[0.02] text-[#86868B] dark:text-[#A1A1A6] font-semibold border-b border-black/[0.06] dark:border-white/[0.08]">
+                    <tr>
+                      <th className="py-3 px-4">Receipt # & Date</th>
+                      <th className="py-3 px-4">Project</th>
+                      <th className="py-3 px-4">Client Organization</th>
+                      <th className="py-3 px-4">Milestone / Purpose</th>
+                      <th className="py-3 px-4 text-right">Amount Received (NGN)</th>
+                      <th className="py-3 px-4 text-right">WHT Deducted (NGN)</th>
+                      <th className="py-3 px-4">Wire Reference</th>
+                      <th className="py-3 px-4">Receiving Bank Account</th>
+                      <th className="py-3 px-4">Recorded By</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-black/[0.04] dark:divide-white/[0.04]">
+                    {filteredClientReceipts.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} className="py-12 text-center text-[#86868B]">
+                          <Landmark className="w-8 h-8 mx-auto mb-2 opacity-40 text-emerald-500" />
+                          <p className="font-semibold text-sm text-[#1D1D1F] dark:text-[#F6F4F0]">No Client Payment Receipts Found</p>
+                          <p className="text-xs text-[#86868B] mt-1">Record mobilization advances or milestone payments received from clients.</p>
+                          <button
+                            onClick={() => {
+                              setSelectedProjectIdForModal(selectedProjectFilter !== 'ALL' ? selectedProjectFilter : undefined);
+                              setIsClientReceiptModalOpen(true);
+                            }}
+                            className="mt-4 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold cursor-pointer"
+                          >
+                            + Record First Client Payment
+                          </button>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredClientReceipts.map(rec => (
+                        <tr key={rec.id} className="hover:bg-black/[0.01] dark:hover:bg-white/[0.01] transition-colors">
+                          <td className="py-3 px-4">
+                            <div className="font-mono font-semibold text-[#1D1D1F] dark:text-[#F6F4F0]">{rec.receiptNumber}</div>
+                            <div className="text-[10px] text-[#86868B]">{rec.paymentDate}</div>
+                          </td>
+                          <td className="py-3 px-4 max-w-xs">
+                            <div className="font-semibold text-[#1D1D1F] dark:text-[#F6F4F0] truncate">{rec.projectName}</div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="font-medium text-[#1D1D1F] dark:text-[#F6F4F0]">{rec.clientName}</div>
+                          </td>
+                          <td className="py-3 px-4 max-w-sm">
+                            <div className="font-medium text-[#1D1D1F] dark:text-[#F6F4F0] truncate">{rec.milestoneDescription}</div>
+                            {rec.notes && <div className="text-[10px] text-[#86868B] truncate">{rec.notes}</div>}
+                          </td>
+                          <td className="py-3 px-4 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                            ₦{rec.amountNgn.toLocaleString()}
+                          </td>
+                          <td className="py-3 px-4 text-right font-mono text-amber-600 dark:text-amber-400">
+                            ₦{(rec.whtDeductedNgn || 0).toLocaleString()}
+                          </td>
+                          <td className="py-3 px-4 font-mono text-[11px] text-[#86868B]">
+                            {rec.paymentReference}
+                          </td>
+                          <td className="py-3 px-4 text-[11px] text-[#86868B] max-w-xs truncate">
+                            {rec.bankAccount}
+                          </td>
+                          <td className="py-3 px-4 text-[11px] text-[#86868B]">
+                            {rec.recordedByName}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Sub-view 3: Project P&L Performance Matrix */}
+          {expenseSubTab === 'PL_MATRIX' && (
+            <div className="rounded-3xl overflow-hidden bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-black/[0.02] dark:bg-white/[0.02] text-[#86868B] dark:text-[#A1A1A6] font-semibold border-b border-black/[0.06] dark:border-white/[0.08]">
+                    <tr>
+                      <th className="py-3 px-4">Project & Client</th>
+                      <th className="py-3 px-4 text-right">Contract Value</th>
+                      <th className="py-3 px-4 text-right">Invoiced</th>
+                      <th className="py-3 px-4 text-right">Cash Received</th>
+                      <th className="py-3 px-4">Collection %</th>
+                      <th className="py-3 px-4 text-right">Direct Expenses</th>
+                      <th className="py-3 px-4">Cost Burn %</th>
+                      <th className="py-3 px-4 text-right">Net Cash Margin</th>
+                      <th className="py-3 px-4 text-center">Quick Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-black/[0.04] dark:divide-white/[0.04]">
+                    {filteredProjectSummaries.map(summary => {
+                      const proj = projects.find(p => p.id === summary.projectId);
+                      return (
+                        <tr key={summary.projectId} className="hover:bg-black/[0.01] dark:hover:bg-white/[0.01] transition-colors">
+                          <td className="py-3 px-4 max-w-xs">
+                            <div className="font-semibold text-[#1D1D1F] dark:text-[#F6F4F0] truncate">
+                              {proj?.projectCode} • {summary.projectName}
+                            </div>
+                            <div className="text-[10px] text-[#86868B]">{summary.clientName}</div>
+                          </td>
+                          <td className="py-3 px-4 text-right font-mono font-semibold text-[#1D1D1F] dark:text-[#F6F4F0]">
+                            ₦{(summary.contractValueNgn / 1000000).toFixed(2)}M
+                          </td>
+                          <td className="py-3 px-4 text-right font-mono text-[#86868B]">
+                            ₦{(summary.totalInvoicedNgn / 1000000).toFixed(2)}M
+                          </td>
+                          <td className="py-3 px-4 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                            ₦{(summary.totalReceivedNgn / 1000000).toFixed(2)}M
+                          </td>
+                          <td className="py-3 px-4 min-w-[120px]">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-1.5 bg-black/5 dark:bg-white/10 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-emerald-500 rounded-full" 
+                                  style={{ width: `${Math.min(100, summary.collectionPercent)}%` }} 
+                                />
+                              </div>
+                              <span className="font-mono text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                                {summary.collectionPercent}%
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-right font-mono font-bold text-amber-600 dark:text-amber-400">
+                            ₦{(summary.totalExpensesNgn / 1000000).toFixed(2)}M
+                          </td>
+                          <td className="py-3 px-4 min-w-[120px]">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-1.5 bg-black/5 dark:bg-white/10 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-amber-500 rounded-full" 
+                                  style={{ width: `${Math.min(100, summary.burnRatePercent)}%` }} 
+                                />
+                              </div>
+                              <span className="font-mono text-[10px] text-amber-600 dark:text-amber-400 font-bold">
+                                {summary.burnRatePercent}%
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <div className={`font-mono font-bold ${summary.netMarginNgn >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                              {summary.netMarginNgn >= 0 ? '+' : ''}₦{(summary.netMarginNgn / 1000000).toFixed(2)}M
+                            </div>
+                            <div className="text-[10px] text-[#86868B] font-mono">
+                              {summary.marginPercent}% margin
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => {
+                                  setSelectedProjectIdForModal(summary.projectId);
+                                  setIsProjectExpenseModalOpen(true);
+                                  haptics.selection();
+                                }}
+                                title="Log expense for this project"
+                                className="px-2 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 rounded-lg text-[10px] font-bold cursor-pointer transition-colors"
+                              >
+                                + Expense
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedProjectIdForModal(summary.projectId);
+                                  setIsClientReceiptModalOpen(true);
+                                  haptics.selection();
+                                }}
+                                title="Record client payment receipt"
+                                className="px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 rounded-lg text-[10px] font-bold cursor-pointer transition-colors"
+                              >
+                                + Receipt
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1682,6 +2362,24 @@ export default function FinancePage() {
         isOpen={isTopUpOpen}
         defaultCustodian={activeCustodianForTopUp}
         onClose={() => setIsTopUpOpen(false)}
+      />
+
+      <CreateProjectExpenseModal
+        isOpen={isProjectExpenseModalOpen}
+        defaultProjectId={selectedProjectIdForModal}
+        onClose={() => {
+          setIsProjectExpenseModalOpen(false);
+          setSelectedProjectIdForModal(undefined);
+        }}
+      />
+
+      <RecordClientReceiptModal
+        isOpen={isClientReceiptModalOpen}
+        defaultProjectId={selectedProjectIdForModal}
+        onClose={() => {
+          setIsClientReceiptModalOpen(false);
+          setSelectedProjectIdForModal(undefined);
+        }}
       />
 
       {/* Record Payment Modal */}

@@ -52,7 +52,10 @@ import {
   ProjectType,
   TaskDueDateChangeRequest,
   ProjectPauseEvent,
-  KpiBonusAward
+  KpiBonusAward,
+  ProjectExpenseItem,
+  ClientReceiptItem,
+  ProjectFinancialSummary
 } from './types';
 import { 
   INITIAL_USERS, 
@@ -87,7 +90,9 @@ import {
   INITIAL_PETTY_CASH_FUNDS,
   INITIAL_PETTY_CASH_TRANSACTIONS,
   INITIAL_PETTY_CASH_TOPUPS,
-  INITIAL_PETTY_CASH_ANALYSES
+  INITIAL_PETTY_CASH_ANALYSES,
+  INITIAL_PROJECT_EXPENSES,
+  INITIAL_CLIENT_RECEIPTS
 } from './mock-data';
 import { 
   calculateEventPoints, 
@@ -259,6 +264,7 @@ interface AuthContextType {
   convertWonToProject: (oppId: string) => string;
   addClientCommunication: (clientId: string, log: { author: string; channel: string; summary: string; projectTag?: string }) => void;
   createProject: (project: Omit<ProjectRecord, 'id' | 'createdAt'>) => ProjectRecord;
+  editProject: (projectId: string, updates: Partial<ProjectRecord>) => void;
   closeOutAndArchiveProject: (projectId: string) => void;
   // Slate Labs V1.2 Project Milestone additions
   taskDateChangeRequests: TaskDueDateChangeRequest[];
@@ -276,6 +282,14 @@ interface AuthContextType {
   resumeProject: (projectId: string) => void;
   selectDecisionRoute: (projectId: string, route: 'ROUTE_1_PERA' | 'ROUTE_2_DETAILED_EIA') => void;
   awardProjectBonus: (projectId: string, userId: string, points: number, note: string) => { success: boolean; message: string };
+  // Project Expense & Client Collections Telemetry
+  projectExpenses: ProjectExpenseItem[];
+  clientReceipts: ClientReceiptItem[];
+  createProjectExpense: (expense: Omit<ProjectExpenseItem, 'id' | 'createdAt'>) => ProjectExpenseItem;
+  updateProjectExpense: (id: string, updates: Partial<ProjectExpenseItem>) => void;
+  deleteProjectExpense: (id: string) => void;
+  recordClientReceipt: (receipt: Omit<ClientReceiptItem, 'id' | 'createdAt'>) => ClientReceiptItem;
+  getProjectFinancials: (projectId: string) => ProjectFinancialSummary;
   createFieldRecord: (record: Omit<FieldRecordItem, 'id' | 'timestamp' | 'watermarkText'>) => void;
   uploadDocument: (doc: Omit<DocumentItem, 'id' | 'documentNumber' | 'uploadedAt'>) => void;
   submitForQa: (docId: string, peerReviewerId: string, qaLeadId: string) => void;
@@ -338,6 +352,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [projectPauseEvents, setProjectPauseEvents] = useState<ProjectPauseEvent[]>([]);
   const [kpiBonusAwards, setKpiBonusAwards] = useState<KpiBonusAward[]>([]);
   
+  // Project Expenses & Client Receipts Telemetry
+  const [projectExpenses, setProjectExpenses] = useState<ProjectExpenseItem[]>(INITIAL_PROJECT_EXPENSES);
+  const [clientReceipts, setClientReceipts] = useState<ClientReceiptItem[]>(INITIAL_CLIENT_RECEIPTS);
+
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   const isHydrated = useRef(false);
@@ -353,8 +371,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const storedBonusAwards = getStoredData<KpiBonusAward[]>('kpi_bonus_awards', []);
       setKpiBonusAwards(storedBonusAwards || []);
+
+      // Smart task merge: Ensure existing browsers on Vercel receive all new tasks and backfill new properties
       const storedTasks = getStoredData<TaskItem[]>('tasks', INITIAL_TASKS);
-      const sanitizedTasks = (storedTasks || []).map(t => ({
+      const initialTaskMap = new Map(INITIAL_TASKS.map(t => [t.id, t]));
+      const existingTaskIds = new Set((storedTasks || []).map(t => t.id));
+      const mergedTasks = (storedTasks || []).map(t => {
+        const seed = initialTaskMap.get(t.id);
+        if (!seed) return t;
+        return {
+          ...seed,
+          ...t,
+          taskAssignees: t.taskAssignees && t.taskAssignees.length > 0 ? t.taskAssignees : seed.taskAssignees,
+          comments: Array.isArray(t.comments) ? t.comments : (seed.comments || [])
+        };
+      });
+      INITIAL_TASKS.forEach(t => {
+        if (!existingTaskIds.has(t.id)) {
+          mergedTasks.push(t);
+        }
+      });
+      const sanitizedTasks = mergedTasks.map(t => ({
         ...t,
         comments: Array.isArray(t.comments) ? t.comments : []
       }));
@@ -381,8 +418,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const storedClients = getStoredData<ClientAccount[]>('clients', INITIAL_CLIENTS);
       setClients(storedClients || []);
 
+      // Smart project merge: Ensure all projects and updated fields are available
       const storedProjects = getStoredData<ProjectRecord[]>('projects', INITIAL_PROJECTS);
-      setProjects(storedProjects || []);
+      const initialProjectMap = new Map(INITIAL_PROJECTS.map(p => [p.id, p]));
+      const existingProjectIds = new Set((storedProjects || []).map(p => p.id));
+      const mergedProjects = (storedProjects || []).map(p => {
+        const seed = initialProjectMap.get(p.id);
+        if (!seed) return p;
+        return {
+          ...seed,
+          ...p
+        };
+      });
+      INITIAL_PROJECTS.forEach(p => {
+        if (!existingProjectIds.has(p.id)) {
+          mergedProjects.push(p);
+        }
+      });
+      setProjects(mergedProjects);
+
+      // Hydrate Project Expenses
+      const storedExpenses = getStoredData<ProjectExpenseItem[]>('project_expenses', INITIAL_PROJECT_EXPENSES);
+      const existingExpIds = new Set((storedExpenses || []).map(e => e.id));
+      const mergedExpenses = [...(storedExpenses || [])];
+      INITIAL_PROJECT_EXPENSES.forEach(e => {
+        if (!existingExpIds.has(e.id)) {
+          mergedExpenses.push(e);
+        }
+      });
+      setProjectExpenses(mergedExpenses);
+
+      // Hydrate Client Receipts
+      const storedReceipts = getStoredData<ClientReceiptItem[]>('client_receipts', INITIAL_CLIENT_RECEIPTS);
+      const existingRecIds = new Set((storedReceipts || []).map(r => r.id));
+      const mergedReceipts = [...(storedReceipts || [])];
+      INITIAL_CLIENT_RECEIPTS.forEach(r => {
+        if (!existingRecIds.has(r.id)) {
+          mergedReceipts.push(r);
+        }
+      });
+      setClientReceipts(mergedReceipts);
 
       const storedField = getStoredData<FieldRecordItem[]>('field_records', INITIAL_FIELD_RECORDS);
       setFieldRecords(storedField || []);
@@ -658,6 +733,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isHydrated.current) setStoredData('kpi_bonus_awards', kpiBonusAwards);
   }, [kpiBonusAwards]);
+
+  useEffect(() => {
+    if (isHydrated.current) setStoredData('project_expenses', projectExpenses);
+  }, [projectExpenses]);
+
+  useEffect(() => {
+    if (isHydrated.current) setStoredData('client_receipts', clientReceipts);
+  }, [clientReceipts]);
 
   const toggleTheme = () => {
     setTheme(prev => {
@@ -1809,6 +1892,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return newProj;
   };
 
+  const editProject = (projectId: string, updates: Partial<ProjectRecord>) => {
+    setProjects(prev => prev.map(p => {
+      if (p.id === projectId) {
+        return {
+          ...p,
+          ...updates
+        };
+      }
+      return p;
+    }));
+
+    if (updates.title) {
+      setTasks(prev => prev.map(t => t.projectId === projectId ? { ...t, projectName: updates.title! } : t));
+    }
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'PROJECT_UPDATED',
+      targetType: 'Project Record',
+      targetId: projectId,
+      details: `Updated project parameters: ${Object.keys(updates).join(', ')}`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
   const closeOutAndArchiveProject = (projectId: string) => {
     setProjects(prev => prev.map(p => {
       if (p.id === projectId) {
@@ -2259,6 +2370,133 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { success: true, message: `Successfully awarded +${cappedPoints} bonus points to ${recipient.name}` };
   };
 
+  // --- PROJECT EXPENSE & CLIENT COLLECTIONS GOVERNANCE ---
+  const createProjectExpense = (expenseData: Omit<ProjectExpenseItem, 'id' | 'createdAt'>): ProjectExpenseItem => {
+    const id = `pex-${Date.now()}`;
+    const seq = String(projectExpenses.length + 1).padStart(3, '0');
+    const expenseNumber = expenseData.expenseNumber || `EXP-2026-${seq}`;
+    const newExpense: ProjectExpenseItem = {
+      ...expenseData,
+      id,
+      expenseNumber,
+      currency: expenseData.currency || 'NGN',
+      status: expenseData.status || 'PAID',
+      createdAt: new Date().toISOString()
+    };
+
+    setProjectExpenses(prev => [newExpense, ...prev]);
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'EXPENSE_RECORDED',
+      targetType: 'Project Expense',
+      targetId: newExpense.expenseNumber,
+      details: `Logged project direct expense of ₦${(newExpense.amountNgn).toLocaleString()} for "${newExpense.projectName}" (${newExpense.title} | Vendor: ${newExpense.vendor})`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+
+    return newExpense;
+  };
+
+  const updateProjectExpense = (id: string, updates: Partial<ProjectExpenseItem>) => {
+    setProjectExpenses(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'EXPENSE_UPDATED',
+      targetType: 'Project Expense',
+      targetId: id,
+      details: `Updated project expense ${id}: ${Object.keys(updates).join(', ')}`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const deleteProjectExpense = (id: string) => {
+    setProjectExpenses(prev => prev.filter(e => e.id !== id));
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'EXPENSE_DELETED',
+      targetType: 'Project Expense',
+      targetId: id,
+      details: `Deleted project expense ${id}`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+  };
+
+  const recordClientReceipt = (receiptData: Omit<ClientReceiptItem, 'id' | 'createdAt'>): ClientReceiptItem => {
+    const id = `cr-${Date.now()}`;
+    const seq = String(clientReceipts.length + 1).padStart(3, '0');
+    const receiptNumber = receiptData.receiptNumber || `REC-2026-${seq}`;
+    const newReceipt: ClientReceiptItem = {
+      ...receiptData,
+      id,
+      receiptNumber,
+      currency: receiptData.currency || 'NGN',
+      createdAt: new Date().toISOString()
+    };
+
+    setClientReceipts(prev => [newReceipt, ...prev]);
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'CLIENT_PAYMENT_RECORDED',
+      targetType: 'Client Receipt',
+      targetId: newReceipt.receiptNumber,
+      details: `Recorded client wire payment of ₦${(newReceipt.amountNgn).toLocaleString()} from ${newReceipt.clientName} for "${newReceipt.projectName}" (Ref: ${newReceipt.paymentReference})`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+
+    return newReceipt;
+  };
+
+  const getProjectFinancials = (projectId: string): ProjectFinancialSummary => {
+    const project = projects.find(p => p.id === projectId);
+    const projectName = project ? project.title : 'Unknown Project';
+    const clientName = project ? project.clientName : 'Unknown Client';
+    const contractValueNgn = project ? (project.contractValue || 0) : 0;
+
+    const pExpenses = projectExpenses.filter(e => e.projectId === projectId);
+    const totalExpensesNgn = pExpenses.reduce((sum, e) => sum + e.amountNgn, 0);
+
+    const pReceipts = clientReceipts.filter(r => r.projectId === projectId);
+    const totalReceivedNgn = pReceipts.reduce((sum, r) => sum + r.amountNgn, 0);
+
+    const pInvoices = invoices.filter(inv => inv.projectId === projectId);
+    const totalInvoicedNgn = pInvoices.reduce((sum, inv) => sum + inv.netPayableNgn, 0);
+
+    const netMarginNgn = totalReceivedNgn - totalExpensesNgn;
+    const marginPercent = totalReceivedNgn > 0 ? (netMarginNgn / totalReceivedNgn) * 100 : (contractValueNgn > 0 ? (netMarginNgn / contractValueNgn) * 100 : 0);
+    const burnRatePercent = contractValueNgn > 0 ? (totalExpensesNgn / contractValueNgn) * 100 : 0;
+    const collectionPercent = contractValueNgn > 0 ? (totalReceivedNgn / contractValueNgn) * 100 : 0;
+
+    return {
+      projectId,
+      projectName,
+      clientName,
+      contractValueNgn,
+      totalInvoicedNgn,
+      totalReceivedNgn,
+      totalExpensesNgn,
+      netMarginNgn,
+      marginPercent: Math.round(marginPercent * 10) / 10,
+      burnRatePercent: Math.round(burnRatePercent * 10) / 10,
+      collectionPercent: Math.round(collectionPercent * 10) / 10,
+      expensesCount: pExpenses.length,
+      receiptsCount: pReceipts.length
+    };
+  };
+
   const createFieldRecord = (recordData: Omit<FieldRecordItem, 'id' | 'timestamp' | 'watermarkText'>) => {
     const now = new Date();
     const timestampStr = now.toISOString().replace('T', ' ').substring(0, 16);
@@ -2551,6 +2789,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }).catch(err => console.warn('[AquaEarth] Invoice payment cloud sync warning:', err));
 
     const inv = invoices.find(i => i.id === invoiceId);
+    if (inv && inv.projectId) {
+      const receipt: ClientReceiptItem = {
+        id: `cr-${Date.now()}`,
+        receiptNumber: `REC-${Date.now().toString().slice(-6)}`,
+        projectId: inv.projectId,
+        projectName: inv.projectName,
+        clientId: inv.clientId,
+        clientName: inv.clientName,
+        amountNgn: inv.netPayableNgn,
+        currency: inv.currency,
+        paymentDate: new Date().toISOString().split('T')[0],
+        paymentReference: `INV-SETTLE-${inv.invoiceNumber}`,
+        milestoneDescription: inv.milestoneDescription,
+        invoiceId: inv.id,
+        whtDeductedNgn: inv.whtDeductionNgn,
+        vatPaidNgn: inv.vatAmountNgn,
+        bankAccount: 'Zenith Bank - 1014882910 (Corporate Operations)',
+        recordedById: currentUser.id,
+        recordedByName: currentUser.name,
+        notes: `Automated collection receipt for settlement of invoice ${inv.invoiceNumber}`,
+        createdAt: new Date().toISOString()
+      };
+      setClientReceipts(prev => [receipt, ...prev]);
+    }
+
     const audit: AuditRecord = {
       id: `aud-${Date.now()}`,
       actorId: currentUser.id,
@@ -4350,6 +4613,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       convertWonToProject,
       addClientCommunication,
       createProject,
+      editProject,
       closeOutAndArchiveProject,
       taskDateChangeRequests,
       projectPauseEvents,
@@ -4366,6 +4630,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       resumeProject,
       selectDecisionRoute,
       awardProjectBonus,
+      projectExpenses,
+      clientReceipts,
+      createProjectExpense,
+      updateProjectExpense,
+      deleteProjectExpense,
+      recordClientReceipt,
+      getProjectFinancials,
       createFieldRecord,
       uploadDocument,
       submitForQa,
