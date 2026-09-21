@@ -35,11 +35,14 @@ import {
   Briefcase,
   GitBranch,
   FileText,
-  Pencil
+  Pencil,
+  Download,
+  FileSpreadsheet
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CreateTaskModal from '@/components/workspace/CreateTaskModal';
 import { haptics } from '@/lib/haptics';
+import { exportToXls, exportToPdf } from '@/lib/export-utils';
 
 export default function MyTasksPage() {
   const { 
@@ -161,6 +164,14 @@ export default function MyTasksPage() {
     haptics.success();
   };
 
+  // Update Task Progress & Hours Modal State
+  const [updatingTask, setUpdatingTask] = useState<TaskItem | null>(null);
+  const [updateProgressVal, setUpdateProgressVal] = useState<number>(0);
+  const [updateStatusVal, setUpdateStatusVal] = useState<TaskItem['status']>('IN_PROGRESS');
+  const [updateAdditionalHours, setUpdateAdditionalHours] = useState<number>(0);
+  const [updateCommentText, setUpdateCommentText] = useState<string>('');
+  const [updateCompletionNote, setUpdateCompletionNote] = useState<string>('');
+
   const isSuperadmin = currentUser.accessTier === 'SUPERADMIN' || 
                        currentUser.functionalRole === 'SUPERADMIN' || 
                        currentUser.functionalRole === 'MANAGING_CONSULTANT' ||
@@ -170,7 +181,77 @@ export default function MyTasksPage() {
   const isManager = currentUser.managementTier === 'LINE_MANAGER' || 
                     currentUser.managementTier === 'TEAM_LEAD' || 
                     currentUser.managementTier === 'DEPT_HEAD' || 
+                    currentUser.functionalRole === 'PROJECT_MANAGER' ||
+                    currentUser.functionalRole === 'DEPUTY_MANAGING_CONSULTANT' ||
+                    currentUser.accessTier === 'SUPERADMIN' ||
                     isSuperadmin;
+
+  const canAccessManagerBoard = isSuperadmin || isManager;
+
+  // Enforce: Manager Board is strictly for Admins and Line Managers, not standard users
+  React.useEffect(() => {
+    if (!canAccessManagerBoard && activeTab === 'MANAGER_BOARD') {
+      setActiveTab('MY_TASKS');
+    }
+  }, [canAccessManagerBoard, activeTab]);
+
+  const isTaskPM = (task: TaskItem | null) => {
+    if (!task) return false;
+    if (isSuperadmin) return true;
+    const proj = task.projectId ? projects.find(p => p.id === task.projectId) : null;
+    return Boolean(proj && (proj.leadPmId === currentUser.id || proj.projectManagerId === currentUser.id));
+  };
+
+  const handleOpenUpdateTask = (task: TaskItem) => {
+    setUpdatingTask(task);
+    setUpdateProgressVal(task.progressPercent || 0);
+    setUpdateStatusVal(task.status);
+    setUpdateAdditionalHours(0);
+    setUpdateCommentText('');
+    setUpdateCompletionNote('');
+  };
+
+  const handleSaveTaskUpdate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!updatingTask) return;
+
+    const totalHours = (updatingTask.loggedHours || 0) + Number(updateAdditionalHours || 0);
+    const isNowDone = updateProgressVal >= 100 || updateStatusVal === 'DONE';
+    const isProjectPM = isTaskPM(updatingTask);
+
+    if (isNowDone && updatingTask.projectId && !isProjectPM) {
+      alert('Under Slate Labs Core Rule 4, only the designated Project Manager can finalize deliverables.');
+      return;
+    }
+
+    updateTaskProgress(
+      updatingTask.id,
+      updateProgressVal,
+      updateStatusVal,
+      totalHours,
+      isNowDone ? {
+        completedById: currentUser.id,
+        completedByName: currentUser.name,
+        completionNotes: updateCompletionNote || updateCommentText || 'Deliverable finalized by PM.'
+      } : undefined
+    );
+
+    if (updateCommentText.trim()) {
+      addTaskComment(updatingTask.id, updateCommentText.trim());
+    }
+
+    if (selectedTask?.id === updatingTask.id) {
+      setSelectedTask(prev => prev ? {
+        ...prev,
+        progressPercent: updateProgressVal,
+        status: updateStatusVal,
+        loggedHours: totalHours
+      } : null);
+    }
+
+    setUpdatingTask(null);
+    haptics.success();
+  };
 
   // Subordinate user IDs for Line Managers
   const supervisedUserIds = new Set(
@@ -192,7 +273,9 @@ export default function MyTasksPage() {
   // Helper to determine if task is assigned to current user
   const isUserAssigned = (t: TaskItem) => {
     if (t.assigneeId === currentUser.id) return true;
+    if (t.assigneeName?.toLowerCase() === currentUser.name?.toLowerCase()) return true;
     if (t.assigneeIds && t.assigneeIds.includes(currentUser.id)) return true;
+    if (t.taskAssignees && t.taskAssignees.some(a => a.userId === currentUser.id || a.userName?.toLowerCase() === currentUser.name?.toLowerCase())) return true;
     if (t.assignmentType === 'DEPARTMENT' && (t.departmentName === currentUser.departmentName || t.departmentId === currentUser.departmentId)) return true;
     return false;
   };
@@ -269,6 +352,83 @@ export default function MyTasksPage() {
   };
 
   const filteredTasks = getFilteredList();
+
+  const handleExportTasksPdf = () => {
+    const tabLabel = activeTab === 'MY_TASKS' ? 'My Active Deliverables' :
+                     activeTab === 'MANAGER_BOARD' ? 'Manager Delegated Tracking Board' :
+                     activeTab === 'DEPARTMENT_TASKS' ? `${currentUser.departmentName || 'Department'} Task Queue` :
+                     activeTab === 'PENDING_APPROVAL' ? 'Tasks Awaiting Management Sign-Off' :
+                     'Completed Deliverables Archive';
+
+    exportToPdf({
+      filename: `AquaEarth_Tasks_Deliverables_${new Date().toISOString().split('T')[0]}`,
+      title: 'Commercial Deliverables & Field Tasks Execution Schedule',
+      subtitle: `AquaEarth Consulting Limited — View: ${tabLabel} | Generated by: ${currentUser.name}`,
+      category: 'TASK EXECUTION REPORT',
+      summaryMetrics: [
+        { label: 'Total Deliverables', value: String(filteredTasks.length) },
+        { label: 'Completed (DONE)', value: String(filteredTasks.filter(t => t.status === 'DONE').length) },
+        { label: 'In Progress / Active', value: String(filteredTasks.filter(t => t.status !== 'DONE').length) },
+        { label: 'Logged Hours', value: `${filteredTasks.reduce((acc, t) => acc + (t.loggedHours || 0), 0)} hrs` }
+      ],
+      columns: [
+        { header: 'Task / Deliverable', key: 'title' },
+        { header: 'Project / Scope', key: 'projectName', format: (val) => val || 'Internal Operations' },
+        { header: 'Assignee', key: 'assigneeName' },
+        { header: 'Priority', key: 'priority' },
+        { header: 'Status', key: 'status', format: (val) => String(val || '').replace('_', ' ') },
+        { header: 'Progress', key: 'progressPercent', align: 'center', format: (val) => `${val || 0}%` },
+        { header: 'Due Date', key: 'dueDate' },
+        { header: 'Logged Hrs', key: 'loggedHours', align: 'right', format: (val) => `${val || 0}h` }
+      ],
+      data: filteredTasks,
+      signatories: [
+        { role: 'OPERATIONS LEAD / PM', name: currentUser.name, title: `${currentUser.jobTitle || 'Lead Consultant'}` },
+        { role: 'TECHNICAL DIRECTOR', name: 'Engr. Femi Adebayo', title: 'Head of Technical Operations' },
+        { role: 'MANAGING CONSULTANT', name: 'Dr. Kaine Edike', title: 'Managing Consultant (MD / FNEC)' }
+      ]
+    });
+    haptics.success();
+  };
+
+  const handleExportTasksXls = () => {
+    const tabLabel = activeTab === 'MY_TASKS' ? 'My Active Deliverables' :
+                     activeTab === 'MANAGER_BOARD' ? 'Manager Delegated Tracking Board' :
+                     activeTab === 'DEPARTMENT_TASKS' ? `${currentUser.departmentName || 'Department'} Task Queue` :
+                     activeTab === 'PENDING_APPROVAL' ? 'Tasks Awaiting Management Sign-Off' :
+                     'Completed Deliverables Archive';
+
+    exportToXls({
+      filename: `AquaEarth_Tasks_Deliverables_${new Date().toISOString().split('T')[0]}`,
+      title: 'COMMERCIAL DELIVERABLES & FIELD TASKS EXECUTION SCHEDULE',
+      subtitle: `AquaEarth Consulting Limited — View: ${tabLabel} | Generated by: ${currentUser.name}`,
+      category: 'TASK EXECUTION REPORT',
+      metadata: {
+        'Custodian': currentUser.name,
+        'View': tabLabel,
+        'Total Count': String(filteredTasks.length)
+      },
+      summaryMetrics: [
+        { label: 'Total Deliverables', value: filteredTasks.length },
+        { label: 'Completed Deliverables', value: filteredTasks.filter(t => t.status === 'DONE').length },
+        { label: 'Logged Hours', value: `${filteredTasks.reduce((acc, t) => acc + (t.loggedHours || 0), 0)} hrs` }
+      ],
+      columns: [
+        { header: 'Task / Deliverable', key: 'title' },
+        { header: 'Project / Scope', key: 'projectName', format: (val) => val || 'Internal Operations' },
+        { header: 'Assignee', key: 'assigneeName' },
+        { header: 'Stage', key: 'stage' },
+        { header: 'Priority', key: 'priority' },
+        { header: 'Status', key: 'status', format: (val) => String(val || '').replace('_', ' ') },
+        { header: 'Progress', key: 'progressPercent', align: 'center', format: (val) => `${val || 0}%` },
+        { header: 'Due Date', key: 'dueDate' },
+        { header: 'Logged Hours', key: 'loggedHours', align: 'right', format: (val) => val || 0 },
+        { header: 'Estimated Hours', key: 'estimatedHours', align: 'right', format: (val) => val || 16 }
+      ],
+      data: filteredTasks
+    });
+    haptics.success();
+  };
 
   const handleAddComment = (e: React.FormEvent) => {
     e.preventDefault();
@@ -348,7 +508,25 @@ export default function MyTasksPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={handleExportTasksPdf}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-black/[0.08] dark:border-white/[0.1] hover:bg-black/[0.03] dark:hover:bg-white/[0.05] text-[11px] font-semibold text-[#1D1D1F] dark:text-[#F6F4F0] transition-all cursor-pointer active:scale-[0.97]"
+            title="Download PDF Report"
+          >
+            <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>PDF Report</span>
+          </button>
+
+          <button
+            onClick={handleExportTasksXls}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-black/[0.08] dark:border-white/[0.1] hover:bg-black/[0.03] dark:hover:bg-white/[0.05] text-[11px] font-semibold text-[#1D1D1F] dark:text-[#F6F4F0] transition-all cursor-pointer active:scale-[0.97]"
+            title="Download Excel Spreadsheet"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>Excel</span>
+          </button>
+
           <button
             onClick={() => setIsCreateModalOpen(true)}
             className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-xl text-xs font-bold shadow-xs transition-all active:scale-[0.96] cursor-pointer"
@@ -360,7 +538,7 @@ export default function MyTasksPage() {
       </div>
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+      <div className={`grid gap-3 text-xs ${canAccessManagerBoard ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-1 sm:grid-cols-3'}`}>
         <div 
           onClick={() => setActiveTab('MY_TASKS')}
           className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-xs space-y-1 ${
@@ -377,21 +555,23 @@ export default function MyTasksPage() {
           </div>
         </div>
 
-        <div 
-          onClick={() => { setActiveTab('MANAGER_BOARD'); setManagerStatusFilter('ALL'); }}
-          className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-xs space-y-1 ${
-            activeTab === 'MANAGER_BOARD'
-              ? 'bg-indigo-600 text-white border-transparent ring-2 ring-indigo-400/40'
-              : 'bg-white dark:bg-[#0c0c0e] border-black/[0.08] dark:border-white/[0.12] hover:border-black/[0.18] dark:hover:border-white/[0.22]'
-          }`}
-        >
-          <div className={`text-[11px] font-semibold ${activeTab === 'MANAGER_BOARD' ? 'text-indigo-100' : 'text-indigo-600 dark:text-indigo-400'}`}>
-            Manager Board (Delegated)
+        {canAccessManagerBoard && (
+          <div 
+            onClick={() => { setActiveTab('MANAGER_BOARD'); setManagerStatusFilter('ALL'); }}
+            className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-xs space-y-1 ${
+              activeTab === 'MANAGER_BOARD'
+                ? 'bg-indigo-600 text-white border-transparent ring-2 ring-indigo-400/40'
+                : 'bg-white dark:bg-[#0c0c0e] border-black/[0.08] dark:border-white/[0.12] hover:border-black/[0.18] dark:hover:border-white/[0.22]'
+            }`}
+          >
+            <div className={`text-[11px] font-semibold ${activeTab === 'MANAGER_BOARD' ? 'text-indigo-100' : 'text-indigo-600 dark:text-indigo-400'}`}>
+              Manager Board (Delegated)
+            </div>
+            <div className="text-2xl font-extrabold tnum">
+              {tasksAssignedByMe.length}
+            </div>
           </div>
-          <div className="text-2xl font-extrabold tnum">
-            {tasksAssignedByMe.length}
-          </div>
-        </div>
+        )}
 
         <div 
           onClick={() => setActiveTab('DEPARTMENT_TASKS')}
@@ -440,18 +620,20 @@ export default function MyTasksPage() {
             My Active ({myTasks.filter(t => t.status !== 'DONE').length})
           </button>
 
-          {/* Manager Board View */}
-          <button
-            onClick={() => setActiveTab('MANAGER_BOARD')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
-              activeTab === 'MANAGER_BOARD'
-                ? 'bg-indigo-600 text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'
-            }`}
-          >
-            <Briefcase className="w-3.5 h-3.5" />
-            <span>Manager Tracking Board ({tasksAssignedByMe.filter(t => t.status !== 'DONE').length})</span>
-          </button>
+          {/* Manager Board View (Admins and Line Managers Only) */}
+          {canAccessManagerBoard && (
+            <button
+              onClick={() => setActiveTab('MANAGER_BOARD')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                activeTab === 'MANAGER_BOARD'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'
+              }`}
+            >
+              <Briefcase className="w-3.5 h-3.5" />
+              <span>Manager Tracking Board ({tasksAssignedByMe.filter(t => t.status !== 'DONE').length})</span>
+            </button>
+          )}
 
           {/* Department Queue */}
           <button
@@ -531,7 +713,7 @@ export default function MyTasksPage() {
       </div>
 
       {/* Sub-Filters for Manager Board & Archive */}
-      {activeTab === 'MANAGER_BOARD' && (
+      {activeTab === 'MANAGER_BOARD' && canAccessManagerBoard && (
         <div className="p-3 bg-indigo-500/5 dark:bg-indigo-500/10 border border-indigo-500/20 rounded-2xl flex items-center justify-between gap-3 text-xs flex-wrap">
           <div className="flex items-center gap-2">
             <span className="font-bold text-indigo-950 dark:text-indigo-200 text-[11px]">
@@ -791,14 +973,30 @@ export default function MyTasksPage() {
                     </div>
                   </div>
 
-                  {!isDone && task.approvalStatus === 'APPROVED' && (
+                  {!isDone && !task.isBlockedByGate && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenUpdateTask(task);
+                      }}
+                      className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-bold shadow-xs active:scale-[0.96] whitespace-nowrap shrink-0 inline-flex items-center gap-1 cursor-pointer transition-all"
+                      title="Update progress milestone, log field hours, or submit for PM sign-off"
+                    >
+                      <Sliders className="w-3 h-3" />
+                      <span>Update Progress</span>
+                    </button>
+                  )}
+
+                  {!isDone && (task.approvalStatus === 'APPROVED' || !task.approvalStatus) && isTaskPM(task) && (
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         openCompletionModal(task);
                       }}
-                      className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-bold shadow-xs active:scale-[0.96] whitespace-nowrap shrink-0 inline-flex items-center gap-1"
+                      className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-bold shadow-xs active:scale-[0.96] whitespace-nowrap shrink-0 inline-flex items-center gap-1 cursor-pointer transition-all"
+                      title="Finalize Deliverable (+KPI)"
                     >
                       <Check className="w-3 h-3" />
                       <span>Complete</span>
@@ -958,7 +1156,7 @@ export default function MyTasksPage() {
                 )}
 
                 {/* Progress Milestone Slider (If Active and Not Gate Blocked) */}
-                {activeDetailTask.status !== 'DONE' && activeDetailTask.approvalStatus === 'APPROVED' && !activeDetailTask.isBlockedByGate && (() => {
+                {activeDetailTask.status !== 'DONE' && activeDetailTask.approvalStatus !== 'REJECTED' && activeDetailTask.approvalStatus !== 'PENDING_APPROVAL' && !activeDetailTask.isBlockedByGate && (() => {
                   const activeDetailProject = activeDetailTask.projectId ? projects.find(p => p.id === activeDetailTask.projectId) : null;
                   const canCompleteActiveTask = isSuperadmin || (activeDetailProject ? (activeDetailProject.leadPmId === currentUser.id || activeDetailProject.projectManagerId === currentUser.id) : isManager);
 
@@ -967,9 +1165,18 @@ export default function MyTasksPage() {
                       <div className="flex items-center justify-between text-xs font-bold text-slate-900 dark:text-white">
                         <span className="flex items-center gap-1.5">
                           <Sliders className="w-3.5 h-3.5 text-indigo-500" />
-                          Update Progress Milestone
+                          <span>Progress Milestone</span>
                         </span>
-                        <span className="tnum font-extrabold text-sm">{activeDetailTask.progressPercent || 0}%</span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenUpdateTask(activeDetailTask)}
+                            className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold hover:underline cursor-pointer inline-flex items-center gap-1"
+                          >
+                            <span>Detailed Logger & Hours &rarr;</span>
+                          </button>
+                          <span className="tnum font-extrabold text-sm">{activeDetailTask.progressPercent || 0}%</span>
+                        </div>
                       </div>
 
                       <input
@@ -978,28 +1185,41 @@ export default function MyTasksPage() {
                         max={canCompleteActiveTask ? 100 : 90}
                         step={5}
                         value={activeDetailTask.progressPercent || 0}
-                        onChange={(e) => updateTaskProgress(activeDetailTask.id, Number(e.target.value))}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          updateTaskProgress(activeDetailTask.id, val);
+                          setSelectedTask(prev => prev ? { ...prev, progressPercent: val } : null);
+                        }}
                         className="w-full accent-indigo-600 cursor-pointer"
                       />
 
                       <div className="flex items-center gap-2 pt-1 flex-wrap">
                         <button
                           type="button"
-                          onClick={() => updateTaskProgress(activeDetailTask.id, 25, 'IN_PROGRESS')}
+                          onClick={() => {
+                            updateTaskProgress(activeDetailTask.id, 25, 'IN_PROGRESS');
+                            setSelectedTask(prev => prev ? { ...prev, progressPercent: 25, status: 'IN_PROGRESS' } : null);
+                          }}
                           className="px-2.5 py-1 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 text-slate-800 dark:text-slate-200 rounded-lg text-[10px] font-bold active:scale-[0.96] whitespace-nowrap shrink-0 cursor-pointer"
                         >
                           25%
                         </button>
                         <button
                           type="button"
-                          onClick={() => updateTaskProgress(activeDetailTask.id, 50, 'IN_PROGRESS')}
+                          onClick={() => {
+                            updateTaskProgress(activeDetailTask.id, 50, 'IN_PROGRESS');
+                            setSelectedTask(prev => prev ? { ...prev, progressPercent: 50, status: 'IN_PROGRESS' } : null);
+                          }}
                           className="px-2.5 py-1 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 text-slate-800 dark:text-slate-200 rounded-lg text-[10px] font-bold active:scale-[0.96] whitespace-nowrap shrink-0 cursor-pointer"
                         >
                           50%
                         </button>
                         <button
                           type="button"
-                          onClick={() => updateTaskProgress(activeDetailTask.id, 75, 'IN_PROGRESS')}
+                          onClick={() => {
+                            updateTaskProgress(activeDetailTask.id, 75, 'IN_PROGRESS');
+                            setSelectedTask(prev => prev ? { ...prev, progressPercent: 75, status: 'IN_PROGRESS' } : null);
+                          }}
                           className="px-2.5 py-1 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 text-slate-800 dark:text-slate-200 rounded-lg text-[10px] font-bold active:scale-[0.96] whitespace-nowrap shrink-0 cursor-pointer"
                         >
                           75%
@@ -1020,6 +1240,7 @@ export default function MyTasksPage() {
                               type="button"
                               onClick={() => {
                                 updateTaskProgress(activeDetailTask.id, 90, 'UNDER_REVIEW');
+                                setSelectedTask(prev => prev ? { ...prev, progressPercent: 90, status: 'UNDER_REVIEW' } : null);
                                 addTaskComment(activeDetailTask.id, `${currentUser.name} marked progress at 90% and requested PM sign-off.`);
                                 haptics.success();
                               }}
@@ -1428,6 +1649,196 @@ export default function MyTasksPage() {
                   <button type="button" onClick={() => setEditingTask(null)} className="px-3 py-1.5 text-[#86868B]">Cancel</button>
                   <button type="submit" className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold cursor-pointer shadow-xs active:scale-[0.98]">
                     Save Task & Assignees
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Update Task Progress & Field Time Modal */}
+      <AnimatePresence>
+        {updatingTask && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setUpdatingTask(null)} className="fixed inset-0 bg-black/70 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-white dark:bg-[#0C0C0D] rounded-3xl shadow-2xl max-w-lg w-full border border-black/[0.08] dark:border-white/[0.12] p-6 space-y-4 z-10 text-xs max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between border-b border-black/[0.05] dark:border-white/[0.08] pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                    <Sliders className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-[#1D1D1F] dark:text-[#F6F4F0]">Update Task Progress</h3>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-xs">{updatingTask.title}</p>
+                  </div>
+                </div>
+                <button onClick={() => setUpdatingTask(null)} className="text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white">&times;</button>
+              </div>
+
+              <form onSubmit={handleSaveTaskUpdate} className="space-y-4">
+                {/* Task Context Card */}
+                <div className="p-3 bg-slate-50 dark:bg-white/[0.03] rounded-2xl border border-black/[0.05] dark:border-white/[0.08] text-xs space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-slate-900 dark:text-white">{updatingTask.stage || updatingTask.projectName || 'General Deliverable'}</span>
+                    <span className="font-mono text-[10px] text-indigo-600 dark:text-indigo-400 font-bold">Due: {updatingTask.dueDate}</span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Assigned to: <b className="text-slate-800 dark:text-slate-200">{updatingTask.assigneeName}</b> • Current Progress: <b className="text-indigo-600 dark:text-indigo-400 font-mono">{updatingTask.progressPercent || 0}%</b>
+                  </div>
+                </div>
+
+                {/* Core Rule 4 Notice if Non-PM */}
+                {!isTaskPM(updatingTask) && (
+                  <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-[11px] text-amber-900 dark:text-amber-300 flex items-center gap-2">
+                    <Lock className="w-3.5 h-3.5 shrink-0 text-amber-600" />
+                    <span><b>Core Rule 4:</b> Assignees can advance work up to 90% and submit for review. Only the Project Manager marks completion.</span>
+                  </div>
+                )}
+
+                {/* Progress Milestone Slider */}
+                <div className="p-4 bg-black/[0.02] dark:bg-white/[0.03] rounded-2xl border border-black/[0.06] dark:border-white/[0.08] space-y-3">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-900 dark:text-white">
+                    <span>Progress Milestone</span>
+                    <span className="text-sm font-extrabold font-mono text-indigo-600 dark:text-indigo-400 tnum">{updateProgressVal}%</span>
+                  </div>
+
+                  <input
+                    type="range"
+                    min={0}
+                    max={isTaskPM(updatingTask) ? 100 : 90}
+                    step={5}
+                    value={updateProgressVal}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      const isPM = isTaskPM(updatingTask);
+                      setUpdateProgressVal(val);
+                      if (val === 0) setUpdateStatusVal('NOT_STARTED');
+                      else if (val >= 100 && isPM) setUpdateStatusVal('DONE');
+                      else if (val >= 90 && !isPM) setUpdateStatusVal('UNDER_REVIEW');
+                      else setUpdateStatusVal('IN_PROGRESS');
+                    }}
+                    className="w-full accent-indigo-600 cursor-pointer"
+                  />
+
+                  {/* Quick Preset Buttons */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => { setUpdateProgressVal(25); setUpdateStatusVal('IN_PROGRESS'); }}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-all ${
+                        updateProgressVal === 25 ? 'bg-indigo-600 text-white' : 'bg-black/[0.04] dark:bg-white/10 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      25% Started
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setUpdateProgressVal(50); setUpdateStatusVal('IN_PROGRESS'); }}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-all ${
+                        updateProgressVal === 50 ? 'bg-indigo-600 text-white' : 'bg-black/[0.04] dark:bg-white/10 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      50% Halfway
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setUpdateProgressVal(75); setUpdateStatusVal('IN_PROGRESS'); }}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-all ${
+                        updateProgressVal === 75 ? 'bg-indigo-600 text-white' : 'bg-black/[0.04] dark:bg-white/10 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      75% Advanced
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setUpdateProgressVal(90); setUpdateStatusVal('UNDER_REVIEW'); }}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-all ${
+                        updateProgressVal === 90 ? 'bg-amber-600 text-white' : 'bg-amber-500/15 text-amber-800 dark:text-amber-300'
+                      }`}
+                    >
+                      90% Ready for Sign-Off
+                    </button>
+                    {isTaskPM(updatingTask) && (
+                      <button
+                        type="button"
+                        onClick={() => { setUpdateProgressVal(100); setUpdateStatusVal('DONE'); }}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-all ml-auto ${
+                          updateProgressVal === 100 ? 'bg-emerald-600 text-white' : 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300'
+                        }`}
+                      >
+                        100% Finalize
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Status</label>
+                    <select
+                      value={updateStatusVal}
+                      onChange={(e: any) => setUpdateStatusVal(e.target.value)}
+                      className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
+                    >
+                      <option value="NOT_STARTED">Not Started</option>
+                      <option value="IN_PROGRESS">In Progress</option>
+                      <option value="UNDER_REVIEW">Under Review / Ready for PM Sign-off</option>
+                      {isTaskPM(updatingTask) && <option value="DONE">Completed (100% Signed Off)</option>}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">
+                      + Log Additional Hours (hrs)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.5}
+                      value={updateAdditionalHours}
+                      onChange={(e) => setUpdateAdditionalHours(Number(e.target.value))}
+                      placeholder="e.g. 3.5"
+                      className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs font-mono tnum text-[#1D1D1F] dark:text-[#F6F4F0]"
+                    />
+                    <span className="text-[9px] text-slate-400 mt-0.5 block">Currently logged: {updatingTask.loggedHours || 0} hrs</span>
+                  </div>
+                </div>
+
+                {/* Progress Update / Handover Note */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">
+                    Operational Note / Handover Comment
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={updateCommentText}
+                    onChange={(e) => setUpdateCommentText(e.target.value)}
+                    placeholder="e.g. Completed initial site survey and updated GIS layer coordinates."
+                    className="w-full p-2.5 bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-[#1D1D1F] dark:text-[#F6F4F0]"
+                  />
+                </div>
+
+                {/* PM Completion Notes (if marking complete) */}
+                {isTaskPM(updatingTask) && (updateProgressVal === 100 || updateStatusVal === 'DONE') && (
+                  <div>
+                    <label className="block text-[11px] font-bold text-emerald-800 dark:text-emerald-300 mb-1">
+                      PM Final Sign-Off Deliverable Acceptance Note *
+                    </label>
+                    <input
+                      type="text"
+                      value={updateCompletionNote}
+                      onChange={(e) => setUpdateCompletionNote(e.target.value)}
+                      placeholder="e.g. Technical peer review verified; signed off for milestone billing."
+                      className="w-full p-2.5 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-300 dark:border-emerald-800 rounded-xl text-xs text-emerald-950 dark:text-emerald-200"
+                    />
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-black/[0.05] dark:border-white/[0.08]">
+                  <button type="button" onClick={() => setUpdatingTask(null)} className="px-3 py-1.5 text-[#86868B]">Cancel</button>
+                  <button type="submit" className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold cursor-pointer shadow-xs active:scale-[0.98]">
+                    Save Progress Update
                   </button>
                 </div>
               </form>

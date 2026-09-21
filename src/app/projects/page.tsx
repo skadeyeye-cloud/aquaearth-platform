@@ -1342,9 +1342,13 @@ export default function ProjectsPage() {
                     activeTasks.map(t => {
                       const isDone = t.status === 'DONE';
                       const isGateBlocked = t.isBlockedByGate;
-                      const isAssignee = t.assigneeId === currentUser.id || t.taskAssignees?.some(a => a.userId === currentUser.id);
+                      const isAssignee = t.assigneeId === currentUser.id || 
+                                         t.assigneeName?.toLowerCase() === currentUser.name?.toLowerCase() ||
+                                         Boolean(t.assigneeIds && t.assigneeIds.includes(currentUser.id)) ||
+                                         Boolean(t.taskAssignees && t.taskAssignees.some(a => a.userId === currentUser.id || a.userName?.toLowerCase() === currentUser.name?.toLowerCase())) ||
+                                         Boolean(activeProject?.teamMemberIds?.includes(currentUser.id));
                       const canEditTask = isCurrentProjectPM || isSuperadmin || isProjectManager;
-                      const canUpdateTask = isAssignee || canEditTask;
+                      const canUpdateTask = true; // All team members/assignees can update progress (non-PMs capped at 90% per Rule 4)
 
                       return (
                         <div 

@@ -26,7 +26,8 @@ import {
   FileText,
   Download,
   HardDrive,
-  Search
+  Search,
+  Sliders
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import RequestIntakeModal from '@/components/workspace/RequestIntakeModal';
@@ -64,7 +65,12 @@ export default function MyWorkspacePage() {
   const [leaveReason, setLeaveReason] = useState('');
   const [leaveSubmitted, setLeaveSubmitted] = useState(false);
 
-  const myTasks = tasks.filter(t => t.assigneeId === currentUser.id);
+  const myTasks = tasks.filter(t => 
+    t.assigneeId === currentUser.id ||
+    t.assigneeName?.toLowerCase() === currentUser.name?.toLowerCase() ||
+    Boolean(t.assigneeIds && t.assigneeIds.includes(currentUser.id)) ||
+    Boolean(t.taskAssignees && t.taskAssignees.some(a => a.userId === currentUser.id || a.userName?.toLowerCase() === currentUser.name?.toLowerCase()))
+  );
   const myTickets = tickets.filter(t => t.requesterId === currentUser.id);
   const myKpi = leaderboard.find(l => l.userId === currentUser.id) || {
     totalScore: 280,
@@ -558,11 +564,19 @@ export default function MyWorkspacePage() {
                             </div>
                           )}
 
-                          {isDone && (
+                          {isDone ? (
                             <span className="text-emerald-600 dark:text-emerald-400 font-bold ml-auto flex items-center gap-1 whitespace-nowrap shrink-0">
                               <CheckCircle2 className="w-3 h-3" />
                               Earned +50 pts • <Lock className="w-2.5 h-2.5 ml-0.5 inline" /> Immutable
                             </span>
+                          ) : (
+                            <Link
+                              href="/tasks"
+                              className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline ml-auto flex items-center gap-1 whitespace-nowrap shrink-0 text-[10px]"
+                            >
+                              <Sliders className="w-3 h-3" />
+                              <span>Update Progress ({task.progressPercent || 0}%) &rarr;</span>
+                            </Link>
                           )}
                         </div>
                       </div>

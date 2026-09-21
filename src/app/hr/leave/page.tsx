@@ -23,10 +23,12 @@ import {
   User,
   Info,
   Building2,
-  CalendarCheck
+  CalendarCheck,
+  FileSpreadsheet
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { haptics } from '@/lib/haptics';
+import { exportToXls, exportToPdf } from '@/lib/export-utils';
 
 export default function LeaveManagementPage() {
   const { 
@@ -337,6 +339,74 @@ export default function LeaveManagementPage() {
     URL.revokeObjectURL(url);
   };
 
+  const handleExportLeavePdf = () => {
+    exportToPdf({
+      filename: `AquaEarth_Leave_Audit_${new Date().toISOString().split('T')[0]}`,
+      title: 'Corporate Leave Liability & Absence Audit Report',
+      subtitle: `AquaEarth Consulting Limited — Status Filter: ${statusFilter} | Extracted by: ${currentUser.name}`,
+      category: 'LEAVE AUDIT REPORT',
+      summaryMetrics: [
+        { label: 'Total Requests', value: String(filteredRequests.length) },
+        { label: 'Total Working Days', value: `${filteredRequests.reduce((acc, r) => acc + (r.daysCount || 0), 0)} days` },
+        { label: 'Approved Absences', value: String(filteredRequests.filter(r => r.status === 'APPROVED').length) },
+        { label: 'Pending Approvals', value: String(filteredRequests.filter(r => r.status === 'PENDING').length) }
+      ],
+      columns: [
+        { header: 'Request ID', key: 'id', width: '80px' },
+        { header: 'Staff Member', key: 'userName' },
+        { header: 'Department', key: 'userDepartment', format: (val, row) => allUsers.find(u => u.id === row.userId)?.departmentName || val || 'Operations' },
+        { header: 'Leave Type', key: 'leaveType' },
+        { header: 'Start Date', key: 'startDate' },
+        { header: 'End Date', key: 'endDate' },
+        { header: 'Days', key: 'daysCount', align: 'center', format: (val) => `${val} d` },
+        { header: 'Status', key: 'status' },
+        { header: 'Sign-Off Officer', key: 'approvedByName', format: (val) => val || 'Pending' }
+      ],
+      data: filteredRequests,
+      signatories: [
+        { role: 'PREPARED BY', name: currentUser.name, title: `${currentUser.jobTitle || 'HR / Operations Officer'}` },
+        { role: 'LINE MANAGER / HOD', name: 'Authorized Line Manager', title: 'Department Head' },
+        { role: 'APPROVED BY', name: 'Dr. Kaine Edike', title: 'Managing Consultant (MD / FNEC)' }
+      ]
+    });
+    haptics.success();
+  };
+
+  const handleExportLeaveXls = () => {
+    exportToXls({
+      filename: `AquaEarth_Leave_Audit_${new Date().toISOString().split('T')[0]}`,
+      title: 'CORPORATE LEAVE LIABILITY & ABSENCE AUDIT REPORT',
+      subtitle: `AquaEarth Consulting Limited — Extracted by: ${currentUser.name}`,
+      category: 'LEAVE AUDIT',
+      metadata: {
+        'Custodian': currentUser.name,
+        'Filter Status': statusFilter,
+        'Total Requests': String(filteredRequests.length),
+        'Total Days': `${filteredRequests.reduce((acc, r) => acc + (r.daysCount || 0), 0)} days`
+      },
+      summaryMetrics: [
+        { label: 'Total Requests', value: filteredRequests.length },
+        { label: 'Approved Absences', value: filteredRequests.filter(r => r.status === 'APPROVED').length },
+        { label: 'Total Working Days', value: `${filteredRequests.reduce((acc, r) => acc + (r.daysCount || 0), 0)} days` }
+      ],
+      columns: [
+        { header: 'Leave ID', key: 'id' },
+        { header: 'Staff Name', key: 'userName' },
+        { header: 'Department', key: 'userDepartment', format: (val, row) => allUsers.find(u => u.id === row.userId)?.departmentName || val || 'Operations' },
+        { header: 'Leave Type', key: 'leaveType' },
+        { header: 'Start Date', key: 'startDate' },
+        { header: 'End Date', key: 'endDate' },
+        { header: 'Working Days', key: 'daysCount', align: 'center', format: (val) => val || 0 },
+        { header: 'Status', key: 'status' },
+        { header: 'Reason', key: 'reason' },
+        { header: 'Approved By', key: 'approvedByName' },
+        { header: 'Approval Date', key: 'approvalDate' }
+      ],
+      data: filteredRequests
+    });
+    haptics.success();
+  };
+
   const getLeaveTypeBadge = (type: LeaveItem['leaveType']) => {
     switch (type) {
       case 'ANNUAL':
@@ -383,15 +453,35 @@ export default function LeaveManagementPage() {
 
         {/* Header Action Buttons */}
         <div className="flex items-center gap-2 flex-wrap">
-          {isCompanyWideAuditor && (
-            <button
-              onClick={handleExportCSV}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-semibold shadow-2xs transition-all active:scale-[0.96] cursor-pointer whitespace-nowrap shrink-0"
-              title="Export leave records to CSV"
-            >
-              <Download className="w-3.5 h-3.5 text-slate-500" />
-              <span>Export Audit CSV</span>
-            </button>
+          {(isCompanyWideAuditor || isLineManager) && (
+            <>
+              <button
+                onClick={handleExportLeavePdf}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-semibold shadow-2xs transition-all active:scale-[0.96] cursor-pointer whitespace-nowrap shrink-0"
+                title="Download PDF Leave Liability Audit"
+              >
+                <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>PDF Report</span>
+              </button>
+
+              <button
+                onClick={handleExportLeaveXls}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-semibold shadow-2xs transition-all active:scale-[0.96] cursor-pointer whitespace-nowrap shrink-0"
+                title="Download Excel Leave Schedule"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>Excel</span>
+              </button>
+
+              <button
+                onClick={handleExportCSV}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-semibold shadow-2xs transition-all active:scale-[0.96] cursor-pointer whitespace-nowrap shrink-0"
+                title="Export leave records to CSV"
+              >
+                <Download className="w-3.5 h-3.5 text-slate-500" />
+                <span>CSV</span>
+              </button>
+            </>
           )}
 
           <button

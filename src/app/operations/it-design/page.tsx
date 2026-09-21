@@ -26,11 +26,13 @@ import {
   Shield,
   FileText,
   Activity,
-  Filter
+  Filter,
+  FileSpreadsheet
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HardwareAsset, UserProfile } from '@/lib/types';
 import { haptics } from '@/lib/haptics';
+import { exportToXls, exportToPdf } from '@/lib/export-utils';
 
 // IT Components
 import { NewAssetModal } from '@/components/it/NewAssetModal';
@@ -44,6 +46,7 @@ type TabKey = 'HARDWARE' | 'USERS_RBAC' | 'AUDIT_LOGS' | 'SUBSCRIPTIONS' | 'DESI
 
 export default function ItDesignOperationsPage() {
   const { 
+    currentUser,
     hardwareAssets, 
     subscriptions, 
     designRequests, 
@@ -176,6 +179,117 @@ export default function ItDesignOperationsPage() {
     return Array.from(new Set(allUsers.map(u => u.departmentName).filter(Boolean)));
   }, [allUsers]);
 
+  const handleExportItPdf = () => {
+    if (activeTab === 'DESIGN') {
+      exportToPdf({
+        filename: `AquaEarth_Design_Queue_${new Date().toISOString().split('T')[0]}`,
+        title: 'Creative Design & Brand Deliverable Queue Audit',
+        subtitle: `AquaEarth Consulting Limited — Design Operations | Extracted by: ${currentUser.name}`,
+        category: 'DESIGN OPERATIONS',
+        summaryMetrics: [
+          { label: 'Total Requests', value: String(designRequests.length) },
+          { label: '24h Rush Orders', value: String(designRequests.filter(d => d.is24hRush).length) },
+          { label: 'Completed Deliverables', value: String(designRequests.filter(d => d.status === 'COMPLETED').length) }
+        ],
+        columns: [
+          { header: 'Project / Title', key: 'title' },
+          { header: 'Requester', key: 'requesterName' },
+          { header: 'Rush 24h', key: 'is24hRush', format: (val) => val ? '⚡ YES' : 'Standard' },
+          { header: 'Status', key: 'status' }
+        ],
+        data: designRequests,
+        signatories: [
+          { role: 'CREATIVE LEAD', name: 'Halima Yusuf', title: 'Brand & IT Lead' },
+          { role: 'MANAGING CONSULTANT', name: 'Dr. Kaine Edike', title: 'Managing Consultant (MD / FNEC)' }
+        ]
+      });
+    } else {
+      exportToPdf({
+        filename: `AquaEarth_Hardware_Inventory_${new Date().toISOString().split('T')[0]}`,
+        title: 'Enterprise Hardware Asset Register & Custody Audit',
+        subtitle: `AquaEarth Consulting Limited — IT Operations & Sovereign Vault | Extracted by: ${currentUser.name}`,
+        category: 'IT ASSET AUDIT',
+        summaryMetrics: [
+          { label: 'Total Assets', value: String(hardwareAssets.length) },
+          { label: 'Operational in Field/Office', value: String(hardwareAssets.filter(h => h.status === 'OPERATIONAL').length) },
+          { label: 'In Depot Storage', value: String(hardwareAssets.filter(h => h.status === 'IN_STORAGE').length) },
+          { label: 'In Maintenance / Repair', value: String(hardwareAssets.filter(h => h.status === 'IN_REPAIR').length) }
+        ],
+        columns: [
+          { header: 'Asset Tag', key: 'assetTag', width: '90px' },
+          { header: 'Item Description', key: 'name' },
+          { header: 'Category', key: 'category' },
+          { header: 'Assigned Custodian', key: 'assignedToName', format: (val) => val || 'Depot Inventory' },
+          { header: 'Serial No', key: 'serialNumber' },
+          { header: 'Condition', key: 'condition' },
+          { header: 'Location', key: 'location' },
+          { header: 'Status', key: 'status' }
+        ],
+        data: hardwareAssets,
+        signatories: [
+          { role: 'IT ASSET CUSTODIAN', name: currentUser.name, title: `${currentUser.jobTitle || 'IT Support Lead'}` },
+          { role: 'HEAD OF OPERATIONS', name: 'Engr. Femi Adebayo', title: 'Chief Operating Officer' },
+          { role: 'MANAGING CONSULTANT', name: 'Dr. Kaine Edike', title: 'Managing Consultant (MD / FNEC)' }
+        ]
+      });
+    }
+    haptics.success();
+  };
+
+  const handleExportItXls = () => {
+    if (activeTab === 'DESIGN') {
+      exportToXls({
+        filename: `AquaEarth_Design_Queue_${new Date().toISOString().split('T')[0]}`,
+        title: 'CREATIVE DESIGN & BRAND DELIVERABLE QUEUE',
+        subtitle: `AquaEarth Consulting Limited — Extracted by: ${currentUser.name}`,
+        category: 'DESIGN',
+        metadata: {
+          'Custodian': currentUser.name,
+          'Total Requests': String(designRequests.length)
+        },
+        summaryMetrics: [
+          { label: 'Total Requests', value: designRequests.length }
+        ],
+        columns: [
+          { header: 'Request ID', key: 'id' },
+          { header: 'Design Title', key: 'title' },
+          { header: 'Project ID', key: 'projectId' },
+          { header: 'Requester', key: 'requesterName' },
+          { header: '24h Rush', key: 'is24hRush', format: (val) => val ? 'YES' : 'NO' },
+          { header: 'Status', key: 'status' }
+        ],
+        data: designRequests
+      });
+    } else {
+      exportToXls({
+        filename: `AquaEarth_Hardware_Inventory_${new Date().toISOString().split('T')[0]}`,
+        title: 'ENTERPRISE HARDWARE ASSET REGISTER & CUSTODY AUDIT',
+        subtitle: `AquaEarth Consulting Limited — Extracted by: ${currentUser.name}`,
+        category: 'IT ASSETS',
+        metadata: {
+          'Custodian': currentUser.name,
+          'Total Assets': String(hardwareAssets.length)
+        },
+        summaryMetrics: [
+          { label: 'Total Assets', value: hardwareAssets.length },
+          { label: 'Operational Assets', value: hardwareAssets.filter(h => h.status === 'OPERATIONAL').length }
+        ],
+        columns: [
+          { header: 'Asset Tag', key: 'assetTag' },
+          { header: 'Item Name', key: 'name' },
+          { header: 'Category', key: 'category' },
+          { header: 'Assigned Custodian', key: 'assignedToName' },
+          { header: 'Serial Number', key: 'serialNumber' },
+          { header: 'Condition', key: 'condition' },
+          { header: 'Location', key: 'location' },
+          { header: 'Asset Status', key: 'status' }
+        ],
+        data: hardwareAssets
+      });
+    }
+    haptics.success();
+  };
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -184,6 +298,26 @@ export default function ItDesignOperationsPage() {
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
             IT Operations & Design Studio
           </h1>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={handleExportItPdf}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-[#141416] hover:bg-slate-100 dark:hover:bg-[#1C1C1F] text-slate-700 dark:text-[#F6F4F0] rounded-xl text-xs font-semibold border border-slate-200 dark:border-white/[0.08] shadow-2xs transition-all active:scale-[0.96] cursor-pointer whitespace-nowrap shrink-0"
+            title="Download PDF Audit Report"
+          >
+            <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>PDF Report</span>
+          </button>
+
+          <button
+            onClick={handleExportItXls}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-[#141416] hover:bg-slate-100 dark:hover:bg-[#1C1C1F] text-slate-700 dark:text-[#F6F4F0] rounded-xl text-xs font-semibold border border-slate-200 dark:border-white/[0.08] shadow-2xs transition-all active:scale-[0.96] cursor-pointer whitespace-nowrap shrink-0"
+            title="Download Excel Spreadsheet"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>Excel</span>
+          </button>
         </div>
 
         {/* Tab Controls */}

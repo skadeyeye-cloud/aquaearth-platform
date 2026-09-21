@@ -19,10 +19,14 @@ import {
   Droplets,
   Trees,
   Waves,
-  Hammer
+  Hammer,
+  Download,
+  FileSpreadsheet
 } from 'lucide-react';
 import { FieldFormType, FieldRecordItem } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
+import { haptics } from '@/lib/haptics';
+import { exportToXls, exportToPdf } from '@/lib/export-utils';
 
 export default function FieldCapturePage() {
   const { projects, fieldRecords, currentUser, createFieldRecord } = useAuth();
@@ -120,6 +124,70 @@ export default function FieldCapturePage() {
     setIsNewRecordOpen(false);
   };
 
+  const handleExportFieldPdf = () => {
+    exportToPdf({
+      filename: `AquaEarth_Field_Acquisition_${new Date().toISOString().split('T')[0]}`,
+      title: 'Field Geotechnical & Environmental Sampling Acquisition Log',
+      subtitle: `AquaEarth Consulting Limited — Hydrogeology & Geotechnical Field Services | Extracted by: ${currentUser.name}`,
+      category: 'FIELD GEOTECHNICAL LOG',
+      summaryMetrics: [
+        { label: 'Total Captures', value: String(fieldRecords.length) },
+        { label: 'Cloud Synced', value: String(fieldRecords.filter(f => f.syncStatus === 'SYNCED').length) },
+        { label: 'Offline Queued', value: String(fieldRecords.filter(f => f.syncStatus === 'LOCAL_QUEUED').length) },
+        { label: 'QA Locked', value: String(fieldRecords.filter(f => f.isLockedForQA).length) }
+      ],
+      columns: [
+        { header: 'Sample Point', key: 'samplePointId' },
+        { header: 'Form Type', key: 'formType', format: (val) => String(val || '').replace('_', ' ') },
+        { header: 'Field Officer', key: 'technicianName' },
+        { header: 'Acquisition Date', key: 'timestamp' },
+        { header: 'GPS (Lat, Lng)', key: 'gps', format: (val) => `${val?.lat?.toFixed(4)}, ${val?.lng?.toFixed(4)}` },
+        { header: 'Elevation', key: 'gps', align: 'center', format: (val) => `${val?.elevationM || 0}m` },
+        { header: 'Sync Status', key: 'syncStatus' }
+      ],
+      data: fieldRecords,
+      signatories: [
+        { role: 'FIELD GEOSCIENTIST', name: currentUser.name, title: `${currentUser.jobTitle || 'Field Lead'}` },
+        { role: 'LEAD GEOLOGIST / PM', name: 'Engr. Femi Adebayo', title: 'Head of Engineering' },
+        { role: 'MANAGING CONSULTANT', name: 'Dr. Kaine Edike', title: 'Managing Consultant (MD / FNEC)' }
+      ]
+    });
+    haptics.success();
+  };
+
+  const handleExportFieldXls = () => {
+    exportToXls({
+      filename: `AquaEarth_Field_Acquisition_${new Date().toISOString().split('T')[0]}`,
+      title: 'FIELD GEOTECHNICAL & ENVIRONMENTAL SAMPLING ACQUISITION LOG',
+      subtitle: `AquaEarth Consulting Limited — Extracted by: ${currentUser.name}`,
+      category: 'FIELD OPERATIONS',
+      metadata: {
+        'Custodian': currentUser.name,
+        'Total Records': String(fieldRecords.length),
+        'Synced Count': String(fieldRecords.filter(f => f.syncStatus === 'SYNCED').length)
+      },
+      summaryMetrics: [
+        { label: 'Total Records', value: fieldRecords.length },
+        { label: 'Synced Records', value: fieldRecords.filter(f => f.syncStatus === 'SYNCED').length }
+      ],
+      columns: [
+        { header: 'Record ID', key: 'id' },
+        { header: 'Sample Point ID', key: 'samplePointId' },
+        { header: 'Form Type', key: 'formType' },
+        { header: 'Field Officer', key: 'technicianName' },
+        { header: 'Acquisition Timestamp', key: 'timestamp' },
+        { header: 'Latitude', key: 'gps', format: (val) => val?.lat || 0 },
+        { header: 'Longitude', key: 'gps', format: (val) => val?.lng || 0 },
+        { header: 'Elevation (M)', key: 'gps', format: (val) => val?.elevationM || 0 },
+        { header: 'Accuracy (M)', key: 'gps', format: (val) => val?.accuracyM || 0 },
+        { header: 'Sync Status', key: 'syncStatus' },
+        { header: 'QA Locked', key: 'isLockedForQA', format: (val) => val ? 'YES' : 'NO' }
+      ],
+      data: fieldRecords
+    });
+    haptics.success();
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -131,7 +199,25 @@ export default function FieldCapturePage() {
         </div>
 
         {/* Action Controls & Offline Toggle */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={handleExportFieldPdf}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-semibold shadow-2xs transition-all active:scale-[0.96] cursor-pointer whitespace-nowrap shrink-0"
+            title="Download PDF Field Acquisition Log"
+          >
+            <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>PDF Report</span>
+          </button>
+
+          <button
+            onClick={handleExportFieldXls}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-semibold shadow-2xs transition-all active:scale-[0.96] cursor-pointer whitespace-nowrap shrink-0"
+            title="Download Excel Field Log"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>Excel</span>
+          </button>
+
           {/* Network Simulator */}
           <button
             onClick={() => setIsOnline(!isOnline)}
