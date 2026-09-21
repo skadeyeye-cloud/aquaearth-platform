@@ -250,6 +250,7 @@ interface AuthContextType {
   updatePayrollRecord: (record: PayrollRecord) => void;
   createMonthlyPayrollRun: (monthYear: string) => void;
   candidateApplications: CandidateApplication[];
+  createCandidateApplication: (candidate: Omit<CandidateApplication, 'id' | 'candidateNumber' | 'createdAt'>) => CandidateApplication;
   advanceCandidateStage: (candidateId: string, newStage: InterviewStage, note?: Omit<InterviewNote, 'stage'>, document?: Omit<CandidateDocument, 'id' | 'stage' | 'uploadedAt'>) => void;
   convertCandidateToEmployee: (candidateId: string, role?: string) => UserProfile;
   createHardwareAsset: (asset: Omit<HardwareAsset, 'id'>) => void;
@@ -579,10 +580,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let isMounted = true;
     async function syncWithNeonCloud() {
       try {
-        const [cloudLeaves, cloudTasks, cloudOpps] = await Promise.allSettled([
+        const [cloudLeaves, cloudTasks, cloudOpps, cloudBudgets, cloudPettyCash, cloudQaReviews, cloudCompliance, cloudPayroll, cloudCandidates, cloudDocuments, cloudFolders, cloudHardware, cloudKpiConfig, cloudStaffQueries] = await Promise.allSettled([
           apiClient.getLeaveRequests(),
           apiClient.getTasks(),
-          apiClient.getOpportunities()
+          apiClient.getOpportunities(),
+          apiClient.getBudgetRequests(),
+          apiClient.getPettyCash(),
+          apiClient.getQaReviews(),
+          apiClient.getCompliancePermits(),
+          apiClient.getPayrollRecords(),
+          apiClient.getCandidates(),
+          apiClient.getDocuments(),
+          apiClient.getDocumentFolders(),
+          apiClient.getHardwareAssets(),
+          apiClient.getKpiConfig(),
+          apiClient.getStaffQueries()
         ]);
 
         if (!isMounted) return;
@@ -595,6 +607,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         if (cloudOpps.status === 'fulfilled' && cloudOpps.value && cloudOpps.value.length > 0) {
           setOpportunities(cloudOpps.value);
+        }
+        if (cloudBudgets.status === 'fulfilled' && cloudBudgets.value && cloudBudgets.value.length > 0) {
+          setBudgetRequests(cloudBudgets.value);
+        }
+        if (cloudPettyCash.status === 'fulfilled' && cloudPettyCash.value) {
+          const pc = cloudPettyCash.value;
+          if (pc.funds && pc.funds.length > 0) setPettyCashFunds(pc.funds);
+          if (pc.transactions) setPettyCashTransactions(pc.transactions);
+          if (pc.topups) setPettyCashTopUps(pc.topups);
+          if (pc.analyses) setPettyCashAnalyses(pc.analyses);
+        }
+        if (cloudQaReviews.status === 'fulfilled' && cloudQaReviews.value && cloudQaReviews.value.length > 0) {
+          setQaReviews(cloudQaReviews.value);
+        }
+        if (cloudCompliance.status === 'fulfilled' && cloudCompliance.value && cloudCompliance.value.length > 0) {
+          setCompliancePermits(cloudCompliance.value);
+        }
+        if (cloudPayroll.status === 'fulfilled' && cloudPayroll.value && cloudPayroll.value.length > 0) {
+          setPayrollRecords(cloudPayroll.value);
+        }
+        if (cloudCandidates.status === 'fulfilled' && cloudCandidates.value && cloudCandidates.value.length > 0) {
+          setCandidateApplications(cloudCandidates.value);
+        }
+        if (cloudDocuments.status === 'fulfilled' && cloudDocuments.value && cloudDocuments.value.length > 0) {
+          setDocuments(cloudDocuments.value);
+        }
+        if (cloudFolders.status === 'fulfilled' && cloudFolders.value && cloudFolders.value.length > 0) {
+          setDocumentFolders(cloudFolders.value);
+        }
+        if (cloudHardware.status === 'fulfilled' && cloudHardware.value && cloudHardware.value.length > 0) {
+          setHardwareAssets(cloudHardware.value);
+        }
+        if (cloudKpiConfig.status === 'fulfilled' && cloudKpiConfig.value) {
+          setKpiConfig(cloudKpiConfig.value);
+        }
+        if (cloudStaffQueries.status === 'fulfilled' && cloudStaffQueries.value && cloudStaffQueries.value.length > 0) {
+          setStaffQueries(cloudStaffQueries.value);
         }
       } catch (err) {
         console.warn('[AquaEarth] Background Neon cloud sync note:', err);
@@ -2562,6 +2611,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
     };
     setAuditLogs(prev => [audit, ...prev]);
+
+    apiClient.createDocument({
+      title: newDoc.title,
+      documentNumber: newDoc.documentNumber,
+      projectId: newDoc.projectId,
+      projectName: newDoc.projectName,
+      category: newDoc.category,
+      version: newDoc.version,
+      fileSizeMb: newDoc.fileSizeMb,
+      authorName: newDoc.authorName,
+      qaStatus: newDoc.qaStatus,
+      storageTier: newDoc.storageTier,
+      downloadUrl: newDoc.downloadUrl
+    }).then((res: any) => {
+      if (res && res.success && res.document) {
+        setDocuments(prev => prev.map(d => d.id === newDoc.id ? { ...d, id: res.document.id } : d));
+      }
+    }).catch(err => console.warn('[AquaEarth] Document cloud creation warning:', err));
   };
 
   const submitForQa = (docId: string, peerReviewerId: string, qaLeadId: string) => {
@@ -2600,6 +2667,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setQaReviews(prev => [newQa, ...prev]);
     setDocuments(prev => prev.map(d => d.id === docId ? { ...d, qaStatus: 'IN_REVIEW' } : d));
+    apiClient.updateDocument(docId, { qaStatus: 'IN_REVIEW' }).catch(err => console.warn('[AquaEarth] Document QA status cloud sync warning:', err));
 
     const audit: AuditRecord = {
       id: `aud-${Date.now()}`,
@@ -2612,68 +2680,91 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
     };
     setAuditLogs(prev => [audit, ...prev]);
+
+    apiClient.createQaReview({
+      documentId: newQa.documentId,
+      documentTitle: newQa.documentTitle,
+      projectCode: newQa.projectCode,
+      authorId: newQa.authorId,
+      authorName: newQa.authorName,
+      stage: newQa.stage,
+      slaDeadline: newQa.slaDeadline,
+      isOverdue: newQa.isOverdue,
+      peerReviewerId: newQa.peerReviewerId,
+      peerReviewerName: newQa.peerReviewerName,
+      qaLeadId: newQa.qaLeadId,
+      qaLeadName: newQa.qaLeadName,
+      managingConsultantSigned: newQa.managingConsultantSigned,
+      reviewNotes: newQa.reviewNotes
+    }).then((res: any) => {
+      if (res && res.success && res.review) {
+        setQaReviews(prev => prev.map(q => q.id === newQa.id ? { ...q, id: res.review.id } : q));
+      }
+    }).catch(err => console.warn('[AquaEarth] QA review cloud creation warning:', err));
   };
 
   const advanceQaReview = (qaId: string, action: 'APPROVED' | 'REJECTED', comment: string) => {
-    setQaReviews(prev => prev.map(qa => {
-      if (qa.id === qaId) {
-        let nextStage: QaReviewStage = qa.stage;
-        let isComplete = false;
+    const currentQa = qaReviews.find(q => q.id === qaId);
+    if (!currentQa) return;
 
-        if (action === 'REJECTED') {
-          nextStage = 'REVISION_REQUESTED';
-        } else {
-          if (qa.stage === 'AUTHOR_SUBMITTED' || qa.stage === 'PEER_REVIEW') {
-            nextStage = 'QA_LEAD_REVIEW';
-          } else if (qa.stage === 'QA_LEAD_REVIEW') {
-            nextStage = 'LEADERSHIP_SIGNOFF';
-          } else if (qa.stage === 'LEADERSHIP_SIGNOFF') {
-            nextStage = 'APPROVED_RELEASED';
-            isComplete = true;
-          }
-        }
+    let nextStage: QaReviewStage = currentQa.stage;
+    let isComplete = false;
 
-        const updatedNotes = [
-          ...qa.reviewNotes,
-          {
-            author: currentUser.name,
-            role: currentUser.functionalRole.replace('_', ' '),
-            timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16),
-            comment,
-            action
-          }
-        ];
-
-        if (isComplete) {
-          const pts = calculateEventPoints('QA_REVIEW', new Date().toISOString().split('T')[0], new Date().toISOString().split('T')[0], kpiConfig?.rules?.QA_REVIEW);
-          setLeaderboard(lPrev => {
-            const updated = lPrev.map(entry => {
-              if (entry.userId === qa.authorId || entry.userId === currentUser.id) {
-                return {
-                  ...entry,
-                  totalScore: entry.totalScore + pts.totalPoints,
-                  completedCount: entry.completedCount + 1,
-                  onTimeCount: entry.onTimeCount + 1
-                };
-              }
-              return entry;
-            });
-            return updated.sort((a, b) => b.totalScore - a.totalScore).map((item, idx) => ({ ...item, rankPosition: idx + 1 }));
-          });
-
-          setDocuments(dPrev => dPrev.map(d => d.id === qa.documentId ? { ...d, qaStatus: 'RELEASED_TO_CLIENT', version: 'v1.0 Final' } : d));
-        }
-
-        return {
-          ...qa,
-          stage: nextStage,
-          managingConsultantSigned: isComplete ? true : qa.managingConsultantSigned,
-          tamperProofCertificateHash: isComplete ? `SHA256:${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}` : qa.tamperProofCertificateHash,
-          reviewNotes: updatedNotes
-        };
+    if (action === 'REJECTED') {
+      nextStage = 'REVISION_REQUESTED';
+    } else {
+      if (currentQa.stage === 'AUTHOR_SUBMITTED' || currentQa.stage === 'PEER_REVIEW') {
+        nextStage = 'QA_LEAD_REVIEW';
+      } else if (currentQa.stage === 'QA_LEAD_REVIEW') {
+        nextStage = 'LEADERSHIP_SIGNOFF';
+      } else if (currentQa.stage === 'LEADERSHIP_SIGNOFF') {
+        nextStage = 'APPROVED_RELEASED';
+        isComplete = true;
       }
-      return qa;
-    }));
+    }
+
+    const updatedNotes = [
+      ...currentQa.reviewNotes,
+      {
+        author: currentUser.name,
+        role: currentUser.functionalRole.replace('_', ' '),
+        timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16),
+        comment,
+        action
+      }
+    ];
+
+    const qaUpdate = {
+      stage: nextStage,
+      managingConsultantSigned: isComplete ? true : currentQa.managingConsultantSigned,
+      tamperProofCertificateHash: isComplete ? `SHA256:${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}` : currentQa.tamperProofCertificateHash,
+      reviewNotes: updatedNotes
+    };
+
+    setQaReviews(prev => prev.map(qa => qa.id === qaId ? { ...qa, ...qaUpdate } : qa));
+
+    apiClient.updateQaReview(qaId, qaUpdate).catch(err => console.warn('[AquaEarth] QA review cloud sync warning:', err));
+
+    if (isComplete) {
+      const pts = calculateEventPoints('QA_REVIEW', new Date().toISOString().split('T')[0], new Date().toISOString().split('T')[0], kpiConfig?.rules?.QA_REVIEW);
+      setLeaderboard(lPrev => {
+        const updated = lPrev.map(entry => {
+          if (entry.userId === currentQa.authorId || entry.userId === currentUser.id) {
+            return {
+              ...entry,
+              totalScore: entry.totalScore + pts.totalPoints,
+              completedCount: entry.completedCount + 1,
+              onTimeCount: entry.onTimeCount + 1
+            };
+          }
+          return entry;
+        });
+        return updated.sort((a, b) => b.totalScore - a.totalScore).map((item, idx) => ({ ...item, rankPosition: idx + 1 }));
+      });
+
+      setDocuments(dPrev => dPrev.map(d => d.id === currentQa.documentId ? { ...d, qaStatus: 'RELEASED_TO_CLIENT', version: 'v1.0 Final' } : d));
+      apiClient.updateDocument(currentQa.documentId, { qaStatus: 'RELEASED_TO_CLIENT', version: 'v1.0 Final' }).catch(err => console.warn('[AquaEarth] Document release cloud sync warning:', err));
+    }
 
     const audit: AuditRecord = {
       id: `aud-${Date.now()}`,
@@ -2689,21 +2780,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const renewCompliancePermit = (permitId: string) => {
-    setCompliancePermits(prev => prev.map(p => {
-      if (p.id === permitId) {
-        const currentYear = parseInt(p.expiryDate.split('-')[0]) || 2026;
-        const newExpiry = `${currentYear + p.cycleDurationYears}-12-31`;
-        return {
-          ...p,
-          status: 'ACTIVE',
-          issueDate: new Date().toISOString().split('T')[0],
-          expiryDate: newExpiry,
-          daysRemaining: p.cycleDurationYears * 365,
-          feeReconciled: true
-        };
-      }
-      return p;
-    }));
+    const target = compliancePermits.find(p => p.id === permitId);
+    if (!target) return;
+
+    const currentYear = parseInt(target.expiryDate.split('-')[0]) || 2026;
+    const renewUpdate = {
+      status: 'ACTIVE' as const,
+      issueDate: new Date().toISOString().split('T')[0],
+      expiryDate: `${currentYear + target.cycleDurationYears}-12-31`,
+      daysRemaining: target.cycleDurationYears * 365,
+      feeReconciled: true
+    };
+
+    setCompliancePermits(prev => prev.map(p => p.id === permitId ? { ...p, ...renewUpdate } : p));
+
+    apiClient.updateCompliancePermit(permitId, renewUpdate).catch(err => console.warn('[AquaEarth] Compliance permit cloud sync warning:', err));
 
     const permit = compliancePermits.find(p => p.id === permitId);
     const audit: AuditRecord = {
@@ -2974,6 +3065,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     setKpiConfig(updatedConfigWithMeta);
 
+    apiClient.saveKpiConfig(updatedConfigWithMeta, currentUser.name).catch(err => console.warn('[AquaEarth] KPI config cloud sync warning:', err));
+
     if (shouldRecalculateLeaderboard) {
       setLeaderboard(prev => {
         const comparisons = simulateLeaderboardRecalculation(prev, kpiConfig, updatedConfigWithMeta);
@@ -3141,6 +3234,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setDocumentFolders(prev => [newFolder, ...prev]);
 
+    apiClient.createDocumentFolder({
+      name: newFolder.name,
+      department: newFolder.department,
+      description: newFolder.description,
+      createdById: newFolder.createdById,
+      createdByName: newFolder.createdByName,
+      isRestricted: newFolder.isRestricted
+    }).then((res: any) => {
+      if (res && res.success && res.folder) {
+        setDocumentFolders(prev => prev.map(f => f.id === newFolder.id ? { ...f, id: res.folder.id } : f));
+      }
+    }).catch(err => console.warn('[AquaEarth] Document folder cloud creation warning:', err));
+
     const audit: AuditRecord = {
       id: `aud-${Date.now()}`,
       actorId: currentUser.id,
@@ -3198,9 +3304,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
     };
     setAuditLogs(prev => [audit, ...prev]);
+
+    // Asynchronous Cloud Sync to Neon (id reconciled once the server assigns its own)
+    apiClient.createBudgetRequest({
+      title: newReq.title,
+      department: newReq.department,
+      requestedById: newReq.requestedById,
+      requestedByName: newReq.requestedByName,
+      amountNgn: newReq.amountNgn,
+      category: newReq.category,
+      justification: newReq.justification,
+      status: newReq.status
+    }).then((res: any) => {
+      if (res && res.success && res.budget) {
+        setBudgetRequests(prev => prev.map(b => b.id === newReq.id ? { ...b, id: res.budget.id, requestNumber: res.budget.requestNumber } : b));
+      }
+    }).catch(err => console.warn('[AquaEarth] Budget cloud creation warning:', err));
   };
 
   const reviewBudgetRequest = (requestId: string, status: 'APPROVED' | 'DECLINED', comment?: string) => {
+    const reviewComments = comment || (status === 'APPROVED' ? 'Approved by finance/executive committee.' : 'Declined by reviewer.');
+    const reviewedAt = new Date().toISOString().split('T')[0];
+
     setBudgetRequests(prev => prev.map(req => {
       if (req.id !== requestId) return req;
       return {
@@ -3209,10 +3334,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         approvalStage: status === 'APPROVED' ? 'APPROVED' : 'DECLINED',
         reviewedById: currentUser.id,
         reviewedByName: currentUser.name,
-        reviewComments: comment || (status === 'APPROVED' ? 'Approved by finance/executive committee.' : 'Declined by reviewer.'),
-        reviewedAt: new Date().toISOString().split('T')[0]
+        reviewComments,
+        reviewedAt
       };
     }));
+
+    apiClient.updateBudgetRequest(requestId, {
+      status: status === 'APPROVED' ? 'APPROVED' : 'DECLINED',
+      approvalStage: status === 'APPROVED' ? 'APPROVED' : 'DECLINED',
+      reviewedById: currentUser.id,
+      reviewedByName: currentUser.name,
+      reviewComments,
+      reviewedAt
+    }).catch(err => console.warn('[AquaEarth] Budget review cloud sync warning:', err));
 
     const audit: AuditRecord = {
       id: `aud-${Date.now()}`,
@@ -3312,6 +3446,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     setAuditLogs(prev => [audit, ...prev]);
 
+    apiClient.createBudgetRequest({
+      title: newReq.title,
+      department: newReq.department,
+      requestedById: newReq.requestedById,
+      requestedByName: newReq.requestedByName,
+      amountNgn: newReq.amountNgn,
+      category: newReq.category,
+      justification: newReq.justification,
+      status: newReq.status,
+      budgetType: newReq.budgetType,
+      frequency: newReq.frequency,
+      collatedById: newReq.collatedById,
+      collatedByName: newReq.collatedByName,
+      cfoReviewStatus: newReq.cfoReviewStatus,
+      approvalStage: newReq.approvalStage,
+      miscellaneousAmountNgn: newReq.miscellaneousAmountNgn,
+      miscellaneousJustification: newReq.miscellaneousJustification
+    }).then((res: any) => {
+      if (res && res.success && res.budget) {
+        setBudgetRequests(prev => prev.map(b => b.id === newReq.id ? { ...b, id: res.budget.id, requestNumber: res.budget.requestNumber } : b));
+      }
+    }).catch(err => console.warn('[AquaEarth] Departmental budget cloud creation warning:', err));
+
     return newReq;
   };
 
@@ -3381,6 +3538,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     setAuditLogs(prev => [audit, ...prev]);
 
+    apiClient.createBudgetRequest({
+      title: newReq.title,
+      department: newReq.department,
+      requestedById: newReq.requestedById,
+      requestedByName: newReq.requestedByName,
+      amountNgn: newReq.amountNgn,
+      category: newReq.category,
+      justification: newReq.justification,
+      status: newReq.status,
+      budgetType: newReq.budgetType,
+      frequency: newReq.frequency,
+      projectId: newReq.projectId,
+      projectName: newReq.projectName,
+      collatedById: newReq.collatedById,
+      collatedByName: newReq.collatedByName,
+      presentedToMdBy: newReq.presentedToMdBy,
+      approvalStage: newReq.approvalStage,
+      cfoReviewStatus: newReq.cfoReviewStatus,
+      miscellaneousAmountNgn: newReq.miscellaneousAmountNgn,
+      miscellaneousJustification: newReq.miscellaneousJustification
+    }).then((res: any) => {
+      if (res && res.success && res.budget) {
+        setBudgetRequests(prev => prev.map(b => b.id === newReq.id ? { ...b, id: res.budget.id, requestNumber: res.budget.requestNumber } : b));
+      }
+    }).catch(err => console.warn('[AquaEarth] Client-facing budget cloud creation warning:', err));
+
     return newReq;
   };
 
@@ -3396,6 +3579,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         cfoReviewStatus: 'IN_REVIEW'
       };
     }));
+
+    apiClient.updateBudgetRequest(budgetId, {
+      collatedById: currentUser.id,
+      collatedByName: currentUser.name,
+      collationNotes: collatorNotes,
+      approvalStage: 'CFO_REVIEW',
+      cfoReviewStatus: 'IN_REVIEW'
+    }).catch(err => console.warn('[AquaEarth] Budget collation cloud sync warning:', err));
 
     const budget = budgetRequests.find(b => b.id === budgetId);
     const notif: NotificationItem = {
@@ -3427,42 +3618,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const cfoReviewBudget = (budgetId: string, action: 'PROJECT_TO_DR_K' | 'DECLINE_REVISE' | 'DECLINE_DROP', notes: string) => {
-    setBudgetRequests(prev => prev.map(req => {
-      if (req.id !== budgetId) return req;
-      if (action === 'PROJECT_TO_DR_K') {
-        return {
-          ...req,
-          cfoReviewStatus: 'VETTED_PROJECTED',
-          cfoReviewNotes: notes,
-          presentedToMdBy: 'ERICA',
-          approvalStage: 'MD_PENDING'
-        };
-      } else if (action === 'DECLINE_REVISE') {
-        return {
-          ...req,
-          cfoReviewStatus: 'DECLINED_REVISE',
-          cfoReviewNotes: notes,
-          status: 'DECLINED',
-          approvalStage: 'DECLINED',
-          declineOutcome: 'REVISE_RESUBMIT',
-          reviewedById: currentUser.id,
-          reviewedByName: currentUser.name,
-          reviewedAt: new Date().toISOString().split('T')[0]
-        };
-      } else {
-        return {
-          ...req,
-          cfoReviewStatus: 'DECLINED_DROP',
-          cfoReviewNotes: notes,
-          status: 'DECLINED',
-          approvalStage: 'DECLINED',
-          declineOutcome: 'DROPPED',
-          reviewedById: currentUser.id,
-          reviewedByName: currentUser.name,
-          reviewedAt: new Date().toISOString().split('T')[0]
-        };
-      }
-    }));
+    const reviewedAt = new Date().toISOString().split('T')[0];
+    let cfoUpdate: Partial<BudgetRequest>;
+
+    if (action === 'PROJECT_TO_DR_K') {
+      cfoUpdate = {
+        cfoReviewStatus: 'VETTED_PROJECTED',
+        cfoReviewNotes: notes,
+        presentedToMdBy: 'ERICA',
+        approvalStage: 'MD_PENDING'
+      };
+    } else if (action === 'DECLINE_REVISE') {
+      cfoUpdate = {
+        cfoReviewStatus: 'DECLINED_REVISE',
+        cfoReviewNotes: notes,
+        status: 'DECLINED',
+        approvalStage: 'DECLINED',
+        declineOutcome: 'REVISE_RESUBMIT',
+        reviewedById: currentUser.id,
+        reviewedByName: currentUser.name,
+        reviewedAt
+      };
+    } else {
+      cfoUpdate = {
+        cfoReviewStatus: 'DECLINED_DROP',
+        cfoReviewNotes: notes,
+        status: 'DECLINED',
+        approvalStage: 'DECLINED',
+        declineOutcome: 'DROPPED',
+        reviewedById: currentUser.id,
+        reviewedByName: currentUser.name,
+        reviewedAt
+      };
+    }
+
+    setBudgetRequests(prev => prev.map(req => req.id === budgetId ? { ...req, ...cfoUpdate } : req));
+
+    apiClient.updateBudgetRequest(budgetId, cfoUpdate).catch(err => console.warn('[AquaEarth] CFO budget review cloud sync warning:', err));
 
     const budget = budgetRequests.find(b => b.id === budgetId);
     let title = '';
@@ -3513,20 +3705,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const todayStr = new Date().toISOString().split('T')[0];
     const isBibi = isAlternativeBibi || currentUser.functionalRole === 'DEPUTY_MANAGING_CONSULTANT' || currentUser.name.toLowerCase().includes('bibi');
 
-    setBudgetRequests(prev => prev.map(req => {
-      if (req.id !== budgetId) return req;
-      return {
-        ...req,
-        status: 'APPROVED',
-        approvalStage: 'APPROVED',
-        reviewedById: currentUser.id,
-        reviewedByName: currentUser.name,
-        reviewComments: comments || (isBibi ? 'Approved by Bibi (Executive Director & 2nd in Command) on behalf of Dr. Kaine Edike.' : 'Approved by Dr. Kaine Edike (Founder & Managing Consultant).'),
-        reviewedAt: todayStr,
-        approvedOnBehalfOfDrK: isBibi,
-        drKNotified: isBibi
-      };
-    }));
+    const mdUpdate: Partial<BudgetRequest> = {
+      status: 'APPROVED',
+      approvalStage: 'APPROVED',
+      reviewedById: currentUser.id,
+      reviewedByName: currentUser.name,
+      reviewComments: comments || (isBibi ? 'Approved by Bibi (Executive Director & 2nd in Command) on behalf of Dr. Kaine Edike.' : 'Approved by Dr. Kaine Edike (Founder & Managing Consultant).'),
+      reviewedAt: todayStr,
+      approvedOnBehalfOfDrK: isBibi,
+      drKNotified: isBibi
+    };
+
+    setBudgetRequests(prev => prev.map(req => req.id === budgetId ? { ...req, ...mdUpdate } : req));
+
+    apiClient.updateBudgetRequest(budgetId, mdUpdate).catch(err => console.warn('[AquaEarth] MD budget approval cloud sync warning:', err));
 
     const budget = budgetRequests.find(b => b.id === budgetId);
 
@@ -3579,19 +3771,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const todayStr = new Date().toISOString().split('T')[0];
     const isBibi = isAlternativeBibi || currentUser.functionalRole === 'DEPUTY_MANAGING_CONSULTANT' || currentUser.name.toLowerCase().includes('bibi');
 
-    setBudgetRequests(prev => prev.map(req => {
-      if (req.id !== budgetId) return req;
-      return {
-        ...req,
-        status: 'DECLINED',
-        approvalStage: 'DECLINED',
-        reviewedById: currentUser.id,
-        reviewedByName: currentUser.name,
-        reviewComments: comments || 'Declined during MD executive review.',
-        reviewedAt: todayStr,
-        approvedOnBehalfOfDrK: isBibi
-      };
-    }));
+    const mdDeclineUpdate: Partial<BudgetRequest> = {
+      status: 'DECLINED',
+      approvalStage: 'DECLINED',
+      reviewedById: currentUser.id,
+      reviewedByName: currentUser.name,
+      reviewComments: comments || 'Declined during MD executive review.',
+      reviewedAt: todayStr,
+      approvedOnBehalfOfDrK: isBibi
+    };
+
+    setBudgetRequests(prev => prev.map(req => req.id === budgetId ? { ...req, ...mdDeclineUpdate } : req));
+
+    apiClient.updateBudgetRequest(budgetId, mdDeclineUpdate).catch(err => console.warn('[AquaEarth] MD budget decline cloud sync warning:', err));
 
     const budget = budgetRequests.find(b => b.id === budgetId);
     const notif: NotificationItem = {
@@ -3667,6 +3859,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
     };
     setAuditLogs(prev => [audit, ...prev]);
+
+    apiClient.logPettyCashTransaction({
+      fundCustodian: data.fundCustodian,
+      date: data.date,
+      amountNgn: data.amountNgn,
+      category: data.category,
+      description: data.description,
+      receiptUrl: data.receiptUrl,
+      approvedByName: data.approvedByName
+    }).catch(err => console.warn('[AquaEarth] Petty cash transaction cloud sync warning:', err));
   };
 
   const topUpPettyCashFund = (params: {
@@ -3744,6 +3946,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     setNotifications(prev => [notif, ...prev]);
 
+    apiClient.topUpPettyCash({
+      fundCustodian: params.fundCustodian,
+      amountNgn: topUpAmount,
+      fundingSource: params.fundingSource,
+      referenceNumber: newTopUp.referenceNumber,
+      notes: params.notes,
+      authorizedByName: newTopUp.authorizedByName,
+      date: todayStr
+    }).catch(err => console.warn('[AquaEarth] Petty cash top-up cloud sync warning:', err));
+
     return newTopUp;
   };
 
@@ -3811,6 +4023,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     setAuditLogs(prev => [audit, ...prev]);
 
+    apiClient.createPettyCashAnalysis({
+      monthYear: newAnalysis.monthYear,
+      analyzedById: newAnalysis.analyzedById,
+      analyzedByName: newAnalysis.analyzedByName,
+      isPrimaryGift: newAnalysis.isPrimaryGift,
+      giftOpeningBalanceNgn: newAnalysis.giftOpeningBalanceNgn,
+      giftDisbursedNgn: newAnalysis.giftDisbursedNgn,
+      giftClosingBalanceNgn: newAnalysis.giftClosingBalanceNgn,
+      marvelousOpeningBalanceNgn: newAnalysis.marvelousOpeningBalanceNgn,
+      marvelousDisbursedNgn: newAnalysis.marvelousDisbursedNgn,
+      marvelousClosingBalanceNgn: newAnalysis.marvelousClosingBalanceNgn,
+      totalDisbursedNgn: newAnalysis.totalDisbursedNgn,
+      replenishmentRequestedNgn: newAnalysis.replenishmentRequestedNgn,
+      status: newAnalysis.status,
+      drKNotes: newAnalysis.drKNotes
+    }).then((res: any) => {
+      if (res && res.success && res.analysis) {
+        setPettyCashAnalyses(prev => prev.map(a => a.id === newAnalysis.id ? { ...a, id: res.analysis.id } : a));
+      }
+    }).catch(err => console.warn('[AquaEarth] Petty cash analysis cloud creation warning:', err));
+
     return newAnalysis;
   };
 
@@ -3832,6 +4065,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       currentBalanceNgn: fund.allocatedAmountNgn,
       lastReplenishedDate: todayStr
     })));
+
+    apiClient.approvePettyCashReplenishment(analysisId, notes).catch(err => console.warn('[AquaEarth] Petty cash replenishment cloud sync warning:', err));
 
     const notif: NotificationItem = {
       id: `notif-${Date.now()}`,
@@ -4043,18 +4278,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
     };
     setAuditLogs(prev => [audit, ...prev]);
+
+    apiClient.createStaffQuery({
+      staffId: newQuery.staffId,
+      staffName: newQuery.staffName,
+      staffDepartment: newQuery.staffDepartment,
+      issuedById: newQuery.issuedById,
+      issuedByName: newQuery.issuedByName,
+      title: newQuery.title,
+      allegationDetails: newQuery.allegationDetails,
+      incidentDate: newQuery.incidentDate,
+      responseDeadline: newQuery.responseDeadline,
+      status: newQuery.status
+    }).then((res: any) => {
+      if (res && res.success && res.query) {
+        setStaffQueries(prev => prev.map(q => q.id === newQuery.id ? { ...q, id: res.query.id, queryNumber: res.query.queryNumber } : q));
+      }
+    }).catch(err => console.warn('[AquaEarth] Staff query cloud creation warning:', err));
   };
 
   const respondToStaffQuery = (queryId: string, responseText: string) => {
+    const respondedAt = new Date().toISOString().split('T')[0];
     setStaffQueries(prev => prev.map(q => {
       if (q.id !== queryId) return q;
       return {
         ...q,
         staffResponse: responseText,
-        respondedAt: new Date().toISOString().split('T')[0],
+        respondedAt,
         status: 'RESPONSE_SUBMITTED'
       };
     }));
+
+    apiClient.updateStaffQuery(queryId, {
+      staffResponse: responseText,
+      respondedAt,
+      status: 'RESPONSE_SUBMITTED'
+    }).catch(err => console.warn('[AquaEarth] Staff query response cloud sync warning:', err));
 
     const audit: AuditRecord = {
       id: `aud-${Date.now()}`,
@@ -4070,18 +4329,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const resolveStaffQuery = (queryId: string, resolution: 'PROCEEDING' | 'FORMAL_WARNING' | 'CANCELLED', notes: string) => {
-    setStaffQueries(prev => prev.map(q => {
-      if (q.id !== queryId) return q;
-      return {
-        ...q,
-        resolution,
-        resolutionNotes: notes,
-        resolvedAt: new Date().toISOString().split('T')[0],
-        resolvedById: currentUser.id,
-        resolvedByName: currentUser.name,
-        status: 'RESOLVED'
-      };
-    }));
+    const resolvedAt = new Date().toISOString().split('T')[0];
+    const resolveUpdate = {
+      resolution,
+      resolutionNotes: notes,
+      resolvedAt,
+      resolvedById: currentUser.id,
+      resolvedByName: currentUser.name,
+      status: 'RESOLVED' as const
+    };
+
+    setStaffQueries(prev => prev.map(q => q.id === queryId ? { ...q, ...resolveUpdate } : q));
+
+    apiClient.updateStaffQuery(queryId, resolveUpdate).catch(err => console.warn('[AquaEarth] Staff query resolution cloud sync warning:', err));
 
     const audit: AuditRecord = {
       id: `aud-${Date.now()}`,
@@ -4118,6 +4378,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setPayrollRecords(prev => prev.map(r => r.id === updatedRecord.id ? updatedRecord : r));
 
+    apiClient.updatePayrollRecord(updatedRecord.id, {
+      baseSalaryNgn: updatedRecord.baseSalaryNgn,
+      hazardAllowanceNgn: updatedRecord.hazardAllowanceNgn,
+      fieldPerDiemNgn: updatedRecord.fieldPerDiemNgn,
+      performanceBonusNgn: updatedRecord.performanceBonusNgn,
+      customBenefits: updatedRecord.customBenefits,
+      pensionDeductionNgn: updatedRecord.pensionDeductionNgn,
+      taxPayeNgn: updatedRecord.taxPayeNgn,
+      netPayNgn: updatedRecord.netPayNgn,
+      paymentStatus: updatedRecord.paymentStatus
+    }).catch(err => console.warn('[AquaEarth] Payroll record cloud sync warning:', err));
+
     const audit: AuditRecord = {
       id: `aud-${Date.now()}`,
       actorId: currentUser.id,
@@ -4132,45 +4404,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const createMonthlyPayrollRun = (monthYear: string) => {
-    setPayrollRecords(prev => {
-      const existingStaffIds = new Set(prev.filter(p => p.monthYear === monthYear).map(p => p.staffId));
-      const newRecords: PayrollRecord[] = [];
+    const existingStaffIds = new Set(payrollRecords.filter(p => p.monthYear === monthYear).map(p => p.staffId));
+    const newRecords: PayrollRecord[] = [];
 
-      allUsers.filter(u => u.status === 'ACTIVE').forEach(user => {
-        if (!existingStaffIds.has(user.id)) {
-          const prevRecord = prev.find(p => p.staffId === user.id);
-          const baseSalary = prevRecord ? prevRecord.baseSalaryNgn : 1500000;
-          const hazard = prevRecord ? prevRecord.hazardAllowanceNgn : 0;
-          const perDiem = 0;
-          const bonus = 0;
-          const pension = Math.round(baseSalary * 0.08);
-          const tax = Math.round(baseSalary * 0.14);
-          const benefits = prevRecord?.customBenefits ? [...prevRecord.customBenefits] : [];
-          const totalBenefits = benefits.reduce((s, b) => s + b.amountNgn, 0);
-          const net = baseSalary + hazard + perDiem + bonus + totalBenefits - pension - tax;
+    allUsers.filter(u => u.status === 'ACTIVE').forEach(user => {
+      if (!existingStaffIds.has(user.id)) {
+        const prevRecord = payrollRecords.find(p => p.staffId === user.id);
+        const baseSalary = prevRecord ? prevRecord.baseSalaryNgn : 1500000;
+        const hazard = prevRecord ? prevRecord.hazardAllowanceNgn : 0;
+        const perDiem = 0;
+        const bonus = 0;
+        const pension = Math.round(baseSalary * 0.08);
+        const tax = Math.round(baseSalary * 0.14);
+        const benefits = prevRecord?.customBenefits ? [...prevRecord.customBenefits] : [];
+        const totalBenefits = benefits.reduce((s, b) => s + b.amountNgn, 0);
+        const net = baseSalary + hazard + perDiem + bonus + totalBenefits - pension - tax;
 
-          newRecords.push({
-            id: `pay-${monthYear}-${user.id}`,
-            staffId: user.id,
-            staffName: user.name,
-            department: user.departmentName || 'Operations',
-            jobTitle: user.jobTitle,
-            baseSalaryNgn: baseSalary,
-            hazardAllowanceNgn: hazard,
-            fieldPerDiemNgn: perDiem,
-            performanceBonusNgn: bonus,
-            customBenefits: benefits,
-            pensionDeductionNgn: pension,
-            taxPayeNgn: tax,
-            netPayNgn: Math.max(0, net),
-            monthYear,
-            paymentStatus: 'DRAFT'
-          });
-        }
-      });
-
-      return [...newRecords, ...prev];
+        newRecords.push({
+          id: `pay-${monthYear}-${user.id}`,
+          staffId: user.id,
+          staffName: user.name,
+          department: user.departmentName || 'Operations',
+          jobTitle: user.jobTitle,
+          baseSalaryNgn: baseSalary,
+          hazardAllowanceNgn: hazard,
+          fieldPerDiemNgn: perDiem,
+          performanceBonusNgn: bonus,
+          customBenefits: benefits,
+          pensionDeductionNgn: pension,
+          taxPayeNgn: tax,
+          netPayNgn: Math.max(0, net),
+          monthYear,
+          paymentStatus: 'DRAFT'
+        });
+      }
     });
+
+    setPayrollRecords(prev => [...newRecords, ...prev]);
+
+    if (newRecords.length > 0) {
+      apiClient.createPayrollRun(newRecords).catch(err => console.warn('[AquaEarth] Payroll run cloud creation warning:', err));
+    }
 
     const audit: AuditRecord = {
       id: `aud-${Date.now()}`,
@@ -4185,47 +4459,95 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAuditLogs(prev => [audit, ...prev]);
   };
 
+  const createCandidateApplication = (candidateData: Omit<CandidateApplication, 'id' | 'candidateNumber' | 'createdAt'>): CandidateApplication => {
+    const count = candidateApplications.length + 1;
+    const candNum = `CND-${new Date().getFullYear()}-${String(100 + count).padStart(3, '0')}`;
+
+    const newCand: CandidateApplication = {
+      ...candidateData,
+      id: `cand-${Date.now()}`,
+      candidateNumber: candNum,
+      createdAt: new Date().toISOString().split('T')[0]
+    };
+
+    setCandidateApplications(prev => [newCand, ...prev]);
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'CANDIDATE_APPLICATION_CREATED',
+      targetType: 'Recruitment & Onboarding',
+      targetId: newCand.id,
+      details: `${currentUser.name} registered new candidate ${newCand.fullName} (${newCand.appliedRole}, ${newCand.department})`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+
+    apiClient.createCandidate({
+      fullName: newCand.fullName,
+      email: newCand.email,
+      phone: newCand.phone,
+      appliedRole: newCand.appliedRole,
+      department: newCand.department,
+      currentStage: newCand.currentStage,
+      yearsExperience: newCand.yearsExperience,
+      expectedSalaryNgn: newCand.expectedSalaryNgn,
+      notes: newCand.notes,
+      documents: newCand.documents,
+      vaultFolderId: newCand.vaultFolderId
+    }).then((res: any) => {
+      if (res && res.success && res.candidate) {
+        setCandidateApplications(prev => prev.map(c => c.id === newCand.id ? { ...c, id: res.candidate.id, candidateNumber: res.candidate.candidateNumber } : c));
+      }
+    }).catch(err => console.warn('[AquaEarth] Candidate creation cloud sync warning:', err));
+
+    return newCand;
+  };
+
   const advanceCandidateStage = (
-    candidateId: string, 
-    newStage: InterviewStage, 
-    note?: Omit<InterviewNote, 'stage'>, 
+    candidateId: string,
+    newStage: InterviewStage,
+    note?: Omit<InterviewNote, 'stage'>,
     document?: Omit<CandidateDocument, 'id' | 'stage' | 'uploadedAt'>
   ) => {
-    setCandidateApplications(prev => prev.map(cand => {
-      if (cand.id !== candidateId) return cand;
+    const cand = candidateApplications.find(c => c.id === candidateId);
+    if (!cand) return;
 
-      const newNotes = note ? [
-        ...cand.notes,
-        {
-          ...note,
-          stage: newStage
-        }
-      ] : cand.notes;
+    const newNotes = note ? [
+      ...cand.notes,
+      {
+        ...note,
+        stage: newStage
+      }
+    ] : cand.notes;
 
-      const newDocs = document ? [
-        ...cand.documents,
-        {
-          ...document,
-          id: `cdoc-${Date.now()}`,
-          stage: newStage,
-          uploadedAt: new Date().toISOString().split('T')[0]
-        }
-      ] : cand.documents;
+    const newDocs = document ? [
+      ...cand.documents,
+      {
+        ...document,
+        id: `cdoc-${Date.now()}`,
+        stage: newStage,
+        uploadedAt: new Date().toISOString().split('T')[0]
+      }
+    ] : cand.documents;
 
-      let outcome = cand.outcome;
-      if (newStage === 'PROBATIONARY') outcome = 'PROBATIONARY';
-      else if (newStage === 'FULL_EMPLOYMENT') outcome = 'FULL_EMPLOYMENT';
-      else if (newStage === 'NON_EMPLOYMENT') outcome = 'NON_EMPLOYMENT';
+    let outcome = cand.outcome;
+    if (newStage === 'PROBATIONARY') outcome = 'PROBATIONARY';
+    else if (newStage === 'FULL_EMPLOYMENT') outcome = 'FULL_EMPLOYMENT';
+    else if (newStage === 'NON_EMPLOYMENT') outcome = 'NON_EMPLOYMENT';
 
-      return {
-        ...cand,
-        currentStage: newStage,
-        notes: newNotes,
-        documents: newDocs,
-        outcome,
-        outcomeDate: outcome ? new Date().toISOString().split('T')[0] : cand.outcomeDate
-      };
-    }));
+    const candUpdate = {
+      currentStage: newStage,
+      notes: newNotes,
+      documents: newDocs,
+      outcome,
+      outcomeDate: outcome ? new Date().toISOString().split('T')[0] : cand.outcomeDate
+    };
+
+    setCandidateApplications(prev => prev.map(c => c.id === candidateId ? { ...c, ...candUpdate } : c));
+
+    apiClient.updateCandidate(candidateId, candUpdate).catch(err => console.warn('[AquaEarth] Candidate stage cloud sync warning:', err));
 
     const audit: AuditRecord = {
       id: `aud-${Date.now()}`,
@@ -4268,15 +4590,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAllUsers(prev => [newEmp, ...prev]);
 
     // Update candidate application status
-    setCandidateApplications(prev => prev.map(c => {
-      if (c.id !== candidateId) return c;
-      return {
-        ...c,
-        currentStage: 'FULL_EMPLOYMENT',
-        outcome: 'FULL_EMPLOYMENT',
-        outcomeDate: new Date().toISOString().split('T')[0]
-      };
-    }));
+    const conversionUpdate = {
+      currentStage: 'FULL_EMPLOYMENT' as const,
+      outcome: 'FULL_EMPLOYMENT' as const,
+      outcomeDate: new Date().toISOString().split('T')[0]
+    };
+    setCandidateApplications(prev => prev.map(c => c.id === candidateId ? { ...c, ...conversionUpdate } : c));
+    apiClient.updateCandidate(candidateId, conversionUpdate).catch(err => console.warn('[AquaEarth] Candidate conversion cloud sync warning:', err));
 
     // Provision baseline payroll record
     const baseSal = cand.expectedSalaryNgn || 550000;
@@ -4297,6 +4617,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       paymentStatus: 'DRAFT'
     };
     setPayrollRecords(prev => [newPayroll, ...prev]);
+    apiClient.createPayrollRun([newPayroll]).catch(err => console.warn('[AquaEarth] Onboarding payroll cloud creation warning:', err));
 
     const audit: AuditRecord = {
       id: `aud-${Date.now()}`,
@@ -4340,29 +4661,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
     };
     setAuditLogs(prev => [audit, ...prev]);
+
+    apiClient.createHardwareAsset({
+      assetTag: newAsset.assetTag,
+      name: newAsset.name,
+      serialNumber: newAsset.serialNumber,
+      category: newAsset.category,
+      assignedToId: newAsset.assignedToId,
+      assignedToName: newAsset.assignedToName,
+      assignedToDept: newAsset.assignedToDept,
+      purchaseDate: newAsset.purchaseDate,
+      status: newAsset.status,
+      location: newAsset.location,
+      condition: newAsset.condition,
+      history: newAsset.history
+    }).then((res: any) => {
+      if (res && res.success && res.asset) {
+        setHardwareAssets(prev => prev.map(a => a.id === newAsset.id ? { ...a, id: res.asset.id } : a));
+      }
+    }).catch(err => console.warn('[AquaEarth] Hardware asset cloud creation warning:', err));
   };
 
   const assignHardwareAsset = (assetId: string, staffId: string, notes?: string) => {
     const targetStaff = allUsers.find(u => u.id === staffId);
     const staffName = targetStaff ? targetStaff.name : staffId;
+    const existingAsset = hardwareAssets.find(a => a.id === assetId);
 
-    setHardwareAssets(prev => prev.map(asset => {
-      if (asset.id !== assetId) return asset;
-      const historyItem = {
-        date: new Date().toISOString().split('T')[0],
-        action: 'ASSIGNED' as const,
-        staffName: staffName,
-        notes: notes || `Handed over and assigned to ${staffName}`
-      };
-      return {
-        ...asset,
-        status: 'OPERATIONAL',
-        assignedToName: staffName,
-        assignedToDept: targetStaff?.departmentName || 'General',
-        assignedToId: staffId,
-        history: [historyItem, ...(asset.history || [])]
-      };
-    }));
+    const historyItem = {
+      date: new Date().toISOString().split('T')[0],
+      action: 'ASSIGNED' as const,
+      staffName: staffName,
+      notes: notes || `Handed over and assigned to ${staffName}`
+    };
+    const assignUpdate = {
+      status: 'OPERATIONAL' as const,
+      assignedToName: staffName,
+      assignedToDept: targetStaff?.departmentName || 'General',
+      assignedToId: staffId,
+      history: [historyItem, ...(existingAsset?.history || [])]
+    };
+
+    setHardwareAssets(prev => prev.map(asset => asset.id === assetId ? { ...asset, ...assignUpdate } : asset));
+
+    apiClient.updateHardwareAsset(assetId, assignUpdate).catch(err => console.warn('[AquaEarth] Hardware asset assignment cloud sync warning:', err));
 
     const audit: AuditRecord = {
       id: `aud-${Date.now()}`,
@@ -4378,24 +4719,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const retrieveHardwareAsset = (assetId: string, reason: string) => {
-    setHardwareAssets(prev => prev.map(asset => {
-      if (asset.id !== assetId) return asset;
-      const prevAssignee = asset.assignedToName || 'Staff';
-      const historyItem = {
-        date: new Date().toISOString().split('T')[0],
-        action: 'RETRIEVED' as const,
-        staffName: currentUser.name,
-        notes: `Retrieved from ${prevAssignee}. Reason: ${reason}`
-      };
-      return {
-        ...asset,
-        status: 'IN_STORAGE',
-        assignedToName: 'Unassigned',
-        assignedToDept: 'IT Inventory',
-        assignedToId: undefined,
-        history: [historyItem, ...(asset.history || [])]
-      };
-    }));
+    const existingAsset = hardwareAssets.find(a => a.id === assetId);
+    const prevAssignee = existingAsset?.assignedToName || 'Staff';
+    const historyItem = {
+      date: new Date().toISOString().split('T')[0],
+      action: 'RETRIEVED' as const,
+      staffName: currentUser.name,
+      notes: `Retrieved from ${prevAssignee}. Reason: ${reason}`
+    };
+    const retrieveUpdate = {
+      status: 'IN_STORAGE' as const,
+      assignedToName: 'Unassigned',
+      assignedToDept: 'IT Inventory',
+      assignedToId: undefined as string | undefined,
+      history: [historyItem, ...(existingAsset?.history || [])]
+    };
+
+    setHardwareAssets(prev => prev.map(asset => asset.id === assetId ? { ...asset, ...retrieveUpdate } : asset));
+
+    apiClient.updateHardwareAsset(assetId, { ...retrieveUpdate, assignedToId: null }).catch(err => console.warn('[AquaEarth] Hardware asset retrieval cloud sync warning:', err));
 
     const audit: AuditRecord = {
       id: `aud-${Date.now()}`,
@@ -4684,6 +5026,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       updatePayrollRecord,
       createMonthlyPayrollRun,
       candidateApplications,
+      createCandidateApplication,
       advanceCandidateStage,
       convertCandidateToEmployee,
       createHardwareAsset,

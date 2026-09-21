@@ -9,35 +9,35 @@ generator client {
 }
 
 model User {
-  id                    String         @id @default(uuid())
-  email                 String         @unique
-  passwordHash          String         @default("AquaEarth@2026!")
-  name                  String
-  avatar                String?
-  jobTitle              String
-  functionalRole        String
-  accessTier            String         @default("STANDARD")
-  managementTier        String         @default("NONE")
-  departmentId          String?
-  managerId             String?
-  status                String         @default("ACTIVE")
-  phone                 String?
-  location              String?
-  bio                   String?
-  skillsJson            String?
-  certificationsJson    String?
-  emergencyContactJson  String?
-  createdAt             DateTime       @default(now())
-  updatedAt             DateTime       @updatedAt
+  id                   String   @id @default(uuid())
+  email                String   @unique
+  passwordHash         String   @default("AquaEarth@2026!")
+  name                 String
+  avatar               String?
+  jobTitle             String
+  functionalRole       String
+  accessTier           String   @default("STANDARD")
+  managementTier       String   @default("NONE")
+  departmentId         String?
+  managerId            String?
+  status               String   @default("ACTIVE")
+  phone                String?
+  location             String?
+  bio                  String?
+  skillsJson           String?
+  certificationsJson   String?
+  emergencyContactJson String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
-  department      Department?    @relation(fields: [departmentId], references: [id])
-  manager         User?          @relation("ManagementHierarchy", fields: [managerId], references: [id])
-  directReports   User[]         @relation("ManagementHierarchy")
+  department      Department?        @relation(fields: [departmentId], references: [id])
+  manager         User?              @relation("ManagementHierarchy", fields: [managerId], references: [id])
+  directReports   User[]             @relation("ManagementHierarchy")
   certifications  Certification[]
   leaveRequests   LeaveRequest[]
-  assignedTasks   Task[]         @relation("AssignedTasks")
-  assignedTickets SupportRequest[] @relation("AssignedSupport")
-  createdTickets  SupportRequest[] @relation("CreatedSupport")
+  assignedTasks   Task[]             @relation("AssignedTasks")
+  assignedTickets SupportRequest[]   @relation("AssignedSupport")
+  createdTickets  SupportRequest[]   @relation("CreatedSupport")
   kpiScores       KpiScore[]
   kpiLogs         KpiLog[]
   assignedAssets  Asset[]
@@ -51,38 +51,38 @@ model Department {
   description String?
   createdAt   DateTime @default(now())
 
-  users       User[]
+  users User[]
 }
 
 model AttendanceRecord {
-  id           String    @id @default(uuid())
+  id           String   @id @default(uuid())
   userId       String
-  date         String    // YYYY-MM-DD
-  clockInTime  String    // HH:MM:SS
-  clockOutTime String?   // HH:MM:SS
-  locationTag  String    @default("Lekki HQ")
-  status       String    @default("PRESENT") // PRESENT, LATE, HALF_DAY, OVERTIME
-  kpiAwarded   Int       @default(10)
+  date         String // YYYY-MM-DD
+  clockInTime  String // HH:MM:SS
+  clockOutTime String? // HH:MM:SS
+  locationTag  String   @default("Lekki HQ")
+  status       String   @default("PRESENT") // PRESENT, LATE, HALF_DAY, OVERTIME
+  kpiAwarded   Int      @default(10)
   coordinates  String?
   notes        String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Certification {
-  id           String    @id @default(uuid())
-  userId       String
-  name         String
-  issuingBody  String
-  issueDate    DateTime
-  expiryDate   DateTime
-  certNumber   String?
-  verified     Boolean   @default(true)
-  createdAt    DateTime  @default(now())
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  issuingBody String
+  issueDate   DateTime
+  expiryDate  DateTime
+  certNumber  String?
+  verified    Boolean  @default(true)
+  createdAt   DateTime @default(now())
 
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model LeaveRequest {
@@ -100,7 +100,7 @@ model LeaveRequest {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Task {
@@ -121,15 +121,15 @@ model Task {
   managerId         String?
   managerName       String?
   assignmentType    String    @default("INDIVIDUAL") // INDIVIDUAL, MULTIPLE, DEPARTMENT
-  assigneeIdsJson   String?   // JSON array of user IDs
-  assigneeNamesJson String?   // JSON array of user names
-  departmentId      String?   // Target department ID
-  departmentName    String?   // Target department name
-  completedById     String?   // Officer who finalized the task
-  completedByName   String?   // Name of officer who finalized
-  completionNotes   String?   // Documentation / resolution notes
+  assigneeIdsJson   String? // JSON array of user IDs
+  assigneeNamesJson String? // JSON array of user names
+  departmentId      String? // Target department ID
+  departmentName    String? // Target department name
+  completedById     String? // Officer who finalized the task
+  completedByName   String? // Name of officer who finalized
+  completionNotes   String? // Documentation / resolution notes
   kpiAttributed     Boolean   @default(false)
-  kpiBreakdownJson  String?   // JSON points breakdown
+  kpiBreakdownJson  String? // JSON points breakdown
   projectId         String?
   projectName       String?
   progressPercent   Int       @default(0)
@@ -144,7 +144,7 @@ model Task {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  assignee          User      @relation("AssignedTasks", fields: [assigneeId], references: [id])
+  assignee User @relation("AssignedTasks", fields: [assigneeId], references: [id])
 }
 
 model SupportRequest {
@@ -167,38 +167,38 @@ model SupportRequest {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  requester      User      @relation("CreatedSupport", fields: [requesterId], references: [id])
-  assignedTo     User?     @relation("AssignedSupport", fields: [assignedToId], references: [id])
+  requester  User  @relation("CreatedSupport", fields: [requesterId], references: [id])
+  assignedTo User? @relation("AssignedSupport", fields: [assignedToId], references: [id])
 }
 
 model Asset {
-  id             String    @id @default(uuid())
-  assetTag       String    @unique
+  id             String   @id @default(uuid())
+  assetTag       String   @unique
   name           String
   type           String
   serialNumber   String
   assignedToId   String?
   purchaseDate   DateTime
   warrantyExpiry DateTime
-  condition      String    @default("GOOD")
+  condition      String   @default("GOOD")
   purchaseCost   Float?
-  createdAt      DateTime  @default(now())
+  createdAt      DateTime @default(now())
 
-  assignedTo     User?     @relation(fields: [assignedToId], references: [id])
+  assignedTo User? @relation(fields: [assignedToId], references: [id])
 }
 
 model Subscription {
-  id             String   @id @default(uuid())
-  serviceName    String
-  vendor         String
-  category       String
-  seats          Int      @default(1)
-  billingCycle   String
-  cost           Float
-  currency       String   @default("NGN")
-  renewalDate    DateTime
-  active         Boolean  @default(true)
-  createdAt      DateTime @default(now())
+  id           String   @id @default(uuid())
+  serviceName  String
+  vendor       String
+  category     String
+  seats        Int      @default(1)
+  billingCycle String
+  cost         Float
+  currency     String   @default("NGN")
+  renewalDate  DateTime
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
 }
 
 model KpiScore {
@@ -213,20 +213,20 @@ model KpiScore {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model KpiLog {
-  id            String   @id @default(uuid())
-  userId        String
-  eventType     String
-  points        Int
-  workItemId    String?
-  workItemType  String?
-  description   String
-  awardedAt     DateTime @default(now())
+  id           String   @id @default(uuid())
+  userId       String
+  eventType    String
+  points       Int
+  workItemId   String?
+  workItemType String?
+  description  String
+  awardedAt    DateTime @default(now())
 
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model AuditLog {
@@ -255,39 +255,39 @@ model Client {
 }
 
 model Project {
-  id               String   @id @default(uuid())
-  projectCode      String   @unique
-  title            String
-  clientId         String?
-  clientName       String
-  serviceLinesJson String
-  contractValue    Float
-  currency         String   @default("NGN")
-  status           String   @default("ACTIVE")
-  health           String   @default("ON_TRACK")
-  startDate        DateTime
-  targetEndDate    DateTime
-  actualEndDate    DateTime?
-  leadPmId             String?
-  projectManagerId     String?
-  leadPmName           String
-  isPaused             Boolean   @default(false)
-  pausedReason         String?
-  pausedAt             DateTime?
+  id                       String    @id @default(uuid())
+  projectCode              String    @unique
+  title                    String
+  clientId                 String?
+  clientName               String
+  serviceLinesJson         String
+  contractValue            Float
+  currency                 String    @default("NGN")
+  status                   String    @default("ACTIVE")
+  health                   String    @default("ON_TRACK")
+  startDate                DateTime
+  targetEndDate            DateTime
+  actualEndDate            DateTime?
+  leadPmId                 String?
+  projectManagerId         String?
+  leadPmName               String
+  isPaused                 Boolean   @default(false)
+  pausedReason             String?
+  pausedAt                 DateTime?
   discretionaryBonusesJson String?
-  vaultStorageTier     String   @default("ACTIVE_VAULT")
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  vaultStorageTier         String    @default("ACTIVE_VAULT")
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
 }
 
 model Opportunity {
-  id                 String   @id @default(uuid())
+  id                 String    @id @default(uuid())
   title              String
   clientName         String
   serviceLinesJson   String
   estimatedValue     Float
-  currency           String   @default("NGN")
-  stage              String   @default("IDENTIFIED")
+  currency           String    @default("NGN")
+  stage              String    @default("IDENTIFIED")
   source             String?
   submissionDeadline DateTime
   decisionDate       DateTime?
@@ -296,33 +296,33 @@ model Opportunity {
   winLossReason      String?
   winningCompetitor  String?
   convertedProjectId String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 }
 
 model Invoice {
-  id                   String    @id @default(uuid())
-  invoiceNumber        String    @unique
-  projectId            String
-  projectName          String
-  clientId             String
-  clientName           String
-  milestoneDescription String
-  subtotalNgn          Float
-  vatRatePercent       Float     @default(7.5)
-  vatAmountNgn         Float
-  whtRatePercent       Float     @default(5.0)
-  whtDeductionNgn      Float
-  netPayableNgn        Float
-  whtCreditNoteReceived Boolean  @default(false)
-  whtCreditNoteNumber  String?
-  status               String    @default("ISSUED")
-  issuedDate           DateTime  @default(now())
-  dueDate              DateTime
-  paidDate             DateTime?
-  currency             String    @default("NGN")
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  id                    String    @id @default(uuid())
+  invoiceNumber         String    @unique
+  projectId             String
+  projectName           String
+  clientId              String
+  clientName            String
+  milestoneDescription  String
+  subtotalNgn           Float
+  vatRatePercent        Float     @default(7.5)
+  vatAmountNgn          Float
+  whtRatePercent        Float     @default(5.0)
+  whtDeductionNgn       Float
+  netPayableNgn         Float
+  whtCreditNoteReceived Boolean   @default(false)
+  whtCreditNoteNumber   String?
+  status                String    @default("ISSUED")
+  issuedDate            DateTime  @default(now())
+  dueDate               DateTime
+  paidDate              DateTime?
+  currency              String    @default("NGN")
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 }
 
 model AccessRequest {
@@ -340,56 +340,340 @@ model AccessRequest {
 }
 
 model ProjectExpense {
-  id              String   @id @default(uuid())
-  expenseNumber   String   @unique
-  projectId       String
-  projectName     String
-  category        String
-  title           String
-  description     String?
-  amountNgn       Float
-  currency        String   @default("NGN")
-  date            DateTime @default(now())
-  vendor          String
-  receiptNumber   String?
-  status          String   @default("APPROVED")
-  paymentMethod   String   @default("BANK_TRANSFER")
-  recordedById    String?
-  recordedByName  String
-  approvedByName  String?
-  receiptUrl      String?
-  notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String   @id @default(uuid())
+  expenseNumber  String   @unique
+  projectId      String
+  projectName    String
+  category       String
+  title          String
+  description    String?
+  amountNgn      Float
+  currency       String   @default("NGN")
+  date           DateTime @default(now())
+  vendor         String
+  receiptNumber  String?
+  status         String   @default("APPROVED")
+  paymentMethod  String   @default("BANK_TRANSFER")
+  recordedById   String?
+  recordedByName String
+  approvedByName String?
+  receiptUrl     String?
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@index([projectId])
   @@index([date])
 }
 
 model ClientReceipt {
-  id                   String    @id @default(uuid())
-  receiptNumber        String    @unique
+  id                   String   @id @default(uuid())
+  receiptNumber        String   @unique
   projectId            String
   projectName          String
   clientId             String
   clientName           String
   amountNgn            Float
-  currency             String    @default("NGN")
-  paymentDate          DateTime  @default(now())
+  currency             String   @default("NGN")
+  paymentDate          DateTime @default(now())
   paymentReference     String
   milestoneDescription String
   invoiceId            String?
-  whtDeductedNgn       Float?    @default(0)
-  vatPaidNgn           Float?    @default(0)
-  bankAccount          String    @default("Zenith Bank Operations")
+  whtDeductedNgn       Float?   @default(0)
+  vatPaidNgn           Float?   @default(0)
+  bankAccount          String   @default("Zenith Bank Operations")
   recordedById         String?
   recordedByName       String
   receiptUrl           String?
   notes                String?
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   @@index([projectId])
   @@index([paymentDate])
 }
 
+model BudgetRequest {
+  id                         String    @id @default(uuid())
+  requestNumber              String    @unique
+  title                      String
+  department                 String
+  requestedById              String
+  requestedByName            String
+  amountNgn                  Float
+  category                   String
+  justification              String
+  status                     String    @default("PENDING_APPROVAL")
+  budgetType                 String?
+  frequency                  String?
+  projectId                  String?
+  projectName                String?
+  collatedById               String?
+  collatedByName             String?
+  collationNotes             String?
+  cfoReviewStatus            String?
+  cfoReviewNotes             String?
+  cfoReviewedAt              DateTime?
+  presentedToMdBy            String?
+  approvalStage              String    @default("MD_PENDING")
+  approvedById               String?
+  approvedByName             String?
+  approvedOnBehalfOfDrK      Boolean?
+  drKNotified                Boolean?
+  declineOutcome             String?
+  miscellaneousAmountNgn     Float?
+  miscellaneousJustification String?
+  reviewedById               String?
+  reviewedByName             String?
+  reviewComments             String?
+  reviewedAt                 DateTime?
+  createdAt                  DateTime  @default(now())
+  updatedAt                  DateTime  @updatedAt
+
+  @@index([department])
+  @@index([status])
+  @@index([approvalStage])
+}
+
+model PettyCashFund {
+  id                  String   @id @default(uuid())
+  custodian           String   @unique
+  custodianName       String
+  allocatedAmountNgn  Float
+  currentBalanceNgn   Float
+  allocatedBy         String
+  lastReplenishedDate DateTime
+  updatedAt           DateTime @updatedAt
+}
+
+model PettyCashTransaction {
+  id             String   @id @default(uuid())
+  fundCustodian  String
+  date           DateTime
+  amountNgn      Float
+  category       String
+  description    String
+  receiptUrl     String?
+  approvedByName String
+  createdAt      DateTime @default(now())
+
+  @@index([fundCustodian])
+  @@index([date])
+}
+
+model PettyCashTopUpRecord {
+  id               String   @id @default(uuid())
+  fundCustodian    String
+  amountNgn        Float
+  fundingSource    String
+  referenceNumber  String?
+  notes            String?
+  authorizedByName String
+  date             DateTime
+  createdAt        DateTime @default(now())
+
+  @@index([fundCustodian])
+}
+
+model PettyCashAnalysis {
+  id                         String   @id @default(uuid())
+  monthYear                  String
+  analyzedById               String
+  analyzedByName             String
+  isPrimaryGift              Boolean
+  giftOpeningBalanceNgn      Float
+  giftDisbursedNgn           Float
+  giftClosingBalanceNgn      Float
+  marvelousOpeningBalanceNgn Float
+  marvelousDisbursedNgn      Float
+  marvelousClosingBalanceNgn Float
+  totalDisbursedNgn          Float
+  replenishmentRequestedNgn  Float
+  status                     String   @default("DRAFT")
+  approvedByDrK              Boolean?
+  drKNotes                   String?
+  createdAt                  DateTime @default(now())
+
+  @@index([monthYear])
+}
+
+model QaReview {
+  id                         String   @id @default(uuid())
+  documentId                 String
+  documentTitle              String
+  projectCode                String
+  authorId                   String
+  authorName                 String
+  stage                      String   @default("PEER_REVIEW")
+  slaDeadline                String
+  isOverdue                  Boolean  @default(false)
+  peerReviewerId             String?
+  peerReviewerName           String?
+  qaLeadId                   String?
+  qaLeadName                 String?
+  managingConsultantSigned   Boolean  @default(false)
+  tamperProofCertificateHash String?
+  reviewNotesJson            String
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  @@index([documentId])
+  @@index([stage])
+}
+
+model CompliancePermit {
+  id                    String   @id @default(uuid())
+  permitTitle           String
+  permitNumber          String   @unique
+  regulatoryBody        String
+  projectId             String?
+  projectName           String?
+  status                String   @default("ACTIVE")
+  issueDate             DateTime
+  expiryDate            DateTime
+  daysRemaining         Int
+  statutoryFeeNgn       Float
+  feeReconciled         Boolean  @default(false)
+  isRecurringCycle      Boolean  @default(false)
+  cycleDurationYears    Int      @default(1)
+  officerInCharge       String
+  stampedCertificateUrl String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([status])
+}
+
+model PayrollRecord {
+  id                  String   @id
+  staffId             String
+  staffName           String
+  department          String
+  jobTitle            String
+  baseSalaryNgn       Float
+  hazardAllowanceNgn  Float    @default(0)
+  fieldPerDiemNgn     Float    @default(0)
+  performanceBonusNgn Float    @default(0)
+  customBenefitsJson  String?
+  pensionDeductionNgn Float    @default(0)
+  taxPayeNgn          Float    @default(0)
+  netPayNgn           Float
+  monthYear           String
+  paymentStatus       String   @default("DRAFT")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([staffId, monthYear])
+  @@index([monthYear])
+}
+
+model CandidateApplication {
+  id                String    @id @default(uuid())
+  candidateNumber   String    @unique
+  fullName          String
+  email             String
+  phone             String
+  appliedRole       String
+  department        String
+  currentStage      String    @default("PROSPECTIVE")
+  yearsExperience   Int
+  expectedSalaryNgn Float?
+  notesJson         String?
+  documentsJson     String?
+  vaultFolderId     String?
+  outcome           String?
+  outcomeDate       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([currentStage])
+}
+
+model DocumentItem {
+  id             String   @id @default(uuid())
+  title          String
+  documentNumber String   @unique
+  projectId      String?
+  projectName    String?
+  category       String
+  version        String
+  fileSizeMb     Float
+  authorName     String
+  qaStatus       String   @default("DRAFT_WATERMARKED")
+  storageTier    String   @default("ACTIVE_VAULT")
+  uploadedAt     DateTime @default(now())
+  downloadUrl    String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([qaStatus])
+}
+
+model DocumentFolder {
+  id            String   @id @default(uuid())
+  name          String
+  department    String
+  description   String
+  createdById   String
+  createdByName String
+  isRestricted  Boolean  @default(false)
+  itemCount     Int      @default(0)
+  createdAt     DateTime @default(now())
+}
+
+model HardwareAsset {
+  id             String   @id @default(uuid())
+  assetTag       String   @unique
+  name           String
+  serialNumber   String?
+  category       String
+  assignedToId   String?
+  assignedToName String
+  assignedToDept String
+  purchaseDate   DateTime
+  status         String   @default("OPERATIONAL")
+  location       String
+  condition      String?
+  historyJson    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([status])
+  @@index([assignedToId])
+}
+
+model KpiConfig {
+  id         String   @id @default("singleton")
+  configJson String
+  updatedBy  String?
+  updatedAt  DateTime @updatedAt
+}
+
+model StaffQuery {
+  id                String    @id @default(uuid())
+  queryNumber       String    @unique
+  staffId           String
+  staffName         String
+  staffDepartment   String
+  issuedById        String
+  issuedByName      String
+  title             String
+  allegationDetails String
+  incidentDate      DateTime
+  issuedDate        DateTime  @default(now())
+  responseDeadline  String
+  status            String    @default("ISSUED")
+  staffResponse     String?
+  respondedAt       DateTime?
+  resolution        String?
+  resolutionNotes   String?
+  resolvedAt        DateTime?
+  resolvedById      String?
+  resolvedByName    String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([staffId])
+  @@index([status])
+}

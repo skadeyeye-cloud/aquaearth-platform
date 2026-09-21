@@ -886,6 +886,87 @@ async function main() {
   }
   console.log('✔ Client receipts & payments seeded');
 
+  // 12. Compliance Permits
+  const compliancePermits = [
+    {
+      id: 'perm-1',
+      permitTitle: 'FMEnv Environmental Impact Assessment (EIA) Approval Permit',
+      permitNumber: 'FMENV/EIA/2026/0419',
+      regulatoryBody: 'FMEnv',
+      projectId: 'prj-3',
+      projectName: 'Dangote Lekki Refinery Phase 2 ESIA',
+      status: 'ACTIVE',
+      issueDate: new Date('2026-08-01'),
+      expiryDate: new Date('2027-07-31'),
+      daysRemaining: 333,
+      statutoryFeeNgn: 4500000,
+      feeReconciled: true,
+      isRecurringCycle: false,
+      cycleDurationYears: 1,
+      officerInCharge: 'Dr. Ngozi Eze',
+      stampedCertificateUrl: '/vault/permits/FMENV-0419-STAMPED.pdf'
+    },
+    {
+      id: 'perm-2',
+      permitTitle: 'NESREA Triennial Environmental Audit Certification (EAR Renewal)',
+      permitNumber: 'NESREA/EAR/TRI-2023-882',
+      regulatoryBody: 'NESREA',
+      projectId: 'prj-4',
+      projectName: 'Dangote Lekki Refinery Phase 1 Environmental Audit',
+      status: 'EXPIRING_SOON',
+      issueDate: new Date('2023-10-01'),
+      expiryDate: new Date('2026-09-30'),
+      daysRemaining: 29,
+      statutoryFeeNgn: 1850000,
+      feeReconciled: true,
+      isRecurringCycle: true,
+      cycleDurationYears: 3,
+      officerInCharge: 'Dr. Ngozi Eze',
+      stampedCertificateUrl: '/vault/permits/NESREA-EAR-2023.pdf'
+    },
+    {
+      id: 'perm-3',
+      permitTitle: 'NUPRC Offshore Baseline & Effluent Discharge Permit (EGASPIN)',
+      permitNumber: 'NUPRC/ENV/OFF-2026-019',
+      regulatoryBody: 'NUPRC',
+      projectId: 'prj-1',
+      projectName: 'Chevron Escravos Terminal Expansion',
+      status: 'ACTIVE',
+      issueDate: new Date('2026-07-15'),
+      expiryDate: new Date('2027-01-14'),
+      daysRemaining: 135,
+      statutoryFeeNgn: 2750000,
+      feeReconciled: true,
+      isRecurringCycle: true,
+      cycleDurationYears: 1,
+      officerInCharge: 'Engr. Femi Adebayo',
+      stampedCertificateUrl: '/vault/permits/NUPRC-EGASPIN-2026.pdf'
+    },
+    {
+      id: 'perm-4',
+      permitTitle: 'Lagos State LASEPA Industrial Air Emissions & Effluent Permit',
+      permitNumber: 'LASEPA/IND/2026/1102',
+      regulatoryBody: 'STATE_MOE',
+      status: 'ACTIVE',
+      issueDate: new Date('2026-01-10'),
+      expiryDate: new Date('2026-12-31'),
+      daysRemaining: 121,
+      statutoryFeeNgn: 650000,
+      feeReconciled: true,
+      isRecurringCycle: true,
+      cycleDurationYears: 1,
+      officerInCharge: 'Dr. Ngozi Eze'
+    }
+  ];
+
+  for (const permit of compliancePermits) {
+    await prisma.compliancePermit.upsert({
+      where: { permitNumber: permit.permitNumber },
+      update: permit,
+      create: permit,
+    });
+  }
+  console.log('✔ Compliance permits seeded');
 
   console.log('✨ All 14 Personnel, 11 Departments, 5 Clients, 3 Projects, 3 Tasks, 4 Bids, 3 Leaves & Support Tickets successfully seeded in Neon!');
 }
