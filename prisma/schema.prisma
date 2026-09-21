@@ -132,6 +132,15 @@ model Task {
   kpiBreakdownJson  String?   // JSON points breakdown
   projectId         String?
   projectName       String?
+  progressPercent   Int       @default(0)
+  originalDueDate   DateTime?
+  taskType          String?   @default("STANDARD")
+  stage             String?
+  confirmed         Boolean   @default(true)
+  approvalStatus    String    @default("APPROVED")
+  isBlockedByGate   Boolean   @default(false)
+  taskAssigneesJson String?
+  commentsJson      String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -259,10 +268,16 @@ model Project {
   startDate        DateTime
   targetEndDate    DateTime
   actualEndDate    DateTime?
-  leadPmName       String
-  vaultStorageTier String   @default("ACTIVE_VAULT")
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  leadPmId             String?
+  projectManagerId     String?
+  leadPmName           String
+  isPaused             Boolean   @default(false)
+  pausedReason         String?
+  pausedAt             DateTime?
+  discretionaryBonusesJson String?
+  vaultStorageTier     String   @default("ACTIVE_VAULT")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 }
 
 model Opportunity {
