@@ -10,9 +10,7 @@ import {
   UserPlus, 
   KeyRound, 
   AlertCircle,
-  ShieldCheck,
   CheckCircle2,
-  ScanFace,
   Eye,
   EyeOff,
   ShieldAlert,
@@ -21,11 +19,10 @@ import {
   Info
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import BiometricAuthModal from '@/components/auth/BiometricAuthModal';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { allUsers, loginWithPassword, loginAsUser, submitAccessRequest, projects, isAuthenticated, isAuthReady } = useAuth();
+  const { allUsers, loginWithPassword, submitAccessRequest, projects, isAuthenticated, isAuthReady } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'LOGIN' | 'REQUEST_ACCESS'>('LOGIN');
 
@@ -40,7 +37,6 @@ export default function LoginPage() {
   const [lockoutSeconds, setLockoutSeconds] = useState(0);
   const [shakeKey, setShakeKey] = useState(0);
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
-  const [isBiometricOpen, setIsBiometricOpen] = useState(false);
   const [showCredsHelper, setShowCredsHelper] = useState(false);
   const [copiedKey, setCopiedKey] = useState(false);
 
@@ -266,10 +262,6 @@ export default function LoginPage() {
                 />
                 <span className="text-[11px] text-slate-600 dark:text-slate-400">Remember this device</span>
               </label>
-              <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                <ShieldCheck className="w-3 h-3 text-emerald-500" />
-                2FA Enforced
-              </span>
             </div>
 
             <button
@@ -286,18 +278,6 @@ export default function LoginPage() {
                 </>
               )}
             </button>
-
-            {/* Apple FaceID / TouchID Biometric Sign-In */}
-            <div>
-              <button
-                type="button"
-                onClick={() => setIsBiometricOpen(true)}
-                className="w-full py-2.5 bg-emerald-500/10 hover:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30 rounded-xl font-bold transition-all active:scale-[0.97] flex items-center justify-center gap-2 text-xs cursor-pointer shadow-2xs"
-              >
-                <ScanFace className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>Sign in with FaceID / TouchID</span>
-              </button>
-            </div>
 
             {/* Authorized Personnel Directory & Testing Credentials */}
             <div className="pt-3 border-t border-black/[0.06] dark:border-white/[0.08]">
@@ -507,15 +487,6 @@ export default function LoginPage() {
         © 2026 AquaEarth Consulting Ltd. • Lagos, Nigeria
       </div>
 
-      {/* Apple Biometric FaceID / TouchID Authentication Modal */}
-      <BiometricAuthModal
-        isOpen={isBiometricOpen}
-        onClose={() => setIsBiometricOpen(false)}
-        onSuccess={async (user) => {
-          await loginAsUser(user);
-          router.push('/workspace');
-        }}
-      />
     </div>
   );
 }

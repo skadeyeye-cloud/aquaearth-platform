@@ -15,8 +15,7 @@ import {
   LogOut, 
   Sun, 
   Moon, 
-  Menu, 
-  ScanFace,
+  Menu,
   LayoutGrid,
   CheckCircle2,
   CalendarCheck,
@@ -37,7 +36,6 @@ import {
   Settings
 } from 'lucide-react';
 import NotificationCenter from './NotificationCenter';
-import BiometricAuthModal from '@/components/auth/BiometricAuthModal';
 import SpotlightModal from './SpotlightModal';
 
 interface HeaderProps {
@@ -52,7 +50,6 @@ export default function Header({ onOpenMobileSidebar }: HeaderProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isPresenceOpen, setIsPresenceOpen] = useState(false);
-  const [isBiometricModalOpen, setIsBiometricModalOpen] = useState(false);
   const [isSpotlightOpen, setIsSpotlightOpen] = useState(false);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
@@ -79,9 +76,17 @@ export default function Header({ onOpenMobileSidebar }: HeaderProps) {
     if (path.startsWith('/projects')) return { section: 'Project Delivery', title: 'Projects & Milestones', icon: FolderKanban };
     if (path.startsWith('/field')) return { section: 'Field Operations', title: 'Field Data Capture', icon: Smartphone };
     if (path.startsWith('/documents')) return { section: 'Quality & Governance', title: 'Documents Repository', icon: FileText };
+    if (path.startsWith('/qa')) return { section: 'Quality & Governance', title: 'QA & Technical Review', icon: ShieldCheck };
+    if (path.startsWith('/compliance')) return { section: 'Quality & Governance', title: 'Regulatory Compliance', icon: Shield };
     if (path.startsWith('/vault')) return { section: 'Quality & Governance', title: 'AquaEarth Vault', icon: HardDrive };
     if (path.startsWith('/operations/it-design')) return { section: 'Operational Support', title: 'IT & Design Studio', icon: Layers };
     if (path.startsWith('/finance')) return { section: 'Operational Support', title: 'Milestone Finance', icon: Receipt };
+    if (path.startsWith('/hr/leave')) return { section: 'HR & Human Capital', title: 'Staff Leave Tracking', icon: CalendarCheck };
+    if (path.startsWith('/hr/onboarding')) return { section: 'HR & Human Capital', title: 'Onboarding & Recruitment', icon: Users };
+    if (path.startsWith('/hr/staff')) return { section: 'HR & Human Capital', title: 'Staff Nominal Roll', icon: Users };
+    if (path.startsWith('/admin/audit-log')) return { section: 'Administration', title: 'Platform Audit Trail', icon: ShieldCheck };
+    if (path.startsWith('/admin/hierarchy')) return { section: 'Administration', title: 'Organizational Hierarchy', icon: Users };
+    if (path.startsWith('/admin/users')) return { section: 'Administration', title: 'User Access & Roles', icon: Lock };
     if (path.startsWith('/admin')) return { section: 'Administration', title: 'User Access & Roles', icon: Lock };
     if (path.startsWith('/settings')) return { section: 'Preferences', title: 'Account Settings', icon: Settings };
     return { section: 'Operations', title: 'Platform Hub', icon: LayoutGrid };
@@ -383,24 +388,6 @@ export default function Header({ onOpenMobileSidebar }: HeaderProps) {
                     </Link>
                   </div>
 
-                  {/* Biometric Quick Re-auth */}
-                  <div className="pt-1 border-t border-black/[0.05] dark:border-white/[0.08]">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsDropdownOpen(false);
-                        setIsBiometricModalOpen(true);
-                      }}
-                      className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-bold transition-all text-xs active:scale-[0.97] cursor-pointer mb-1 whitespace-nowrap shrink-0"
-                    >
-                      <div className="flex items-center gap-2 whitespace-nowrap">
-                        <ScanFace className="w-3.5 h-3.5 shrink-0" />
-                        <span>FaceID / TouchID Unlock</span>
-                      </div>
-                      <span className="text-[9px] uppercase font-mono px-1.5 py-0.2 rounded bg-emerald-500/20 whitespace-nowrap shrink-0">Active</span>
-                    </button>
-                  </div>
-
                   {/* Sign Out Action */}
                   <div className="pt-1 border-t border-black/[0.05] dark:border-white/[0.08]">
                     <button
@@ -423,15 +410,6 @@ export default function Header({ onOpenMobileSidebar }: HeaderProps) {
       <NotificationCenter
         isOpen={isNotificationOpen}
         onClose={() => setIsNotificationOpen(false)}
-      />
-
-      {/* Apple Biometric Quick-Unlock Modal */}
-      <BiometricAuthModal
-        isOpen={isBiometricModalOpen}
-        onClose={() => setIsBiometricModalOpen(false)}
-        onSuccess={(user) => {
-          switchUser(user.id);
-        }}
       />
 
       {/* Apple Spotlight Quick Module Switcher (Cmd+K) */}
