@@ -138,7 +138,7 @@ export default function Header({ onOpenMobileSidebar }: HeaderProps) {
           </AnimatePresence>
 
           {/* Spotlight Search Launcher Trigger */}
-          <div className="relative flex-1 max-w-xs sm:max-w-sm">
+          <div className="relative flex-1 min-w-0 max-w-xs sm:max-w-sm">
             <button
               type="button"
               onClick={() => {

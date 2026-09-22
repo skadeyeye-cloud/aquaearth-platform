@@ -568,12 +568,12 @@ export default function AttendancePage() {
             <table className="w-full text-left text-xs">
               <thead className="text-[10px] uppercase font-semibold text-[#86868B] tracking-wider border-b border-black/[0.04] dark:border-white/[0.06]">
                 <tr>
-                  <th className="pb-2.5">Date</th>
-                  <th className="pb-2.5">Staff Member</th>
-                  <th className="pb-2.5">Station Base</th>
-                  <th className="pb-2.5">Clock In</th>
-                  <th className="pb-2.5">Clock Out</th>
-                  <th className="pb-2.5">Punctuality</th>
+                  <th className="pb-2.5 pr-4">Date</th>
+                  <th className="pb-2.5 pr-4">Staff Member</th>
+                  <th className="pb-2.5 pr-4">Station Base</th>
+                  <th className="pb-2.5 pr-4">Clock In</th>
+                  <th className="pb-2.5 pr-4">Clock Out</th>
+                  <th className="pb-2.5 pr-4">Punctuality</th>
                   <th className="pb-2.5 text-right">KPI Point</th>
                 </tr>
               </thead>
@@ -590,48 +590,50 @@ export default function AttendancePage() {
                     const isMe = rec.userId === currentUser.id;
                     return (
                       <tr key={rec.id} className={`hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors ${isMe ? 'bg-emerald-500/5' : ''}`}>
-                        <td className="py-3 font-mono text-[11px] text-[#86868B] whitespace-nowrap shrink-0">
+                        <td className="py-3 pr-4 font-mono text-[11px] text-[#86868B] whitespace-nowrap shrink-0">
                           {rec.date}
                         </td>
 
-                        <td className="py-3 flex items-center gap-2.5">
-                          <img
-                            src={rec.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
-                            alt={rec.userName}
-                            className="w-7 h-7 rounded-lg object-cover ring-1 ring-black/[0.06] dark:ring-white/10"
-                          />
-                          <div>
-                            <div className="font-semibold text-[#1D1D1F] dark:text-[#F6F4F0] flex items-center gap-1.5 flex-wrap">
-                              <span className="whitespace-nowrap shrink-0">{rec.userName}</span>
-                              {isMe && (
-                                <span className="text-[9px] bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] px-1.5 py-0.2 rounded font-bold whitespace-nowrap shrink-0">YOU</span>
+                        <td className="py-3 pr-4">
+                          <div className="flex items-center gap-2.5">
+                            <img
+                              src={rec.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
+                              alt={rec.userName}
+                              className="w-7 h-7 rounded-lg object-cover ring-1 ring-black/[0.06] dark:ring-white/10 shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <div className="font-semibold text-[#1D1D1F] dark:text-[#F6F4F0] flex items-center gap-1.5 flex-wrap">
+                                <span className="whitespace-nowrap shrink-0">{rec.userName}</span>
+                                {isMe && (
+                                  <span className="text-[9px] bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] px-1.5 py-0.2 rounded font-bold whitespace-nowrap shrink-0">YOU</span>
+                                )}
+                              </div>
+                              {rec.notes && (
+                                <div className="text-[10px] text-[#86868B] italic truncate max-w-xs">{rec.notes}</div>
                               )}
                             </div>
-                            {rec.notes && (
-                              <div className="text-[10px] text-[#86868B] italic truncate max-w-xs">{rec.notes}</div>
-                            )}
                           </div>
                         </td>
 
-                        <td className="py-3 text-[#1D1D1F] dark:text-[#F6F4F0] text-[11px]">
+                        <td className="py-3 pr-4 text-[#1D1D1F] dark:text-[#F6F4F0] text-[11px]">
                           <div className="flex items-center gap-1 whitespace-nowrap shrink-0">
                             <MapPin className="w-3 h-3 text-[#86868B] shrink-0" />
                             <span>{rec.locationTag}</span>
                           </div>
                         </td>
 
-                        <td className="py-3 font-mono font-medium text-[#1D1D1F] dark:text-[#F6F4F0] text-[11px] tnum whitespace-nowrap shrink-0">
+                        <td className="py-3 pr-4 font-mono font-medium text-[#1D1D1F] dark:text-[#F6F4F0] text-[11px] tnum whitespace-nowrap shrink-0">
                           {rec.clockInTime}
                         </td>
 
-                        <td className="py-3 font-mono text-[#86868B] text-[11px] tnum whitespace-nowrap shrink-0">
+                        <td className="py-3 pr-4 font-mono text-[#86868B] text-[11px] tnum whitespace-nowrap shrink-0">
                           {rec.clockOutTime || 'Active on Duty'}
                         </td>
 
-                        <td className="py-3">
+                        <td className="py-3 pr-4">
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap shrink-0 inline-flex items-center gap-1 ${
-                            isLate 
-                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' 
+                            isLate
+                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
                               : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                           }`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${isLate ? 'bg-amber-500' : 'bg-emerald-500'}`} />
