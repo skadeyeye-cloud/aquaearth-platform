@@ -113,9 +113,10 @@ export const apiClient = {
     }
   },
 
-  async updateTask(id: string, updates: { 
-    status?: string; 
-    loggedHours?: number; 
+  async updateTask(id: string, updates: {
+    status?: string;
+    progressPercent?: number;
+    loggedHours?: number;
     blockedReason?: string;
     completedById?: string;
     completedByName?: string;

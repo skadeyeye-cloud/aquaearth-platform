@@ -1166,6 +1166,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       projectId: newTask.projectId,
       projectName: newTask.projectName,
       estimatedHours: newTask.estimatedHours
+    }).then((res: any) => {
+      if (res && res.success && res.task) {
+        setTasks(prev => prev.map(t => t.id === newTask.id ? { ...t, id: res.task.id } : t));
+      }
     }).catch(err => console.warn('[AquaEarth] Task cloud creation warning:', err));
 
     // Audit Record
@@ -1484,6 +1488,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Asynchronous Cloud Database Sync with Neon
     apiClient.updateTask(taskId, {
       status: finalStatus,
+      progressPercent: isNowDone ? 100 : progressPercent,
       loggedHours,
       completedById: completionDetails?.completedById || currentUser.id,
       completedByName: completionDetails?.completedByName || currentUser.name,
@@ -2110,9 +2115,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return t;
     }));
 
-    if (updates.status || updates.loggedHours !== undefined) {
+    if (updates.status || updates.loggedHours !== undefined || updates.progressPercent !== undefined) {
       apiClient.updateTask(taskId, {
         status: updates.status,
+        progressPercent: updates.progressPercent,
         loggedHours: updates.loggedHours
       }).catch(err => console.warn('[apiClient] editTask sync fallback:', err));
     }

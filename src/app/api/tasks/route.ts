@@ -67,7 +67,8 @@ export async function GET(request: Request) {
         projectId: t.projectId || undefined,
         projectName: t.projectName || undefined,
         estimatedHours: t.estimatedHours,
-        loggedHours: t.loggedHours
+        loggedHours: t.loggedHours,
+        progressPercent: t.progressPercent
       };
     });
 
@@ -124,14 +125,15 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const body = await request.json();
-    const { 
-      id, 
-      status, 
-      loggedHours, 
-      blockedReason, 
-      completedById, 
-      completedByName, 
-      completionNotes 
+    const {
+      id,
+      status,
+      progressPercent,
+      loggedHours,
+      blockedReason,
+      completedById,
+      completedByName,
+      completionNotes
     } = body;
 
     if (!id) {
@@ -157,6 +159,7 @@ export async function PATCH(request: Request) {
     }
     if (loggedHours !== undefined) updateData.loggedHours = Number(loggedHours);
     if (blockedReason !== undefined) updateData.blockedReason = blockedReason;
+    if (progressPercent !== undefined) updateData.progressPercent = isMarkingDone ? 100 : Number(progressPercent);
 
     // Handle Task Completion & KPI Attribution
     let kpiBreakdown: any = undefined;
