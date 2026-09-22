@@ -202,6 +202,7 @@ export default function MyWorkspacePage() {
     setTimeout(() => {
       setLeaveSubmitted(false);
       setIsLeaveModalOpen(false);
+      setLeaveReason('');
     }, 1200);
   };
 
@@ -964,13 +965,25 @@ export default function MyWorkspacePage() {
 
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Total Days</label>
-                  <input 
-                    type="number" 
-                    min="1" 
-                    max="30" 
-                    value={daysCount} 
-                    onChange={(e) => setDaysCount(Number(e.target.value))} 
-                    className="w-full p-1.5 bg-slate-50 dark:bg-white/5 border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-slate-900 dark:text-white" 
+                  <input
+                    type="number"
+                    min="1"
+                    max="30"
+                    value={daysCount}
+                    onChange={(e) => setDaysCount(Number(e.target.value))}
+                    className="w-full p-1.5 bg-slate-50 dark:bg-white/5 border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Reason & Handover Summary</label>
+                  <textarea
+                    required
+                    rows={2}
+                    value={leaveReason}
+                    onChange={(e) => setLeaveReason(e.target.value)}
+                    placeholder="Briefly state reason and coverage plan for ongoing tasks..."
+                    className="w-full p-2 bg-slate-50 dark:bg-white/5 border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs text-slate-900 dark:text-white resize-none"
                   />
                 </div>
 
