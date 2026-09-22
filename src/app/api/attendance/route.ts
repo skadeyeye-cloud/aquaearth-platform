@@ -1,5 +1,23 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getWATDateStr, getWATTimeStr } from '@/lib/wat-time';
+
+function formatRecord(r: any) {
+  return {
+    id: r.id,
+    userId: r.userId,
+    userName: r.user?.name || 'Staff Member',
+    userAvatar: r.user?.avatar || undefined,
+    date: r.date,
+    clockInTime: r.clockInTime,
+    clockOutTime: r.clockOutTime || undefined,
+    locationTag: r.locationTag,
+    status: r.status,
+    kpiAwarded: r.kpiAwarded,
+    coordinates: r.coordinates || undefined,
+    notes: r.notes || undefined
+  };
+}
 
 export async function GET(request: Request) {
   try {
@@ -21,7 +39,7 @@ export async function GET(request: Request) {
       }
     });
 
-    return NextResponse.json({ success: true, records });
+    return NextResponse.json({ success: true, records: records.map(formatRecord) });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
@@ -32,27 +50,26 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { action, userId, locationTag, coordinates, notes } = body;
 
-    const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
-    const timeStr = now.toTimeString().split(' ')[0]; // HH:MM:SS
+    const todayStr = getWATDateStr();
+    const timeStr = getWATTimeStr();
     const [hours, minutes] = timeStr.split(':').map(Number);
 
     if (action === 'CLOCK_IN') {
-      // Punctuality check: 08:15 cutoff
+      // Punctuality check: 08:15 WAT cutoff
       const isLate = hours > 8 || (hours === 8 && minutes > 15);
       const status = isLate ? 'LATE' : 'PRESENT';
       const kpiAwarded = isLate ? 0 : 10;
 
-      // Check if already clocked in today
+      // Check if already clocked in today (WAT calendar day)
       const existing = await prisma.attendanceRecord.findFirst({
         where: { userId, date: todayStr }
       });
 
       if (existing) {
-        return NextResponse.json({ 
-          success: false, 
+        return NextResponse.json({
+          success: false,
           message: 'User has already clocked in for today.',
-          record: existing 
+          record: formatRecord({ ...existing, user: null })
         }, { status: 400 });
       }
 
@@ -66,7 +83,8 @@ export async function POST(request: Request) {
           kpiAwarded,
           coordinates,
           notes
-        }
+        },
+        include: { user: { select: { id: true, name: true, avatar: true } } }
       });
 
       // Award KPI points in KpiScore and KpiLog
@@ -78,7 +96,7 @@ export async function POST(request: Request) {
             eventType: 'PUNCTUAL_ATTENDANCE',
             points: kpiAwarded,
             description: `On-time clock-in at ${timeStr} WAT (${locationTag || 'Lekki HQ'})`,
-            awardedAt: now
+            awardedAt: new Date()
           }
         });
 
@@ -102,9 +120,9 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         action: 'CLOCK_IN',
-        record,
+        record: formatRecord(record),
         kpiAwarded,
-        message: isLate 
+        message: isLate
           ? `Clocked in at ${timeStr} (Flagged Late). 0 KPI points awarded.`
           : `Punctual clock-in recorded at ${timeStr} WAT! +${kpiAwarded} KPI points awarded.`
       });
@@ -125,13 +143,14 @@ export async function POST(request: Request) {
         data: {
           clockOutTime: timeStr,
           notes: notes ? `${existing.notes || ''} | Out: ${notes}` : existing.notes
-        }
+        },
+        include: { user: { select: { id: true, name: true, avatar: true } } }
       });
 
       return NextResponse.json({
         success: true,
         action: 'CLOCK_OUT',
-        record,
+        record: formatRecord(record),
         message: `Clocked out successfully at ${timeStr} WAT.`
       });
     }

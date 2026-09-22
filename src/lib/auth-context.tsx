@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { getStoredData, setStoredData, clearDatabase } from './storage';
 import { apiClient } from './api-client';
+import { getWATDateStr, getWATTimeStr } from './wat-time';
 import { 
   UserProfile, 
   TaskItem, 
@@ -585,7 +586,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let isMounted = true;
     async function syncWithNeonCloud() {
       try {
-        const [cloudLeaves, cloudTasks, cloudOpps, cloudBudgets, cloudPettyCash, cloudQaReviews, cloudCompliance, cloudPayroll, cloudCandidates, cloudDocuments, cloudFolders, cloudHardware, cloudKpiConfig, cloudStaffQueries] = await Promise.allSettled([
+        const [cloudLeaves, cloudTasks, cloudOpps, cloudBudgets, cloudPettyCash, cloudQaReviews, cloudCompliance, cloudPayroll, cloudCandidates, cloudDocuments, cloudFolders, cloudHardware, cloudKpiConfig, cloudStaffQueries, cloudAttendance] = await Promise.allSettled([
           apiClient.getLeaveRequests(),
           apiClient.getTasks(),
           apiClient.getOpportunities(),
@@ -599,7 +600,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           apiClient.getDocumentFolders(),
           apiClient.getHardwareAssets(),
           apiClient.getKpiConfig(),
-          apiClient.getStaffQueries()
+          apiClient.getStaffQueries(),
+          apiClient.getAttendance()
         ]);
 
         if (!isMounted) return;
@@ -649,6 +651,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         if (cloudStaffQueries.status === 'fulfilled' && cloudStaffQueries.value && cloudStaffQueries.value.length > 0) {
           setStaffQueries(cloudStaffQueries.value);
+        }
+        if (cloudAttendance.status === 'fulfilled' && cloudAttendance.value && cloudAttendance.value.length > 0) {
+          setAttendanceRecords(cloudAttendance.value);
         }
       } catch (err) {
         console.warn('[AquaEarth] Background Neon cloud sync note:', err);
@@ -828,12 +833,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getWATDateStr();
   const todayAttendance = attendanceRecords.find(a => a.userId === currentUser.id && a.date === todayStr);
 
   const clockIn = (locationTag: string, coordinates?: string) => {
     const now = new Date();
-    const timeStr = now.toTimeString().split(' ')[0];
+    const timeStr = getWATTimeStr();
     const [hours, minutes] = timeStr.split(':').map(Number);
     const isLate = hours > 8 || (hours === 8 && minutes > 15);
     const status = isLate ? 'LATE' : 'PRESENT';
@@ -889,6 +894,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       locationTag: locationTag || 'Lekki HQ',
       coordinates,
       notes: `Clocked in via platform (${status})`
+    }).then((res: any) => {
+      if (res && res.success && res.record) {
+        setAttendanceRecords(prev => prev.map(a => a.id === newRecord.id ? { ...a, id: res.record.id } : a));
+      }
     }).catch(err => console.warn('[AquaEarth] Attendance cloud sync warning:', err));
 
     return {
@@ -900,7 +909,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const clockOut = (notes?: string) => {
     const now = new Date();
-    const timeStr = now.toTimeString().split(' ')[0];
+    const timeStr = getWATTimeStr();
 
     setAttendanceRecords(prev => prev.map(a => {
       if (a.userId === currentUser.id && a.date === todayStr) {
@@ -924,6 +933,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       timestamp: now.toISOString().replace('T', ' ').substring(0, 19)
     };
     setAuditLogs(prev => [audit, ...prev]);
+
+    // Asynchronous Cloud Database Sync with Neon
+    apiClient.recordAttendance({
+      action: 'CLOCK_OUT',
+      userId: currentUser.id,
+      notes
+    }).catch(err => console.warn('[AquaEarth] Attendance clock-out cloud sync warning:', err));
 
     return { success: true, message: `Clocked out successfully at ${timeStr} WAT.` };
   };
