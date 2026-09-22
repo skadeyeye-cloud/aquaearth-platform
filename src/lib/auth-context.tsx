@@ -575,7 +575,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Cloud Database Sync: background sync with Neon PostgreSQL
+  // Cloud Database Sync: background sync with Neon PostgreSQL.
+  // Runs on mount, on a recurring interval, and whenever the tab regains
+  // focus/visibility, so other users' changes show up without a manual
+  // page refresh (Postgres has no built-in push/realtime layer, so
+  // polling is the right-sized way to get this without standing up a
+  // separate realtime service).
   useEffect(() => {
     let isMounted = true;
     async function syncWithNeonCloud() {
@@ -651,7 +656,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     syncWithNeonCloud();
-    return () => { isMounted = false; };
+
+    // Poll periodically so open tabs pick up changes made elsewhere
+    const intervalId = setInterval(syncWithNeonCloud, 25000);
+
+    // Also resync immediately when the user comes back to this tab,
+    // rather than waiting for the next interval tick
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') syncWithNeonCloud();
+    };
+    window.addEventListener('focus', syncWithNeonCloud);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+      window.removeEventListener('focus', syncWithNeonCloud);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, []);
 
   // Theme synchronization to DOM
