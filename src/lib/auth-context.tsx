@@ -11,7 +11,8 @@ import {
   SupportTicket, 
   LeaveItem, 
   CertificationItem, 
-  KpiLeaderboardEntry, 
+  KpiLeaderboardEntry,
+  KpiScoreEvent, 
   AuditRecord,
   OpportunityItem,
   ClientAccount,
@@ -121,6 +122,7 @@ interface AuthContextType {
   leaveRequests: LeaveItem[];
   certifications: CertificationItem[];
   leaderboard: KpiLeaderboardEntry[];
+  kpiScoreEvents: KpiScoreEvent[];
   auditLogs: AuditRecord[];
   opportunities: OpportunityItem[];
   clients: ClientAccount[];
@@ -328,6 +330,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [leaveRequests, setLeaveRequests] = useState<LeaveItem[]>(INITIAL_LEAVE);
   const [certifications, setCertifications] = useState<CertificationItem[]>(INITIAL_CERTIFICATIONS);
   const [leaderboard, setLeaderboard] = useState<KpiLeaderboardEntry[]>(INITIAL_KPI_LEADERBOARD);
+  const [kpiScoreEvents, setKpiScoreEvents] = useState<KpiScoreEvent[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditRecord[]>(INITIAL_AUDIT_LOGS);
   const [opportunities, setOpportunities] = useState<OpportunityItem[]>(INITIAL_OPPORTUNITIES);
   const [clients, setClients] = useState<ClientAccount[]>(INITIAL_CLIENTS);
@@ -507,6 +510,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const storedLeaderboard = getStoredData<KpiLeaderboardEntry[]>('leaderboard', INITIAL_KPI_LEADERBOARD);
       setLeaderboard(storedLeaderboard || []);
 
+      const storedKpiEvents = getStoredData<KpiScoreEvent[]>('kpi_score_events', []);
+      setKpiScoreEvents(storedKpiEvents || []);
+
       const storedKpiConfig = getStoredData<KpiScoringConfig>('kpi_scoring_config', DEFAULT_KPI_CONFIG);
       setKpiConfig(storedKpiConfig || DEFAULT_KPI_CONFIG);
 
@@ -592,7 +598,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let isMounted = true;
     async function syncWithNeonCloud() {
       try {
-        const [cloudLeaves, cloudTasks, cloudOpps, cloudBudgets, cloudPettyCash, cloudQaReviews, cloudCompliance, cloudPayroll, cloudCandidates, cloudDocuments, cloudFolders, cloudHardware, cloudKpiConfig, cloudStaffQueries, cloudAttendance] = await Promise.allSettled([
+        const [cloudLeaves, cloudTasks, cloudOpps, cloudBudgets, cloudPettyCash, cloudQaReviews, cloudCompliance, cloudPayroll, cloudCandidates, cloudDocuments, cloudFolders, cloudHardware, cloudKpiConfig, cloudStaffQueries, cloudAttendance, cloudKpiEvents, cloudProjects, cloudInvoices] = await Promise.allSettled([
           apiClient.getLeaveRequests(),
           apiClient.getTasks(),
           apiClient.getOpportunities(),
@@ -607,7 +613,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           apiClient.getHardwareAssets(),
           apiClient.getKpiConfig(),
           apiClient.getStaffQueries(),
-          apiClient.getAttendance()
+          apiClient.getAttendance(),
+          apiClient.getKpiScoreEvents(),
+          apiClient.getProjects(),
+          apiClient.getInvoices()
         ]);
 
         if (!isMounted) return;
@@ -660,6 +669,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         if (cloudAttendance.status === 'fulfilled' && cloudAttendance.value && cloudAttendance.value.length > 0) {
           setAttendanceRecords(cloudAttendance.value);
+        }
+        if (cloudKpiEvents.status === 'fulfilled' && cloudKpiEvents.value && cloudKpiEvents.value.length > 0) {
+          setKpiScoreEvents(cloudKpiEvents.value);
+        }
+        if (cloudProjects.status === 'fulfilled' && cloudProjects.value && cloudProjects.value.length > 0) {
+          setProjects(cloudProjects.value);
+        }
+        if (cloudInvoices.status === 'fulfilled' && cloudInvoices.value && cloudInvoices.value.length > 0) {
+          setInvoices(cloudInvoices.value);
         }
       } catch (err) {
         console.warn('[AquaEarth] Background Neon cloud sync note:', err);
@@ -767,6 +785,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [leaderboard]);
 
   useEffect(() => {
+    if (isHydrated.current) setStoredData('kpi_score_events', kpiScoreEvents);
+  }, [kpiScoreEvents]);
+
+  useEffect(() => {
     if (isHydrated.current) setStoredData('kpi_scoring_config', kpiConfig);
   }, [kpiConfig]);
 
@@ -841,6 +863,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  // Logs one or more dated, attributable point awards to the KPI ledger —
+  // this is what lets the leaderboard be sliced by week/month/quarter/half/
+  // year later, instead of only ever showing the one running all-time total.
+  // Call this alongside (never instead of) the existing setLeaderboard
+  // mutation at each point-awarding site.
+  const logKpiScoreEvent = (events: Array<{ userId: string; points: number; reason: string; sourceType: KpiScoreEvent['sourceType']; sourceId?: string }>) => {
+    const nonZero = events.filter(e => e.points !== 0);
+    if (nonZero.length === 0) return;
+    const occurredAt = getWATDateStr();
+    const newEvents: KpiScoreEvent[] = nonZero.map((e, idx) => {
+      const user = allUsers.find(u => u.id === e.userId);
+      return {
+        id: `kse-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 6)}`,
+        userId: e.userId,
+        userName: user?.name || e.userId,
+        points: e.points,
+        reason: e.reason,
+        sourceType: e.sourceType,
+        sourceId: e.sourceId,
+        occurredAt
+      };
+    });
+    setKpiScoreEvents(prev => [...newEvents, ...prev]);
+    newEvents.forEach(ev => {
+      apiClient.createKpiScoreEvent(ev).catch(err => console.warn('[AquaEarth] KPI score event cloud sync warning:', err));
+    });
+  };
+
   const todayStr = getWATDateStr();
   const todayAttendance = attendanceRecords.find(a => a.userId === currentUser.id && a.date === todayStr);
 
@@ -881,6 +931,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         return updated.sort((a, b) => b.totalScore - a.totalScore).map((item, idx) => ({ ...item, rankPosition: idx + 1 }));
       });
+      logKpiScoreEvent([{ userId: currentUser.id, points: kpiAwarded, reason: `On-time clock-in (${locationTag})`, sourceType: 'ATTENDANCE', sourceId: newRecord.id }]);
     }
 
     const audit: AuditRecord = {
@@ -1524,6 +1575,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             });
             return updated.sort((a, b) => b.totalScore - a.totalScore).map((item, idx) => ({ ...item, rankPosition: idx + 1 }));
           });
+          logKpiScoreEvent(
+            Object.entries(pointsMap).map(([userId, points]) => ({
+              userId,
+              points,
+              reason: `Task: "${t.title}"`,
+              sourceType: 'TASK' as const,
+              sourceId: t.id
+            }))
+          );
         }
 
         return updatedTask;
@@ -2036,6 +2096,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
     };
     setAuditLogs(prev => [audit, ...prev]);
+
+    apiClient.createProject(newProj).then((res: any) => {
+      if (res && res.success && res.project) {
+        setProjects(prev => prev.map(p => p.id === newProj.id ? { ...p, id: res.project.id } : p));
+      }
+    }).catch(err => console.warn('[AquaEarth] Project creation cloud sync warning:', err));
+
     return newProj;
   };
 
@@ -2049,6 +2116,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       return p;
     }));
+
+    apiClient.updateProject(projectId, updates)
+      .catch(err => console.warn('[AquaEarth] Project edit cloud sync warning:', err));
 
     if (updates.title) {
       setTasks(prev => prev.map(t => t.projectId === projectId ? { ...t, projectName: updates.title! } : t));
@@ -2490,6 +2560,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       return entry;
     }).sort((a, b) => b.totalScore - a.totalScore).map((item, idx) => ({ ...item, rankPosition: idx + 1 })));
+    logKpiScoreEvent([{ userId, points: cappedPoints, reason: `Bonus: ${note}`, sourceType: 'BONUS', sourceId: newBonus.id }]);
 
     // Send notification
     const notif: NotificationItem = {
@@ -2674,6 +2745,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       return updated.sort((a, b) => b.totalScore - a.totalScore).map((item, idx) => ({ ...item, rankPosition: idx + 1 }));
     });
+    logKpiScoreEvent([{ userId: recordData.technicianId, points: pts.totalPoints, reason: `Field record: ${recordData.projectName} (${recordData.samplePointId})`, sourceType: 'FIELD_FORM', sourceId: newRecord.id }]);
 
     const audit: AuditRecord = {
       id: `aud-${Date.now()}`,
@@ -2860,6 +2932,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         return updated.sort((a, b) => b.totalScore - a.totalScore).map((item, idx) => ({ ...item, rankPosition: idx + 1 }));
       });
+      logKpiScoreEvent(
+        Array.from(new Set([currentQa.authorId, currentUser.id])).map(userId => ({
+          userId,
+          points: pts.totalPoints,
+          reason: `QA review completed: "${currentQa.documentId}"`,
+          sourceType: 'QA_REVIEW' as const,
+          sourceId: qaId
+        }))
+      );
 
       setDocuments(dPrev => dPrev.map(d => d.id === currentQa.documentId ? { ...d, qaStatus: 'RELEASED_TO_CLIENT', version: 'v1.0 Final' } : d));
       apiClient.updateDocument(currentQa.documentId, { qaStatus: 'RELEASED_TO_CLIENT', version: 'v1.0 Final' }).catch(err => console.warn('[AquaEarth] Document release cloud sync warning:', err));
@@ -5084,6 +5165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       leaveRequests,
       certifications,
       leaderboard,
+      kpiScoreEvents,
       auditLogs,
       opportunities,
       clients,

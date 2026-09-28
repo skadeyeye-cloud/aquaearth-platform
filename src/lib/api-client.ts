@@ -136,6 +136,49 @@ export const apiClient = {
     }
   },
 
+  // Projects
+  async getProjects() {
+    try {
+      const res = await fetch('/api/projects');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      return data.success ? data.projects : null;
+    } catch (err) {
+      console.warn('[apiClient] getProjects fallback:', err);
+      return null;
+    }
+  },
+
+  async createProject(payload: Record<string, any>) {
+    try {
+      const res = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      console.warn('[apiClient] createProject failed:', err);
+      return { success: false, error: String(err) };
+    }
+  },
+
+  async updateProject(id: string, updates: Record<string, any>) {
+    try {
+      const res = await fetch('/api/projects', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, ...updates })
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      console.warn('[apiClient] updateProject failed:', err);
+      return { success: false, error: String(err) };
+    }
+  },
+
   // BD Opportunities
   async getOpportunities() {
     try {
@@ -805,6 +848,34 @@ export const apiClient = {
       return await res.json();
     } catch (err) {
       console.warn('[apiClient] saveKpiConfig failed:', err);
+      return { success: false, error: String(err) };
+    }
+  },
+
+  // KPI Score Events (dated ledger behind the per-period leaderboard)
+  async getKpiScoreEvents() {
+    try {
+      const res = await fetch('/api/kpi-events');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      return data.success ? data.events : null;
+    } catch (err) {
+      console.warn('[apiClient] getKpiScoreEvents fallback:', err);
+      return null;
+    }
+  },
+
+  async createKpiScoreEvent(payload: { userId: string; userName: string; points: number; reason: string; sourceType: string; sourceId?: string; occurredAt: string }) {
+    try {
+      const res = await fetch('/api/kpi-events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      console.warn('[apiClient] createKpiScoreEvent failed:', err);
       return { success: false, error: String(err) };
     }
   },
