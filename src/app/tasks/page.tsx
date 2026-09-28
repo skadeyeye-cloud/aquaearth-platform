@@ -195,6 +195,15 @@ export default function MyTasksPage() {
     }
   }, [canAccessManagerBoard, activeTab]);
 
+  // Enforce: "All Company Records" is need-to-know — only Superadmins may view
+  // completed deliverables across the whole company. Everyone else falls back
+  // to their own records the moment they land on this sub-filter.
+  React.useEffect(() => {
+    if (!isSuperadmin && archiveSubFilter === 'ALL') {
+      setArchiveSubFilter('MY_COMPLETED');
+    }
+  }, [isSuperadmin, archiveSubFilter]);
+
   const isTaskPM = (task: TaskItem | null) => {
     if (!task) return false;
     if (isSuperadmin) return true;
@@ -305,8 +314,18 @@ export default function MyTasksPage() {
     return t.approvalStatus === 'PENDING_APPROVAL' && (t.managerId === currentUser.id || supervisedUserIds.has(t.assigneeId));
   });
 
-  // 5. Completed Tasks
-  const completedTasks = tasks.filter(t => t.status === 'DONE' && isTaskVisible(t));
+  // 5. Completed Tasks — need-to-know: a Superadmin sees the full company
+  // archive, everyone else only sees records they assigned, executed, or
+  // that belong to their own department.
+  const completedTasks = tasks.filter(t => t.status === 'DONE' && isTaskVisible(t) && (
+    isSuperadmin ||
+    t.assignedById === currentUser.id ||
+    t.managerId === currentUser.id ||
+    t.completedById === currentUser.id ||
+    t.assigneeId === currentUser.id ||
+    t.departmentName === currentUser.departmentName ||
+    t.departmentId === currentUser.departmentId
+  ));
 
   const getFilteredList = () => {
     let list: TaskItem[] = [];
@@ -590,7 +609,7 @@ export default function MyTasksPage() {
         </div>
 
         <div 
-          onClick={() => { setActiveTab('COMPLETED_ARCHIVE'); setArchiveSubFilter('ALL'); }}
+          onClick={() => { setActiveTab('COMPLETED_ARCHIVE'); setArchiveSubFilter(isSuperadmin ? 'ALL' : 'MY_COMPLETED'); }}
           className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-xs space-y-1 ${
             activeTab === 'COMPLETED_ARCHIVE'
               ? 'bg-emerald-600 text-white border-transparent ring-2 ring-emerald-400/40'
@@ -759,14 +778,16 @@ export default function MyTasksPage() {
               Documentation Scope:
             </span>
             <div className="flex items-center gap-1 bg-white/70 dark:bg-black/40 p-1 rounded-xl border border-emerald-500/20">
-              <button
-                onClick={() => setArchiveSubFilter('ALL')}
-                className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold ${
-                  archiveSubFilter === 'ALL' ? 'bg-emerald-600 text-white' : 'text-slate-600 dark:text-slate-400'
-                }`}
-              >
-                All Company Records ({completedTasks.length})
-              </button>
+              {isSuperadmin && (
+                <button
+                  onClick={() => setArchiveSubFilter('ALL')}
+                  className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold ${
+                    archiveSubFilter === 'ALL' ? 'bg-emerald-600 text-white' : 'text-slate-600 dark:text-slate-400'
+                  }`}
+                >
+                  All Company Records ({completedTasks.length})
+                </button>
+              )}
               <button
                 onClick={() => setArchiveSubFilter('ASSIGNED_BY_ME')}
                 className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold ${
