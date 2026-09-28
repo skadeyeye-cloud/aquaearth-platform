@@ -666,8 +666,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     syncWithNeonCloud();
 
-    // Poll periodically so open tabs pick up changes made elsewhere
-    const intervalId = setInterval(syncWithNeonCloud, 25000);
+    // Poll periodically so open tabs pick up changes made elsewhere.
+    // Short interval so a colleague's change shows up while you're sitting
+    // on the page, not just when you refresh or switch tabs back in.
+    const intervalId = setInterval(syncWithNeonCloud, 6000);
 
     // Also resync immediately when the user comes back to this tab,
     // rather than waiting for the next interval tick
