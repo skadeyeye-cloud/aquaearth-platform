@@ -13,10 +13,7 @@ import {
   CheckCircle2,
   Eye,
   EyeOff,
-  ShieldAlert,
-  Copy,
-  Check,
-  Info
+  ShieldAlert
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -37,8 +34,6 @@ export default function LoginPage() {
   const [lockoutSeconds, setLockoutSeconds] = useState(0);
   const [shakeKey, setShakeKey] = useState(0);
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
-  const [showCredsHelper, setShowCredsHelper] = useState(false);
-  const [copiedKey, setCopiedKey] = useState(false);
 
   // Request access form state
   const [reqFullName, setReqFullName] = useState('');
@@ -100,12 +95,6 @@ export default function LoginPage() {
       }
       setPassword('');
     }
-  };
-
-  const handleCopyPassword = () => {
-    navigator.clipboard.writeText('AquaEarth@2026!');
-    setCopiedKey(true);
-    setTimeout(() => setCopiedKey(false), 2000);
   };
 
   const handleRequestAccess = (e: React.FormEvent) => {
@@ -279,75 +268,6 @@ export default function LoginPage() {
               )}
             </button>
 
-            {/* Authorized Personnel Directory & Testing Credentials */}
-            <div className="pt-3 border-t border-black/[0.06] dark:border-white/[0.08]">
-              <button
-                type="button"
-                onClick={() => setShowCredsHelper(!showCredsHelper)}
-                className="w-full py-1.5 px-2.5 rounded-xl bg-slate-100/80 dark:bg-white/[0.04] hover:bg-slate-200/70 dark:hover:bg-white/[0.08] text-[11px] font-semibold text-slate-600 dark:text-slate-300 flex items-center justify-between transition-colors cursor-pointer"
-              >
-                <span className="flex items-center gap-1.5">
-                  <KeyRound className="w-3.5 h-3.5 text-emerald-500" />
-                  Corporate Credentials Directory
-                </span>
-                <span className="text-[10px] text-slate-400 font-normal">
-                  {showCredsHelper ? 'Hide' : 'View'}
-                </span>
-              </button>
-
-              <AnimatePresence>
-                {showCredsHelper && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="overflow-hidden space-y-2.5 pt-2.5"
-                  >
-                    {/* Master Password Box */}
-                    <div className="p-2.5 bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center justify-between">
-                      <div>
-                        <div className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400 tracking-wider">Default Corporate Key</div>
-                        <div className="font-mono text-xs font-bold text-slate-900 dark:text-white mt-0.5">AquaEarth@2026!</div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleCopyPassword}
-                        className="px-2.5 py-1 bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/20 text-slate-700 dark:text-slate-200 rounded-lg text-[10px] font-semibold border border-black/10 dark:border-white/10 flex items-center gap-1 transition-colors cursor-pointer"
-                      >
-                        {copiedKey ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
-                        <span>{copiedKey ? 'Copied' : 'Copy Key'}</span>
-                      </button>
-                    </div>
-
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400">
-                      Select any corporate profile to populate the email. Enter <code className="bg-slate-100 dark:bg-white/10 px-1 py-0.5 rounded font-mono text-[10px] text-slate-900 dark:text-white">AquaEarth@2026!</code> to authenticate:
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {[
-                        { name: 'Dr. Kaine Edike', role: 'Superadmin', email: 'kaine.edike@aquaearth.com' },
-                        { name: 'Chidi Okafor', role: 'IT Lead', email: 'chidi.okafor@aquaearth.com' },
-                        { name: 'Engr. Femi Adebayo', role: 'Geotech PM', email: 'femi.adebayo@aquaearth.com' },
-                        { name: 'Amina Bello', role: 'HR Lead', email: 'amina.bello@aquaearth.com' },
-                      ].map((item) => (
-                        <button
-                          key={item.email}
-                          type="button"
-                          onClick={() => {
-                            setEmail(item.email);
-                            setErrorMsg('');
-                          }}
-                          className="p-2 text-left bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-black/5 dark:hover:border-white/10"
-                        >
-                          <div className="text-[11px] font-bold text-slate-800 dark:text-slate-200 truncate">{item.name}</div>
-                          <div className="text-[9px] text-slate-400 truncate">{item.role}</div>
-                        </button>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
           </form>
         )}
 
