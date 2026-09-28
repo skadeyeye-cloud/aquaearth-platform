@@ -41,13 +41,65 @@ import { getPerformanceTier } from '@/lib/kpi-engine';
 
 type HorizonType = 'WEEK' | 'MONTH' | 'QUARTER' | 'H1_H2' | 'YEAR';
 
+// Real per-period leaderboard slicing (admins only) — distinct from the
+// personal-breakdown "horizon" projection above, which just multiplies the
+// current month's score by a fixed factor rather than showing real numbers.
+type StandingsPeriod = 'ALL_TIME' | 'WEEK' | 'MONTH' | 'QUARTER' | 'H1' | 'H2' | 'YEAR';
+
+function getPeriodRange(period: StandingsPeriod, offset: number, today: Date): { start: Date; end: Date; label: string } {
+  const y = today.getFullYear();
+
+  if (period === 'WEEK') {
+    const day = today.getDay(); // 0=Sun..6=Sat
+    const diffToMonday = day === 0 ? -6 : 1 - day;
+    const start = new Date(today);
+    start.setHours(0, 0, 0, 0);
+    start.setDate(today.getDate() + diffToMonday + offset * 7);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    end.setHours(23, 59, 59, 999);
+    const fmt = (d: Date) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+    return { start, end, label: `Week of ${fmt(start)} – ${fmt(end)}, ${end.getFullYear()}` };
+  }
+  if (period === 'MONTH') {
+    const m = today.getMonth() + offset;
+    const start = new Date(y, m, 1);
+    const end = new Date(y, m + 1, 0, 23, 59, 59, 999);
+    return { start, end, label: start.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) };
+  }
+  if (period === 'QUARTER') {
+    const qIndex = Math.floor(today.getMonth() / 3) + offset;
+    const yearAdj = y + Math.floor(qIndex / 4);
+    const qInYear = ((qIndex % 4) + 4) % 4;
+    const start = new Date(yearAdj, qInYear * 3, 1);
+    const end = new Date(yearAdj, qInYear * 3 + 3, 0, 23, 59, 59, 999);
+    return { start, end, label: `Q${qInYear + 1} ${yearAdj}` };
+  }
+  if (period === 'H1' || period === 'H2') {
+    const yearAdj = y + offset;
+    const isH1 = period === 'H1';
+    const start = new Date(yearAdj, isH1 ? 0 : 6, 1);
+    const end = new Date(yearAdj, isH1 ? 6 : 12, 0, 23, 59, 59, 999);
+    return { start, end, label: `${period === 'H1' ? 'H1 (Jan–Jun)' : 'H2 (Jul–Dec)'} ${yearAdj}` };
+  }
+  if (period === 'YEAR') {
+    const yearAdj = y + offset;
+    const start = new Date(yearAdj, 0, 1);
+    const end = new Date(yearAdj, 11, 31, 23, 59, 59, 999);
+    return { start, end, label: `${yearAdj}` };
+  }
+  return { start: new Date(0), end: today, label: 'All Time' };
+}
+
 export default function KpiLeaderboardPage() {
-  const { leaderboard, currentUser, allUsers, tasks, kpiConfig } = useAuth();
+  const { leaderboard, currentUser, allUsers, tasks, kpiConfig, kpiScoreEvents } = useAuth();
   const [selectedMonth, setSelectedMonth] = useState('2026-09');
   const [deptFilter, setDeptFilter] = useState('ALL');
   const [drilldownEntry, setDrilldownEntry] = useState<KpiLeaderboardEntry | null>(null);
   const [isWeightsModalOpen, setIsWeightsModalOpen] = useState(false);
   const [horizon, setHorizon] = useState<HorizonType>('MONTH');
+  const [standingsPeriod, setStandingsPeriod] = useState<StandingsPeriod>('ALL_TIME');
+  const [periodOffset, setPeriodOffset] = useState(0);
 
   // Role Scoping Flags
   const isSuperadmin = currentUser.accessTier === 'SUPERADMIN' || 
@@ -76,15 +128,55 @@ export default function KpiLeaderboardPage() {
   );
   const supervisedUserIds = new Set(supervisedUsers.map(u => u.id));
 
+  // Real per-period standings (admins only): computed fresh from the dated
+  // KPI event ledger for whichever period is selected, rather than the one
+  // running all-time total. The ledger only has data from whenever this
+  // feature was deployed forward — periods entirely before that will be
+  // empty, which is expected and called out in the UI rather than faked.
+  const periodRange = getPeriodRange(standingsPeriod, periodOffset, new Date());
+  const periodScopedEntries: KpiLeaderboardEntry[] = React.useMemo(() => {
+    if (standingsPeriod === 'ALL_TIME') return leaderboard;
+    const inRange = kpiScoreEvents.filter(e => {
+      const d = new Date(e.occurredAt);
+      return d >= periodRange.start && d <= periodRange.end;
+    });
+    const byUser: Record<string, { totalScore: number; completedCount: number }> = {};
+    inRange.forEach(e => {
+      if (!byUser[e.userId]) byUser[e.userId] = { totalScore: 0, completedCount: 0 };
+      byUser[e.userId].totalScore += e.points;
+      if (e.sourceType !== 'BONUS') byUser[e.userId].completedCount += 1;
+    });
+    const entries: KpiLeaderboardEntry[] = Object.entries(byUser).map(([userId, agg]) => {
+      const user = allUsers.find(u => u.id === userId);
+      return {
+        userId,
+        name: user?.name || userId,
+        avatar: user?.avatar,
+        jobTitle: user?.jobTitle || '',
+        departmentName: user?.departmentName || '',
+        totalScore: Math.round(agg.totalScore),
+        completedCount: agg.completedCount,
+        onTimeCount: agg.completedCount,
+        overdueCount: 0,
+        rankPosition: 0,
+        monthYear: ''
+      };
+    });
+    return entries.sort((a, b) => b.totalScore - a.totalScore).map((e, idx) => ({ ...e, rankPosition: idx + 1 }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [standingsPeriod, periodOffset, kpiScoreEvents, leaderboard, allUsers]);
+
+  const sourceEntries = standingsPeriod === 'ALL_TIME' ? leaderboard : periodScopedEntries;
+
   // Determine allowed entries based on role
-  let scopedEntries = leaderboard;
+  let scopedEntries = sourceEntries;
 
   if (isSuperadmin || isHr) {
-    scopedEntries = leaderboard;
+    scopedEntries = sourceEntries;
   } else if (isManagerOrLead) {
-    scopedEntries = leaderboard.filter(e => e.userId === currentUser.id || supervisedUserIds.has(e.userId));
+    scopedEntries = sourceEntries.filter(e => e.userId === currentUser.id || supervisedUserIds.has(e.userId));
   } else {
-    scopedEntries = leaderboard.filter(e => e.userId === currentUser.id);
+    scopedEntries = sourceEntries.filter(e => e.userId === currentUser.id);
   }
 
   const filteredEntries = scopedEntries.filter(e => {
@@ -310,9 +402,9 @@ export default function KpiLeaderboardPage() {
             </button>
           </div>
 
-          {/* Department Filter for Team view */}
+          {/* Department + Period Filters for Team view (admins only) */}
           {activeTab === 'TEAM_STANDINGS' && (isSuperadmin || isHr) && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
               <select
                 value={deptFilter}
                 onChange={(e) => setDeptFilter(e.target.value)}
@@ -326,8 +418,56 @@ export default function KpiLeaderboardPage() {
                 <option value="IT">IT & Digital</option>
                 <option value="Finance">Finance</option>
               </select>
+
+              <select
+                value={standingsPeriod}
+                onChange={(e) => { setStandingsPeriod(e.target.value as StandingsPeriod); setPeriodOffset(0); }}
+                className="px-2.5 py-1 bg-white dark:bg-[#121216] border border-black/[0.08] dark:border-white/[0.1] rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 cursor-pointer"
+              >
+                <option value="ALL_TIME">All Time</option>
+                <option value="WEEK">Weekly</option>
+                <option value="MONTH">Monthly</option>
+                <option value="QUARTER">Quarterly</option>
+                <option value="H1">H1 (Jan–Jun)</option>
+                <option value="H2">H2 (Jul–Dec)</option>
+                <option value="YEAR">Yearly</option>
+              </select>
+
+              {standingsPeriod !== 'ALL_TIME' && (
+                <div className="flex items-center gap-1 bg-white dark:bg-[#121216] border border-black/[0.08] dark:border-white/[0.1] rounded-xl px-1 py-1">
+                  <button
+                    type="button"
+                    onClick={() => setPeriodOffset(o => o - 1)}
+                    className="px-1.5 py-0.5 text-slate-500 hover:text-slate-900 dark:hover:text-white rounded-lg cursor-pointer"
+                    title="Previous period"
+                  >
+                    ‹
+                  </button>
+                  <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200 px-1 whitespace-nowrap tnum">
+                    {periodRange.label}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPeriodOffset(o => Math.min(0, o + 1))}
+                    disabled={periodOffset >= 0}
+                    className="px-1.5 py-0.5 text-slate-500 hover:text-slate-900 dark:hover:text-white rounded-lg cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Next period"
+                  >
+                    ›
+                  </button>
+                </div>
+              )}
             </div>
           )}
+        </div>
+      )}
+
+      {activeTab === 'TEAM_STANDINGS' && (isSuperadmin || isHr) && standingsPeriod !== 'ALL_TIME' && (
+        <div className="px-4 py-2.5 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800/40 rounded-2xl text-[11px] text-indigo-800 dark:text-indigo-300 flex items-center gap-2">
+          <Calendar className="w-3.5 h-3.5 shrink-0" />
+          <span>
+            Showing real point totals earned in <b>{periodRange.label}</b> only (not the running all-time score). Live tracking for period breakdowns started when this view shipped — periods before that will show no data.
+          </span>
         </div>
       )}
 

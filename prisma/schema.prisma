@@ -526,6 +526,21 @@ model QaReview {
   @@index([stage])
 }
 
+model KpiScoreEvent {
+  id         String   @id @default(uuid())
+  userId     String
+  userName   String
+  points     Float
+  reason     String
+  sourceType String
+  sourceId   String?
+  occurredAt DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([occurredAt])
+}
+
 model CompliancePermit {
   id                    String   @id @default(uuid())
   recordType            String   @default("PERMIT")

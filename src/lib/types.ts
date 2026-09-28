@@ -257,6 +257,20 @@ export interface KpiScoringConfig {
 
 export type PerformanceTier = 'NEEDS_IMPROVEMENT' | 'SATISFACTORY' | 'COMMENDABLE' | 'EXEMPLARY';
 
+// A single dated, attributable point award — the ledger that lets the
+// leaderboard be sliced by week/month/quarter/half/year rather than only
+// showing the one running all-time total.
+export interface KpiScoreEvent {
+  id: string;
+  userId: string;
+  userName: string;
+  points: number;
+  reason: string;
+  sourceType: 'TASK' | 'ATTENDANCE' | 'BONUS' | 'FIELD_FORM' | 'QA_REVIEW';
+  sourceId?: string;
+  occurredAt: string; // YYYY-MM-DD
+}
+
 export interface KpiLeaderboardEntry {
   userId: string;
   name: string;
