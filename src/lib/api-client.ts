@@ -537,6 +537,21 @@ export const apiClient = {
     }
   },
 
+  async createCompliancePermit(payload: Record<string, any>) {
+    try {
+      const res = await fetch('/api/compliance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      console.warn('[apiClient] createCompliancePermit failed:', err);
+      return { success: false, error: String(err) };
+    }
+  },
+
   async updateCompliancePermit(id: string, updates: Record<string, any>) {
     try {
       const res = await fetch('/api/compliance', {

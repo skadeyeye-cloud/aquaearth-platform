@@ -19,6 +19,36 @@ export async function GET() {
   }
 }
 
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const permit = await prisma.compliancePermit.create({
+      data: {
+        recordType: body.recordType || 'PERMIT',
+        permitTitle: body.permitTitle,
+        permitNumber: body.permitNumber,
+        licenseNumber: body.licenseNumber || null,
+        regulatoryBody: body.regulatoryBody,
+        projectId: body.projectId || null,
+        projectName: body.projectName || null,
+        status: body.status || 'ACTIVE',
+        issueDate: new Date(body.issueDate),
+        expiryDate: new Date(body.expiryDate),
+        daysRemaining: Number(body.daysRemaining) || 0,
+        statutoryFeeNgn: Number(body.statutoryFeeNgn) || 0,
+        feeReconciled: !!body.feeReconciled,
+        isRecurringCycle: !!body.isRecurringCycle,
+        cycleDurationYears: Number(body.cycleDurationYears) || 1,
+        officerInCharge: body.officerInCharge
+      }
+    });
+    return NextResponse.json({ success: true, permit: formatPermit(permit) });
+  } catch (error: any) {
+    console.error('[API /api/compliance POST error]', error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
 export async function PATCH(request: Request) {
   try {
     const body = await request.json();
@@ -29,7 +59,12 @@ export async function PATCH(request: Request) {
     }
 
     const updateData: any = {};
-    const allowedFields = ['status', 'daysRemaining', 'feeReconciled', 'stampedCertificateUrl'];
+    const allowedFields = [
+      'status', 'daysRemaining', 'feeReconciled', 'stampedCertificateUrl',
+      'recordType', 'permitTitle', 'permitNumber', 'licenseNumber', 'regulatoryBody',
+      'projectId', 'projectName', 'statutoryFeeNgn', 'officerInCharge',
+      'isRecurringCycle', 'cycleDurationYears'
+    ];
     for (const field of allowedFields) {
       if (updates[field] !== undefined) updateData[field] = updates[field];
     }

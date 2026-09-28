@@ -301,6 +301,8 @@ interface AuthContextType {
   submitForQa: (docId: string, peerReviewerId: string, qaLeadId: string) => void;
   advanceQaReview: (qaId: string, action: 'APPROVED' | 'REJECTED', comment: string) => void;
   renewCompliancePermit: (permitId: string) => void;
+  createCompliancePermit: (data: Omit<CompliancePermit, 'id' | 'daysRemaining' | 'status'> & { daysRemaining?: number; status?: CompliancePermit['status'] }) => void;
+  editCompliancePermit: (permitId: string, updates: Partial<Omit<CompliancePermit, 'id'>>) => void;
   createInvoice: (inv: Omit<InvoiceItem, 'id' | 'invoiceNumber' | 'vatAmountNgn' | 'whtDeductionNgn' | 'netPayableNgn' | 'issuedDate'>) => void;
   markInvoicePaid: (invoiceId: string, whtCreditNumber?: string) => void;
   updateDigestRecipients: (recipients: string[]) => void;
@@ -2907,6 +2909,76 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAuditLogs(prev => [audit, ...prev]);
   };
 
+  // Derives status + daysRemaining from an expiry date, matching the
+  // convention used by seed data and renewCompliancePermit (a stored
+  // snapshot, not live-recomputed on every render).
+  const deriveComplianceStatus = (expiryDate: string): { status: CompliancePermit['status']; daysRemaining: number } => {
+    const days = Math.round((new Date(expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    const status: CompliancePermit['status'] = days < 0 ? 'EXPIRED' : days <= 60 ? 'EXPIRING_SOON' : 'ACTIVE';
+    return { status, daysRemaining: days };
+  };
+
+  const createCompliancePermit = (data: Omit<CompliancePermit, 'id' | 'daysRemaining' | 'status'> & { daysRemaining?: number; status?: CompliancePermit['status'] }) => {
+    const derived = deriveComplianceStatus(data.expiryDate);
+    const newRecord: CompliancePermit = {
+      ...data,
+      id: `comp-${Date.now()}`,
+      status: data.status || derived.status,
+      daysRemaining: data.daysRemaining ?? derived.daysRemaining
+    };
+
+    setCompliancePermits(prev => [newRecord, ...prev]);
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: newRecord.recordType === 'CONTRACT' ? 'COMPLIANCE_CONTRACT_CREATED' : 'STATUTORY_PERMIT_CREATED',
+      targetType: 'Compliance Permit',
+      targetId: newRecord.id,
+      details: `${currentUser.name} logged a new ${newRecord.recordType === 'CONTRACT' ? 'contract' : 'statutory permit'}: "${newRecord.permitTitle}" (${newRecord.permitNumber}), expiring ${newRecord.expiryDate}.`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+
+    apiClient.createCompliancePermit(newRecord).then((res: any) => {
+      if (res && res.success && res.permit) {
+        setCompliancePermits(prev => prev.map(p => p.id === newRecord.id ? { ...p, id: res.permit.id } : p));
+      }
+    }).catch(err => console.warn('[AquaEarth] Compliance record creation cloud sync warning:', err));
+  };
+
+  const editCompliancePermit = (permitId: string, updates: Partial<Omit<CompliancePermit, 'id'>>) => {
+    const target = compliancePermits.find(p => p.id === permitId);
+    if (!target) return;
+
+    // Re-derive status/days if the expiry date changed and the caller
+    // didn't explicitly override status.
+    const finalUpdates = { ...updates };
+    if (updates.expiryDate && !updates.status) {
+      const derived = deriveComplianceStatus(updates.expiryDate);
+      finalUpdates.status = derived.status;
+      finalUpdates.daysRemaining = derived.daysRemaining;
+    }
+
+    setCompliancePermits(prev => prev.map(p => p.id === permitId ? { ...p, ...finalUpdates } : p));
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: target.recordType === 'CONTRACT' ? 'COMPLIANCE_CONTRACT_EDITED' : 'STATUTORY_PERMIT_EDITED',
+      targetType: 'Compliance Permit',
+      targetId: permitId,
+      details: `${currentUser.name} edited "${target.permitTitle}" (${Object.keys(updates).join(', ')}).`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+
+    apiClient.updateCompliancePermit(permitId, finalUpdates)
+      .catch(err => console.warn('[AquaEarth] Compliance record edit cloud sync warning:', err));
+  };
+
   const createInvoice = (invData: Omit<InvoiceItem, 'id' | 'invoiceNumber' | 'vatAmountNgn' | 'whtDeductionNgn' | 'netPayableNgn' | 'issuedDate'>) => {
     const vat = (invData.subtotalNgn * invData.vatRatePercent) / 100;
     const wht = (invData.subtotalNgn * invData.whtRatePercent) / 100;
@@ -5082,6 +5154,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       submitForQa,
       advanceQaReview,
       renewCompliancePermit,
+      createCompliancePermit,
+      editCompliancePermit,
       createInvoice,
       markInvoicePaid,
       updateDigestRecipients,

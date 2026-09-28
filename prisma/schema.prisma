@@ -528,8 +528,10 @@ model QaReview {
 
 model CompliancePermit {
   id                    String   @id @default(uuid())
+  recordType            String   @default("PERMIT")
   permitTitle           String
   permitNumber          String   @unique
+  licenseNumber         String?
   regulatoryBody        String
   projectId             String?
   projectName           String?

@@ -528,9 +528,16 @@ export type RegulatoryBody = 'FMEnv' | 'NESREA' | 'NUPRC' | 'STATE_MOE' | 'NIWA'
 
 export interface CompliancePermit {
   id: string;
+  // PERMIT (statutory, e.g. FMEnv/NESREA) or CONTRACT (a tracked agreement
+  // with its own dates & license reference). Defaults to PERMIT for
+  // pre-existing records.
+  recordType?: 'PERMIT' | 'CONTRACT';
   permitTitle: string;
   permitNumber: string;
-  regulatoryBody: RegulatoryBody;
+  // Contracts may carry a separate license/registration number alongside
+  // their contract number.
+  licenseNumber?: string;
+  regulatoryBody: RegulatoryBody | string;
   projectId?: string;
   projectName?: string;
   status: 'ACTIVE' | 'EXPIRING_SOON' | 'EXPIRED' | 'RENEWAL_IN_PROGRESS';
