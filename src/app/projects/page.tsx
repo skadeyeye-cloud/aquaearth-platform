@@ -1810,7 +1810,7 @@ export default function ProjectsPage() {
                     <Sliders className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-[#1D1D1F] dark:text-[#F6F4F0]">Update Task Progress</h3>
+                    <h3 className="text-sm font-bold text-[#1D1D1F] dark:text-[#F6F4F0]">Task Details & Progress</h3>
                     <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-xs">{updatingTask.title}</p>
                   </div>
                 </div>
@@ -1826,6 +1826,42 @@ export default function ProjectsPage() {
                   </div>
                   <div className="text-[11px] text-slate-500 dark:text-slate-400">
                     Assigned to: <b className="text-slate-800 dark:text-slate-200">{updatingTask.assigneeName}</b> • Current Progress: <b className="text-indigo-600 dark:text-indigo-400 font-mono">{updatingTask.progressPercent || 0}%</b>
+                  </div>
+                  {updatingTask.description && (
+                    <p className="text-slate-700 dark:text-slate-300 pt-1 border-t border-black/[0.04] dark:border-white/[0.06] leading-relaxed">
+                      {updatingTask.description}
+                    </p>
+                  )}
+                </div>
+
+                {/* Comment History */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-900 dark:text-white">
+                    <span className="flex items-center gap-1.5">
+                      <MessageSquare className="w-3.5 h-3.5 text-indigo-500" />
+                      Comments & Update History
+                    </span>
+                    <span className="text-[10px] text-slate-400 tnum">{updatingTask.comments?.length || 0} Entries</span>
+                  </div>
+                  <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                    {(!updatingTask.comments || updatingTask.comments.length === 0) ? (
+                      <div className="py-4 text-center text-[11px] text-slate-400">
+                        No comments yet. Add an update note below.
+                      </div>
+                    ) : (
+                      updatingTask.comments.map((c) => (
+                        <div key={c.id} className="p-2.5 bg-slate-50 dark:bg-white/[0.03] rounded-xl border border-black/[0.04] dark:border-white/[0.06] space-y-0.5">
+                          <div className="flex items-center justify-between text-[10px]">
+                            <span className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                              {c.authorName}
+                              <span className="text-slate-400 font-normal">({c.authorRole})</span>
+                            </span>
+                            <span className="text-slate-400 font-mono tnum">{c.timestamp}</span>
+                          </div>
+                          <p className="text-slate-700 dark:text-slate-300 leading-relaxed text-[11px]">{c.text}</p>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
 
