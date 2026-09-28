@@ -299,6 +299,10 @@ export interface OpportunityItem {
   serviceLines: string[];
   estimatedValue: number;
   currency: 'NGN' | 'USD' | 'EUR' | 'GBP';
+  // Optional second currency portion — some deals are part-Naira, part-hard-currency
+  // (e.g. local logistics in NGN, international scope in USD).
+  secondaryValue?: number;
+  secondaryCurrency?: 'NGN' | 'USD' | 'EUR' | 'GBP';
   stage: OpportunityStage;
   source: string;
   referredByStaffId?: string;

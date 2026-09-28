@@ -261,6 +261,10 @@ interface AuthContextType {
   updateUserProfile: (userId: string, data: Partial<UserProfile>) => { success: boolean; message: string };
   requestPasswordChange: (userId: string, details: { currentPassword?: string; newPassword?: string; requestType: 'DIRECT' | 'ADMIN_RESET' }) => { success: boolean; message: string };
   createOpportunity: (opp: Omit<OpportunityItem, 'id' | 'createdAt'>) => void;
+  editOpportunity: (oppId: string, updates: Partial<Pick<OpportunityItem,
+    'title' | 'clientName' | 'serviceLines' | 'estimatedValue' | 'currency' | 'secondaryValue' | 'secondaryCurrency' |
+    'source' | 'referredByStaffId' | 'referredByStaffName' | 'submissionDeadline' | 'technicalLeadId' | 'technicalLeadName'
+  >>) => void;
   updateOpportunityStage: (oppId: string, newStage: OpportunityStage, reason?: string, competitor?: string) => { success: boolean; requiresApproval?: boolean };
   approveHighValueBid: (oppId: string) => void;
   convertWonToProject: (oppId: string) => string;
@@ -1820,6 +1824,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
     };
     setAuditLogs(prev => [audit, ...prev]);
+
+    apiClient.createOpportunity({
+      title: newOpp.title,
+      clientName: newOpp.clientName,
+      serviceLines: newOpp.serviceLines,
+      estimatedValue: newOpp.estimatedValue,
+      currency: newOpp.currency,
+      secondaryValue: newOpp.secondaryValue,
+      secondaryCurrency: newOpp.secondaryCurrency,
+      stage: newOpp.stage,
+      source: newOpp.source,
+      referredByStaffId: newOpp.referredByStaffId,
+      referredByStaffName: newOpp.referredByStaffName,
+      submissionDeadline: newOpp.submissionDeadline,
+      bdOwnerName: newOpp.bdOwnerName,
+      technicalLeadId: newOpp.technicalLeadId,
+      technicalLeadName: newOpp.technicalLeadName
+    }).then((res: any) => {
+      if (res && res.success && res.opportunity) {
+        setOpportunities(prev => prev.map(o => o.id === newOpp.id ? { ...o, id: res.opportunity.id } : o));
+      }
+    }).catch(err => console.warn('[AquaEarth] Opportunity creation cloud sync warning:', err));
+  };
+
+  const editOpportunity = (oppId: string, updates: Partial<Pick<OpportunityItem,
+    'title' | 'clientName' | 'serviceLines' | 'estimatedValue' | 'currency' | 'secondaryValue' | 'secondaryCurrency' |
+    'source' | 'referredByStaffId' | 'referredByStaffName' | 'submissionDeadline' | 'technicalLeadId' | 'technicalLeadName'
+  >>) => {
+    const opp = opportunities.find(o => o.id === oppId);
+    if (!opp) return;
+
+    setOpportunities(prev => prev.map(o => o.id === oppId ? { ...o, ...updates } : o));
+
+    const audit: AuditRecord = {
+      id: `aud-${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      action: 'OPPORTUNITY_EDITED',
+      targetType: 'Opportunity',
+      targetId: oppId,
+      details: `${currentUser.name} edited tender "${opp.title}" (${Object.keys(updates).join(', ')}).`,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setAuditLogs(prev => [audit, ...prev]);
+
+    apiClient.updateOpportunity(oppId, updates as any)
+      .catch(err => console.warn('[AquaEarth] Opportunity edit cloud sync warning:', err));
   };
 
   const updateOpportunityStage = (oppId: string, newStage: OpportunityStage, reason?: string, competitor?: string) => {
@@ -4994,6 +5045,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       updateUserRole,
       bulkImportUsers,
       createOpportunity,
+      editOpportunity,
       updateOpportunityStage,
       approveHighValueBid,
       convertWonToProject,

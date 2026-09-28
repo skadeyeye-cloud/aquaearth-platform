@@ -26,7 +26,8 @@ import {
   Filter,
   Check,
   Download,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Pencil
 } from 'lucide-react';
 import { OpportunityItem, OpportunityStage } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -49,8 +50,9 @@ export default function BdPipelinePage() {
     currentUser, 
     clients, 
     allUsers, 
-    createOpportunity, 
-    updateOpportunityStage, 
+    createOpportunity,
+    editOpportunity,
+    updateOpportunityStage,
     approveHighValueBid, 
     convertWonToProject 
   } = useAuth();
@@ -76,17 +78,79 @@ export default function BdPipelinePage() {
   const [serviceLines, setServiceLines] = useState<string[]>(['ESIA / EIA Studies']);
   const [estimatedValue, setEstimatedValue] = useState(45000000);
   const [currency, setCurrency] = useState<'NGN' | 'USD' | 'EUR' | 'GBP'>('NGN');
+  const [hasSecondaryValue, setHasSecondaryValue] = useState(false);
+  const [secondaryValue, setSecondaryValue] = useState(0);
+  const [secondaryCurrency, setSecondaryCurrency] = useState<'NGN' | 'USD' | 'EUR' | 'GBP'>('USD');
   const [source, setSource] = useState('Public Tender RFP');
   const [referredByStaffId, setReferredByStaffId] = useState('');
   const [submissionDeadline, setSubmissionDeadline] = useState('2026-09-18 17:00');
   const [technicalLeadId, setTechnicalLeadId] = useState('usr-4');
+
+  // Edit Opp Modal State
+  const [editingOpp, setEditingOpp] = useState<OpportunityItem | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editClientId, setEditClientId] = useState('');
+  const [editEstimatedValue, setEditEstimatedValue] = useState(0);
+  const [editCurrency, setEditCurrency] = useState<'NGN' | 'USD' | 'EUR' | 'GBP'>('NGN');
+  const [editHasSecondaryValue, setEditHasSecondaryValue] = useState(false);
+  const [editSecondaryValue, setEditSecondaryValue] = useState(0);
+  const [editSecondaryCurrency, setEditSecondaryCurrency] = useState<'NGN' | 'USD' | 'EUR' | 'GBP'>('USD');
+  const [editSource, setEditSource] = useState('Public Tender RFP');
+  const [editReferredByStaffId, setEditReferredByStaffId] = useState('');
+  const [editSubmissionDeadline, setEditSubmissionDeadline] = useState('');
+  const [editTechnicalLeadId, setEditTechnicalLeadId] = useState('');
+
+  const handleOpenEditOpp = (opp: OpportunityItem) => {
+    setEditingOpp(opp);
+    setEditTitle(opp.title);
+    setEditClientId(clients.find(c => c.name === opp.clientName)?.id || clients[0]?.id || '');
+    setEditEstimatedValue(opp.estimatedValue);
+    setEditCurrency(opp.currency);
+    setEditHasSecondaryValue(!!opp.secondaryValue);
+    setEditSecondaryValue(opp.secondaryValue || 0);
+    setEditSecondaryCurrency(opp.secondaryCurrency || (opp.currency === 'NGN' ? 'USD' : 'NGN'));
+    setEditSource(opp.referredByStaffId ? 'Staff / Employee Referral' : opp.source || 'Public Tender RFP');
+    setEditReferredByStaffId(opp.referredByStaffId || '');
+    setEditSubmissionDeadline(opp.submissionDeadline);
+    setEditTechnicalLeadId(opp.technicalLeadId || '');
+  };
+
+  const handleSaveEditOpp = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingOpp) return;
+    const client = clients.find(c => c.id === editClientId);
+    const techLead = allUsers.find(u => u.id === editTechnicalLeadId);
+    const referringStaff = allUsers.find(u => u.id === editReferredByStaffId);
+
+    editOpportunity(editingOpp.id, {
+      title: editTitle,
+      clientName: client?.name || editingOpp.clientName,
+      estimatedValue: Number(editEstimatedValue),
+      currency: editCurrency,
+      secondaryValue: editHasSecondaryValue ? Number(editSecondaryValue) : null as any,
+      secondaryCurrency: editHasSecondaryValue ? editSecondaryCurrency : null as any,
+      source: editSource === 'Staff / Employee Referral' && referringStaff ? `Employee Referral (${referringStaff.name})` : editSource,
+      referredByStaffId: editSource === 'Staff / Employee Referral' ? (editReferredByStaffId || null as any) : (null as any),
+      referredByStaffName: editSource === 'Staff / Employee Referral' ? (referringStaff?.name || null as any) : (null as any),
+      submissionDeadline: editSubmissionDeadline,
+      technicalLeadId: editTechnicalLeadId || (null as any),
+      technicalLeadName: techLead?.name || (null as any)
+    });
+
+    setEditingOpp(null);
+    haptics.success();
+  };
 
   const isManagingConsultant = currentUser.functionalRole === 'MANAGING_CONSULTANT' || currentUser.accessTier === 'SUPERADMIN';
 
   // Calculate pipeline summary stats
   const activeOpps = opportunities.filter(o => o.stage !== 'WON' && o.stage !== 'LOST');
   const totalActiveValueNGN = activeOpps.reduce((acc, curr) => {
-    return curr.currency === 'NGN' ? acc + curr.estimatedValue : acc + (curr.estimatedValue * 1550);
+    const primaryNGN = curr.currency === 'NGN' ? curr.estimatedValue : curr.estimatedValue * 1550;
+    const secondaryNGN = curr.secondaryValue
+      ? (curr.secondaryCurrency === 'NGN' ? curr.secondaryValue : curr.secondaryValue * 1550)
+      : 0;
+    return acc + primaryNGN + secondaryNGN;
   }, 0);
 
   const wonOpps = opportunities.filter(o => o.stage === 'WON');
@@ -131,6 +195,8 @@ export default function BdPipelinePage() {
       serviceLines,
       estimatedValue: Number(estimatedValue),
       currency,
+      secondaryValue: hasSecondaryValue ? Number(secondaryValue) : undefined,
+      secondaryCurrency: hasSecondaryValue ? secondaryCurrency : undefined,
       stage: 'IDENTIFIED',
       source: source === 'Staff / Employee Referral' && referringStaff ? `Employee Referral (${referringStaff.name})` : source,
       referredByStaffId: source === 'Staff / Employee Referral' ? referredByStaffId : undefined,
@@ -145,6 +211,8 @@ export default function BdPipelinePage() {
     setIsNewOppOpen(false);
     setTitle('');
     setReferredByStaffId('');
+    setHasSecondaryValue(false);
+    setSecondaryValue(0);
     haptics.success();
   };
 
@@ -376,9 +444,12 @@ export default function BdPipelinePage() {
               const isWon = opp.stage === 'WON';
               const isLost = opp.stage === 'LOST';
               const isHighValue = opp.estimatedValue >= 50000000 || (opp.currency === 'USD' && opp.estimatedValue >= 100000);
-              const formattedVal = opp.currency === 'NGN' 
-                ? `₦${(opp.estimatedValue / 1000000).toFixed(1)}M`
-                : `$${(opp.estimatedValue / 1000).toFixed(0)}k`;
+              const symbolFor = (c: string) => c === 'NGN' ? '₦' : c === 'USD' ? '$' : c === 'EUR' ? '€' : '£';
+              const shortAmount = (val: number, c: string) => c === 'NGN'
+                ? `${symbolFor(c)}${(val / 1000000).toFixed(1)}M`
+                : `${symbolFor(c)}${(val / 1000).toFixed(0)}k`;
+              const formattedVal = shortAmount(opp.estimatedValue, opp.currency);
+              const formattedSecondaryVal = opp.secondaryValue ? shortAmount(opp.secondaryValue, opp.secondaryCurrency || 'USD') : null;
 
               // Find step index for progressive active fill
               const currentStepIdx = PIPELINE_STEPS.findIndex(s => s.id === opp.stage);
@@ -441,12 +512,21 @@ export default function BdPipelinePage() {
                     <div className="flex items-center gap-3 shrink-0">
                       <div className="text-right">
                         <div className="text-base font-extrabold text-slate-900 dark:text-white font-mono tnum">
-                          {formattedVal}
+                          {formattedVal}{formattedSecondaryVal && <span className="text-slate-400 dark:text-slate-500"> + {formattedSecondaryVal}</span>}
                         </div>
                         <div className="text-[10px] text-slate-400">
-                          {opp.currency} Estimate
+                          {opp.currency}{formattedSecondaryVal ? ` + ${opp.secondaryCurrency}` : ''} Estimate
                         </div>
                       </div>
+
+                      {/* Edit Button */}
+                      <button
+                        onClick={() => { handleOpenEditOpp(opp); haptics.selection(); }}
+                        className="p-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 rounded-xl transition-colors"
+                        title="Edit deal details, lead source & currency"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
 
                       {/* Log Call / Meeting Button */}
                       <button
@@ -674,6 +754,45 @@ export default function BdPipelinePage() {
                   </div>
                 </div>
 
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-[11px] font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={hasSecondaryValue}
+                      onChange={(e) => setHasSecondaryValue(e.target.checked)}
+                      className="rounded"
+                    />
+                    Split across a second currency (e.g. local portion in ₦, international scope in $)
+                  </label>
+                  {hasSecondaryValue && (
+                    <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Second Portion Value</label>
+                        <input
+                          type="number"
+                          required
+                          value={secondaryValue}
+                          onChange={(e) => setSecondaryValue(Number(e.target.value))}
+                          className="w-full p-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-mono tnum text-slate-900 dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Second Currency</label>
+                        <select
+                          value={secondaryCurrency}
+                          onChange={(e: any) => setSecondaryCurrency(e.target.value)}
+                          className="w-full p-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white"
+                        >
+                          <option value="NGN">₦ NGN (Nigerian Naira)</option>
+                          <option value="USD">$ USD (US Dollar)</option>
+                          <option value="EUR">€ EUR (Euro)</option>
+                          <option value="GBP">£ GBP (British Pound)</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Submission Deadline</label>
@@ -745,6 +864,195 @@ export default function BdPipelinePage() {
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
                   <button type="button" onClick={() => setLossModalOpp(null)} className="px-3 py-1.5 text-slate-500 font-semibold">Cancel</button>
                   <button type="submit" className="px-4 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold shadow-xs active:scale-[0.96]">Confirm Loss</button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Opportunity Modal */}
+      <AnimatePresence>
+        {editingOpp && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setEditingOpp(null)} className="fixed inset-0 bg-black/70 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-lg w-full border border-slate-200 dark:border-slate-800 p-6 space-y-4 z-10 text-xs max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                    <Pencil className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">Edit Deal Details</h3>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-xs">{editingOpp.title}</p>
+                  </div>
+                </div>
+                <button onClick={() => setEditingOpp(null)} className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">&times;</button>
+              </div>
+
+              <form onSubmit={handleSaveEditOpp} className="space-y-4">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Deal Title</label>
+                  <input
+                    type="text"
+                    required
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Client</label>
+                    <select
+                      value={editClientId}
+                      onChange={(e) => setEditClientId(e.target.value)}
+                      className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white"
+                    >
+                      {clients.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Lead Source</label>
+                    <select
+                      value={editSource}
+                      onChange={(e) => setEditSource(e.target.value)}
+                      className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
+                    >
+                      <option value="Staff / Employee Referral">Staff / Employee Referral (Internal Lead)</option>
+                      <option value="Public Tender RFP">Public Tender RFP</option>
+                      <option value="Existing Client Repeat">Existing Client Repeat</option>
+                      <option value="Direct Client Referral">Direct Client Referral</option>
+                      <option value="Framework Agreement">Framework Agreement</option>
+                    </select>
+                  </div>
+                </div>
+
+                {editSource === 'Staff / Employee Referral' && (
+                  <div className="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 rounded-2xl space-y-1.5">
+                    <label className="block text-[11px] font-bold text-emerald-800 dark:text-emerald-300">
+                      Referring Staff Member *
+                    </label>
+                    <select
+                      required
+                      value={editReferredByStaffId}
+                      onChange={(e) => setEditReferredByStaffId(e.target.value)}
+                      className="w-full p-2 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-white"
+                    >
+                      <option value="">-- Select Any AquaEarth Staff Member ({allUsers.length} available) --</option>
+                      {allUsers.map(u => (
+                        <option key={u.id} value={u.id}>
+                          {u.name} — {u.jobTitle} ({u.departmentName})
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-[10px] text-emerald-700 dark:text-emerald-400">
+                      Employees who refer client contracts receive commercial deal commission credit & leadership visibility.
+                    </p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Estimated Value</label>
+                    <input
+                      type="number"
+                      required
+                      value={editEstimatedValue}
+                      onChange={(e) => setEditEstimatedValue(Number(e.target.value))}
+                      className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-mono tnum text-slate-900 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Currency</label>
+                    <select
+                      value={editCurrency}
+                      onChange={(e: any) => setEditCurrency(e.target.value)}
+                      className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white"
+                    >
+                      <option value="NGN">₦ NGN (Nigerian Naira)</option>
+                      <option value="USD">$ USD (US Dollar)</option>
+                      <option value="EUR">€ EUR (Euro)</option>
+                      <option value="GBP">£ GBP (British Pound)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-[11px] font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editHasSecondaryValue}
+                      onChange={(e) => setEditHasSecondaryValue(e.target.checked)}
+                      className="rounded"
+                    />
+                    Split across a second currency (e.g. local portion in ₦, international scope in $)
+                  </label>
+                  {editHasSecondaryValue && (
+                    <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Second Portion Value</label>
+                        <input
+                          type="number"
+                          required
+                          value={editSecondaryValue}
+                          onChange={(e) => setEditSecondaryValue(Number(e.target.value))}
+                          className="w-full p-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-mono tnum text-slate-900 dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Second Currency</label>
+                        <select
+                          value={editSecondaryCurrency}
+                          onChange={(e: any) => setEditSecondaryCurrency(e.target.value)}
+                          className="w-full p-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white"
+                        >
+                          <option value="NGN">₦ NGN (Nigerian Naira)</option>
+                          <option value="USD">$ USD (US Dollar)</option>
+                          <option value="EUR">€ EUR (Euro)</option>
+                          <option value="GBP">£ GBP (British Pound)</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Submission Deadline</label>
+                    <input
+                      type="text"
+                      required
+                      value={editSubmissionDeadline}
+                      onChange={(e) => setEditSubmissionDeadline(e.target.value)}
+                      placeholder="YYYY-MM-DD HH:MM"
+                      className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Technical Lead</label>
+                    <select
+                      value={editTechnicalLeadId}
+                      onChange={(e) => setEditTechnicalLeadId(e.target.value)}
+                      className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
+                    >
+                      <option value="">-- None --</option>
+                      {allUsers.map(u => (
+                        <option key={u.id} value={u.id}>{u.name} — {u.jobTitle}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+                  <button type="button" onClick={() => setEditingOpp(null)} className="px-3 py-1.5 text-slate-500 font-semibold">Cancel</button>
+                  <button type="submit" className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-xs active:scale-[0.96]">Save Changes</button>
                 </div>
               </form>
             </motion.div>

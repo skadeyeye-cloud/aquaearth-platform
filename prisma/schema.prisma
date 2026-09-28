@@ -281,23 +281,28 @@ model Project {
 }
 
 model Opportunity {
-  id                 String    @id @default(uuid())
-  title              String
-  clientName         String
-  serviceLinesJson   String
-  estimatedValue     Float
-  currency           String    @default("NGN")
-  stage              String    @default("IDENTIFIED")
-  source             String?
-  submissionDeadline DateTime
-  decisionDate       DateTime?
-  bdOwnerName        String
-  technicalLeadName  String?
-  winLossReason      String?
-  winningCompetitor  String?
-  convertedProjectId String?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  id                   String    @id @default(uuid())
+  title                String
+  clientName           String
+  serviceLinesJson     String
+  estimatedValue       Float
+  currency             String    @default("NGN")
+  secondaryValue       Float?
+  secondaryCurrency    String?
+  stage                String    @default("IDENTIFIED")
+  source               String?
+  referredByStaffId    String?
+  referredByStaffName  String?
+  submissionDeadline   DateTime
+  decisionDate         DateTime?
+  bdOwnerName          String
+  technicalLeadId      String?
+  technicalLeadName    String?
+  winLossReason        String?
+  winningCompetitor    String?
+  convertedProjectId   String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 }
 
 model Invoice {

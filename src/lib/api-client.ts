@@ -149,7 +149,33 @@ export const apiClient = {
     }
   },
 
-  async updateOpportunity(id: string, updates: { stage?: string; winLossReason?: string; winningCompetitor?: string }) {
+  async createOpportunity(payload: {
+    title: string; clientName: string; serviceLines: string[]; estimatedValue: number; currency: string;
+    secondaryValue?: number; secondaryCurrency?: string; stage: string; source?: string;
+    referredByStaffId?: string; referredByStaffName?: string; submissionDeadline: string;
+    bdOwnerName: string; technicalLeadId?: string; technicalLeadName?: string;
+  }) {
+    try {
+      const res = await fetch('/api/pipeline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      console.warn('[apiClient] createOpportunity failed:', err);
+      return { success: false, error: String(err) };
+    }
+  },
+
+  async updateOpportunity(id: string, updates: {
+    stage?: string; winLossReason?: string; winningCompetitor?: string; convertedProjectId?: string;
+    title?: string; clientName?: string; serviceLines?: string[]; estimatedValue?: number; currency?: string;
+    secondaryValue?: number | null; secondaryCurrency?: string | null; source?: string;
+    referredByStaffId?: string | null; referredByStaffName?: string | null;
+    submissionDeadline?: string; technicalLeadId?: string | null; technicalLeadName?: string | null;
+  }) {
     try {
       const res = await fetch('/api/pipeline', {
         method: 'PATCH',
